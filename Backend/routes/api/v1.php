@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use Illuminate\Support\Facades\Route;
@@ -61,4 +62,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         ->name('verification.send');
 
     Route::post('employer', [EmployerController::class, 'store'])->name('api.v1.employer.store');
+
+    Route::get('applications', [ApplicationController::class, 'index'])->name('api.v1.applications.index');
+    Route::post('applications', [ApplicationController::class, 'store'])->name('api.v1.applications.store');
+    Route::patch('applications/{application}', [ApplicationController::class, 'updateStatus'])->name('api.v1.applications.update');
 });
