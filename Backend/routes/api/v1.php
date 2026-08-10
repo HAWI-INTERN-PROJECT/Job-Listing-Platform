@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\EmployerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health check
-Route::get('health', fn () => response()->json([
+Route::get('health', fn() => response()->json([
     'status' => 'healthy',
     'timestamp' => now()->toDateTimeString(),
 ]))->name('api.v1.health');
@@ -50,4 +51,14 @@ Route::middleware('throttle:6,1')->group(function (): void {
         ->name('password.email');
     Route::post('reset-password', [AuthController::class, 'resetPassword'])
         ->name('password.reset');
+});
+Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function (): void {
+    Route::post('logout', [AuthController::class, 'logout'])->name('api.v1.logout');
+    Route::get('profile', [AuthController::class, 'profile'])->name('api.v1.profile');
+    Route::put('change-password', [AuthController::class, 'changePassword'])->name('api.v1.change-password');
+    Route::post('email/resend', [AuthController::class, 'resendVerificationEmail'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    Route::post('employer', [EmployerController::class, 'store'])->name('api.v1.employer.store');
 });
