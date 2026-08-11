@@ -12,7 +12,7 @@ class StoreEmployerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() === 'employer';
+        return $this->user()?->role === 'employer';
     }
 
     /**
