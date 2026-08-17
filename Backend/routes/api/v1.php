@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Middleware\EnsureRole;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +43,32 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::post('email/resend', [AuthController::class, 'resendVerificationEmail'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+
+    // Role-protected route groups
+
+    // Administrator Routes
+    Route::middleware(EnsureRole::class.':admin')->prefix('admin')->group(function (): void {
+        Route::get('dashboard', fn () => response()->json([
+            'success' => true,
+            'message' => 'Welcome Administrator',
+        ]))->name('api.v1.admin.dashboard');
+    });
+
+    // Employer Routes
+    Route::middleware(EnsureRole::class.':employer')->prefix('employer')->group(function (): void {
+        Route::get('dashboard', fn () => response()->json([
+            'success' => true,
+            'message' => 'Welcome Employer',
+        ]))->name('api.v1.employer.dashboard');
+    });
+
+    // Employee Routes
+    Route::middleware(EnsureRole::class.':employee')->prefix('employee')->group(function (): void {
+        Route::get('dashboard', fn () => response()->json([
+            'success' => true,
+            'message' => 'Welcome Employee',
+        ]))->name('api.v1.employee.dashboard');
+    });
 });
 
 // Password reset routes (public with rate limiting)
@@ -51,3 +78,4 @@ Route::middleware('throttle:6,1')->group(function (): void {
     Route::post('reset-password', [AuthController::class, 'resetPassword'])
         ->name('password.reset');
 });
+
