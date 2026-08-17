@@ -317,3 +317,4 @@ The `docs/` folder has focused guides for each tool used in this project:
   - **Solution**: Run `composer update` once instead of `composer install` — this regenerates `composer.lock` for your machine.
 - **Issue**: PHPStan reports errors on code that looks fine.
   - **Solution**: Read the specific error message — it's usually a missing type hint or a possible-null value PHPStan wants handled explicitly. See `docs/phpstan.md`.
+  
