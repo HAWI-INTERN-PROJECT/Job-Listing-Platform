@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\EmployerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +43,15 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::post('email/resend', [AuthController::class, 'resendVerificationEmail'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+
+    // Employer profiles - protected by auth:sanctum
+    Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
+        Route::get('/', [EmployerController::class, 'index'])->name('index');
+        Route::post('/', [EmployerController::class, 'store'])->name('store');
+        Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
+        Route::put('{employer}', [EmployerController::class, 'update'])->name('update');
+        Route::delete('{employer}', [EmployerController::class, 'destroy'])->name('destroy');
+    });
 });
 
 // Password reset routes (public with rate limiting)
