@@ -7,6 +7,7 @@ import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
 import DashboardPage from '@/pages/DashboardPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import EmployerDashboardPage from '@/pages/EmployerDashboardPage'
 
 const queryClient = new QueryClient()
 
@@ -28,12 +29,46 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-            <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+  <Route
+    path="/login"
+    element={
+      <GuestRoute>
+        <LoginPage />
+      </GuestRoute>
+    }
+  />
+
+  <Route
+    path="/register"
+    element={
+      <GuestRoute>
+        <RegisterPage />
+      </GuestRoute>
+    }
+  />
+
+  <Route
+    path="/dashboard"
+    element={
+      <ProtectedRoute>
+        <DashboardPage />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+  path="/employer-dashboard"
+  element={
+    <ProtectedRoute>
+      <EmployerDashboardPage />
+    </ProtectedRoute>
+  }
+/>
+
+  <Route path="*" element={<NotFoundPage />} />
+</Routes>
         </BrowserRouter>
         <Toaster position="top-right" richColors />
       </QueryClientProvider>
