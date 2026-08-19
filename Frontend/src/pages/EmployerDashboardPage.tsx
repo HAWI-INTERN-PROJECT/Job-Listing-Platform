@@ -9,6 +9,8 @@ import {
   Pencil,
   X,
 } from 'lucide-react'
+import EmployerSidebar from '@/components/employer/EmployerSidebar'
+import EmployerHeader from '@/components/employer/EmployerHeader'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -96,65 +98,14 @@ export default function EmployerDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 hidden h-screen w-60 border-r bg-background md:block">
-        <div className="flex h-16 items-center border-b px-6">
-          <h1 className="text-xl font-bold text-primary">JobPlatform</h1>
-        </div>
+  <div className="min-h-screen bg-muted/40">
+    <EmployerSidebar />
 
-        <nav className="space-y-1 p-4">
-          <a
-            href="/employer-dashboard"
-            className="flex items-center gap-3 rounded-lg bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
-          >
-            <Briefcase className="h-4 w-4" />
-            Dashboard
-          </a>
+    <div className="md:ml-64">
+      <EmployerHeader title="Employer Dashboard" />
 
-          <a
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Users className="h-4 w-4" />
-            Company Profile
-          </a>
-
-          <a
-            href="/my-job-posts"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Briefcase className="h-4 w-4" />
-            My Job Posts
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Users className="h-4 w-4" />
-            Applicants
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Clock className="h-4 w-4" />
-            Settings
-          </a>
-
-          <a
-            href="#"
-            className="mt-8 flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-muted-foreground hover:bg-muted"
-          >
-            Logout
-          </a>
-        </nav>
-      </aside>
-
-      {/* Main area */}
-      <div className="md:ml-60">
+      {/* Dashboard content */}
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
         {/* Top navigation */}
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
           <div>
@@ -404,8 +355,9 @@ export default function EmployerDashboardPage() {
               </CardContent>
             </Card>
           </div>
-        </main>
-      </div>
-    </div>
+                </main>
+              </div>
+          </div>
+  </div>
   )
 }
