@@ -69,7 +69,7 @@ export default function App() {
     <ProtectedRoute>
       <EmployerDashboardPage />
     </ProtectedRoute>
-  }
+      }
 />
 <Route
   path="/my-job-posts"
