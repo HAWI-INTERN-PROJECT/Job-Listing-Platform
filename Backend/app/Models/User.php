@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use App\Notifications\V1\ResetPasswordNotification;
+use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
@@ -24,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'username',
         'password',
+        'role',
+        'is_approved',
     ];
 
     /**
@@ -46,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_approved' => 'boolean',
         ];
     }
 
@@ -58,5 +63,25 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Get the job seeker profile associated with the user.
+     *
+     * @return HasOne<JobSeeker, $this>
+     */
+    public function jobSeeker(): HasOne
+    {
+        return $this->hasOne(JobSeeker::class);
+    }
+
+    /**
+     * Get the employer profile associated with the user.
+     *
+     * @return HasOne<Employer, $this>
+     */
+    public function employer(): HasOne
+    {
+        return $this->hasOne(Employer::class);
     }
 }
