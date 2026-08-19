@@ -32,7 +32,7 @@ class AuthController extends Controller
      * @unauthenticated
      *
      * @param  RegisterRequest  $request
-     * @return JsonResponse
+     * @return AuthResource|JsonResponse
      */
     public function register(RegisterRequest $request): AuthResource|JsonResponse
     {
