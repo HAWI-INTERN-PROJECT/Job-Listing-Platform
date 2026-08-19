@@ -49,6 +49,16 @@ class Employer extends Model
     /**
      * Get the user that owns the employer profile.
      *
+    protected $fillable = [
+        'user_id',
+        'company_name',
+        'description',
+        'logo',
+        'website',
+        'location',
+    ];
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo

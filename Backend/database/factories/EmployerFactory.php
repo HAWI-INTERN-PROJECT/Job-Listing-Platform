@@ -25,6 +25,12 @@ class EmployerFactory extends Factory
             'description' => fake()->paragraph(),
             'location' => fake()->city() . ', ' . fake()->country(),
             'is_approved' => true,
+            'user_id' => User::factory()->state(['role' => 'employer'])->create()->id,
+            'company_name' => fake()->company(),
+            'description' => fake()->paragraph(),
+            'logo' => null,
+            'website' => fake()->url(),
+            'location' => fake()->city(),
         ];
     }
 }
