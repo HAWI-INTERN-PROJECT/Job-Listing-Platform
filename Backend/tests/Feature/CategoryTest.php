@@ -92,7 +92,7 @@ class CategoryTest extends TestCase
 
     public function test_non_admin_cannot_create_category(): void
     {
-        $jobSeeker = User::factory()->create(['role' => 'job_seeker']);
+        $jobSeeker = User::factory()->create(['role' => 'employee']);
 
         $response = $this->actingAs($jobSeeker)->postJson('/api/v1/categories', [
             'name' => 'Should Not Be Created',

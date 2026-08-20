@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Middleware\EnsureRole;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
+use App\Http\Middleware\EnsureRole;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -96,7 +96,6 @@ Route::middleware('throttle:6,1')->group(function (): void {
     Route::post('reset-password', [AuthController::class, 'resetPassword'])
         ->name('password.reset');
 });
-
 // Public category browsing (no auth required)
 Route::prefix('categories')->name('api.v1.categories.')->group(function (): void {
     Route::get('/', [CategoryController::class, 'index'])->name('index');

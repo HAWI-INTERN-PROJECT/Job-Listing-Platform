@@ -31,7 +31,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'username',
         'role',
         'password',
-        'role',
     ];
 
     /**
@@ -85,7 +84,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Check if user has any of the specified roles.
      *
-     * @param UserRole|string|array<UserRole|string> $roles
+     * @param  UserRole|string|array<UserRole|string>  $roles
      */
     public function hasRole(UserRole|string|array $roles): bool
     {
@@ -120,4 +119,3 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Employer::class);
     }
 }
-
