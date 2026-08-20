@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * @property string $role
+ * @property UserRole $role
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -92,7 +92,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         foreach ($roles as $role) {
             $roleValue = $role instanceof UserRole ? $role->value : $role;
-            if ($this->role?->value === $roleValue || $this->role === $role) {
+            if ($this->role->value === $roleValue) {
                 return true;
             }
         }
