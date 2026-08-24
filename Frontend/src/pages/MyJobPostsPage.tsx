@@ -1,4 +1,7 @@
+
+import { useState } from 'react'
 import {
+  Bell,
   Briefcase,
   ChevronLeft,
   ChevronRight,
@@ -6,9 +9,9 @@ import {
   Plus,
   Search,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
-import EmployerHeader from '@/components/employer/EmployerHeader'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,7 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-const jobs = [
+const initialJobs = [
   {
     title: 'Senior React Developer',
     category: 'Technology',
@@ -69,15 +72,149 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function MyJobPostsPage() {
+  const [jobs, setJobs] = useState(initialJobs)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [typeFilter, setTypeFilter] = useState(
+    'All Employment Types',
+  )
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showNotifications, setShowNotifications] =
+    useState(false)
+
+  const jobsPerPage = 2
+
+  const filteredJobs = jobs.filter((job) => {
+    const search = searchTerm.toLowerCase()
+
+    const matchesSearch =
+      job.title.toLowerCase().includes(search) ||
+      job.category.toLowerCase().includes(search) ||
+      job.location.toLowerCase().includes(search)
+
+    const matchesStatus =
+      statusFilter === 'All Status' ||
+      job.status === statusFilter
+
+    const matchesType =
+      typeFilter === 'All Employment Types' ||
+      job.type === typeFilter
+
+    return matchesSearch && matchesStatus && matchesType
+  })
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredJobs.length / jobsPerPage),
+  )
+
+  const startIndex = (currentPage - 1) * jobsPerPage
+
+  const paginatedJobs = filteredJobs.slice(
+    startIndex,
+    startIndex + jobsPerPage,
+  )
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1)
+  }
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value)
+    setCurrentPage(1)
+  }
+
+  const handleTypeChange = (value: string) => {
+    setTypeFilter(value)
+    setCurrentPage(1)
+  }
+
+  const handleCloseJob = (jobTitle: string) => {
+    setJobs((currentJobs) =>
+      currentJobs.map((job) =>
+        job.title === jobTitle
+          ? { ...job, status: 'Closed' }
+          : job,
+      ),
+    )
+  }
+
   return (
     <div className="min-h-screen bg-muted/40 md:flex">
       {/* Sidebar */}
       <EmployerSidebar />
 
       {/* Main area */}
-      <div className="min-w-0 flex-1 ">
-        {/* Top navigation */}
-        <EmployerHeader title="My Job Posts" />
+      <div className="min-w-0 flex-1">
+        {/* Header */}
+        <header className="relative flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
+          <h1 className="text-xl font-semibold">
+            My Job Posts
+          </h1>
+
+          <div className="flex items-center gap-4">
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setShowNotifications(
+                    !showNotifications,
+                  )
+                }
+                className="rounded-full p-2 hover:bg-muted"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 top-12 z-20 w-72 rounded-lg border bg-background p-4 shadow-lg">
+                  <p className="font-semibold">
+                    Notifications
+                  </p>
+
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div className="border-b pb-3">
+                      You have new applications to review.
+                    </div>
+
+                    <div className="border-b pb-3">
+                      Your job post is awaiting review.
+                    </div>
+
+                    <div>
+                      Your employer account is approved.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profile */}
+            <Link
+              to="/company-profile"
+              className="flex items-center gap-2 rounded-lg p-1 hover:bg-muted"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                AR
+              </div>
+
+              <div className="hidden sm:block">
+                <p className="text-sm font-medium">
+                  Employer
+                </p>
+
+                <p className="text-xs text-muted-foreground">
+                  Company Profile
+                </p>
+              </div>
+            </Link>
+          </div>
+        </header>
 
         {/* Content */}
         <main className="px-4 py-6 sm:px-6 lg:px-8">
@@ -93,10 +230,12 @@ export default function MyJobPostsPage() {
               </p>
             </div>
 
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Post a New Job
-            </Button>
+            <Link to="/create-job">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Post a New Job
+              </Button>
+            </Link>
           </div>
 
           {/* Filters */}
@@ -110,11 +249,25 @@ export default function MyJobPostsPage() {
                   <Input
                     className="pl-9"
                     placeholder="Search jobs"
+                    value={searchTerm}
+                    onChange={(event) =>
+                      handleSearchChange(
+                        event.target.value,
+                      )
+                    }
                   />
                 </div>
 
                 {/* Status */}
-                <select className="h-10 rounded-md border bg-background px-3 text-sm">
+                <select
+                  className="h-10 rounded-md border bg-background px-3 text-sm"
+                  value={statusFilter}
+                  onChange={(event) =>
+                    handleStatusChange(
+                      event.target.value,
+                    )
+                  }
+                >
                   <option>All Status</option>
                   <option>Approved</option>
                   <option>Pending</option>
@@ -123,7 +276,15 @@ export default function MyJobPostsPage() {
                 </select>
 
                 {/* Employment type */}
-                <select className="h-10 rounded-md border bg-background px-3 text-sm">
+                <select
+                  className="h-10 rounded-md border bg-background px-3 text-sm"
+                  value={typeFilter}
+                  onChange={(event) =>
+                    handleTypeChange(
+                      event.target.value,
+                    )
+                  }
+                >
                   <option>All Employment Types</option>
                   <option>Full-time</option>
                   <option>Part-time</option>
@@ -180,72 +341,103 @@ export default function MyJobPostsPage() {
                   </thead>
 
                   <tbody>
-                    {jobs.map((job) => (
-                      <tr
-                        key={job.title}
-                        className="border-b last:border-0 hover:bg-muted/20"
-                      >
-                        <td className="px-6 py-4 font-medium">
-                          {job.title}
-                        </td>
+                    {paginatedJobs.length > 0 ? (
+                      paginatedJobs.map((job) => (
+                        <tr
+                          key={job.title}
+                          className="border-b last:border-0 hover:bg-muted/20"
+                        >
+                          <td className="px-6 py-4 font-medium">
+                            {job.title}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          {job.category}
-                        </td>
+                          <td className="px-6 py-4">
+                            {job.category}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          {job.location}
-                        </td>
+                          <td className="px-6 py-4">
+                            {job.location}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          {job.type}
-                        </td>
+                          <td className="px-6 py-4">
+                            {job.type}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          {job.applications}
-                        </td>
+                          <td className="px-6 py-4">
+                            {job.applications}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          {job.deadline}
-                        </td>
+                          <td className="px-6 py-4">
+                            {job.deadline}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          <StatusBadge status={job.status} />
-                        </td>
+                          <td className="px-6 py-4">
+                            <StatusBadge
+                              status={job.status}
+                            />
+                          </td>
 
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            >
-                              View
-                            </Button>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1">
+                              {/* View */}
+                              <Link to="/job-applicants">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                >
+                                  View
+                                </Button>
+                              </Link>
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            >
-                              Edit
-                            </Button>
+                              {/* Edit */}
+                              <Link to="/edit-job">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                >
+                                  Edit
+                                </Button>
+                              </Link>
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            >
-                              Close
-                            </Button>
+                              {/* Close */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={
+                                  job.status === 'Closed'
+                                }
+                                onClick={() =>
+                                  handleCloseJob(
+                                    job.title,
+                                  )
+                                }
+                              >
+                                {job.status === 'Closed'
+                                  ? 'Closed'
+                                  : 'Close'}
+                              </Button>
 
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </div>
+                              {/* More */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="px-6 py-12 text-center text-muted-foreground"
+                        >
+                          No job posts found.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -255,20 +447,60 @@ export default function MyJobPostsPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between py-5">
             <p className="text-sm text-muted-foreground">
-              Showing 1–3 of 3 job posts
+              Showing {paginatedJobs.length} of{' '}
+              {filteredJobs.length} job posts
             </p>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.max(page - 1, 1),
+                  )
+                }
+              >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Previous
               </Button>
 
-              <Button size="sm">1</Button>
+              {Array.from(
+                { length: totalPages },
+                (_, index) => (
+                  <Button
+                    key={index + 1}
+                    size="sm"
+                    variant={
+                      currentPage === index + 1
+                        ? 'default'
+                        : 'outline'
+                    }
+                    onClick={() =>
+                      setCurrentPage(index + 1)
+                    }
+                  >
+                    {index + 1}
+                  </Button>
+                ),
+              )}
 
-              <Button variant="outline" size="sm">
-                <ChevronRight className="ml-1 h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  currentPage === totalPages ||
+                  filteredJobs.length === 0
+                }
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.min(page + 1, totalPages),
+                  )
+                }
+              >
                 Next
+                <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -285,13 +517,16 @@ export default function MyJobPostsPage() {
               </h3>
 
               <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                Create your first job post to start receiving applications.
+                Create your first job post to start receiving
+                applications.
               </p>
 
-              <Button className="mt-5">
-                <Plus className="mr-2 h-4 w-4" />
-                Post a New Job
-              </Button>
+              <Link to="/create-job">
+                <Button className="mt-5">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Post a New Job
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </main>
@@ -299,3 +534,4 @@ export default function MyJobPostsPage() {
     </div>
   )
 }
+

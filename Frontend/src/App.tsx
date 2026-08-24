@@ -13,6 +13,7 @@ import CreateJobPage from '@/pages/CreateJobPage'
 import EditJobPage from '@/pages/EditJobPage'
 import JobApplicantsPage from '@/pages/JobApplicantsPage'
 import ApplicantDetailsPage from '@/pages/ApplicantDetailsPage'
+import CompanyProfilePage from './pages/CompanyProfilePage'
 
 const queryClient = new QueryClient()
 
@@ -66,9 +67,9 @@ export default function App() {
  <Route
   path="/employer-dashboard"
   element={
-    <ProtectedRoute>
+    
       <EmployerDashboardPage />
-    </ProtectedRoute>
+    
       }
 />
 <Route
@@ -90,6 +91,11 @@ export default function App() {
  <Route 
    path="/applicant-details" 
    element={<ApplicantDetailsPage />} />
+
+   <Route
+  path="/company-profile"
+  element={<CompanyProfilePage />}
+/>
 
   <Route path="*" element={<NotFoundPage />} />
 </Routes>
