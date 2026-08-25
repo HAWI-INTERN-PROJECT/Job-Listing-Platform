@@ -14,6 +14,7 @@ import EditJobPage from '@/pages/EditJobPage'
 import JobApplicantsPage from '@/pages/JobApplicantsPage'
 import ApplicantDetailsPage from '@/pages/ApplicantDetailsPage'
 import CompanyProfilePage from './pages/CompanyProfilePage'
+import SettingsPage from '@/pages/SettingsPage'
 
 const queryClient = new QueryClient()
 
@@ -95,6 +96,10 @@ export default function App() {
    <Route
   path="/company-profile"
   element={<CompanyProfilePage />}
+/>
+<Route
+  path="/settings"
+  element={<SettingsPage />}
 />
 
   <Route path="*" element={<NotFoundPage />} />
