@@ -7,10 +7,14 @@ use App\Notifications\V1\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property string $role
+ */
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
@@ -27,6 +31,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'username',
         'role',
         'password',
+        'role',
     ];
 
     /**
@@ -105,5 +110,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * @return HasOne<Employer, $this>
+     */
+    public function employer(): HasOne
+    {
+        return $this->hasOne(Employer::class);
     }
 }
