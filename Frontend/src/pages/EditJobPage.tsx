@@ -1,131 +1,186 @@
-import {
-  Bell,
-  Briefcase,
-  LogOut,
-  Settings,
-  User,
-  Users,
-} from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle, XCircle } from 'lucide-react'
+
+import EmployerSidebar from '@/components/employer/EmployerSidebar'
+import EmployerHeader from '@/components/employer/EmployerHeader'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+
+type JobForm = {
+  title: string
+  category: string
+  employmentType: string
+  positions: string
+  location: string
+  workMode: string
+  description: string
+  responsibilities: string
+  requirements: string
+  deadline: string
+  status: string
+}
+
+const initialJob: JobForm = {
+  title: 'Senior React Developer',
+  category: 'Technology',
+  employmentType: 'Full-time',
+  positions: '2',
+  location: 'Addis Ababa, Ethiopia',
+  workMode: 'On-site',
+  description:
+    'We are looking for a Senior React Developer to build and maintain modern web applications for our growing technology team.',
+  responsibilities:
+    'Develop React applications, collaborate with designers and backend developers, review code, and maintain application performance.',
+  requirements:
+    '3+ years of React experience, strong JavaScript and TypeScript knowledge, Git experience, and good communication skills.',
+  deadline: '2026-08-30',
+  status: 'Open',
+}
 
 export default function EditJobPage() {
+  const navigate = useNavigate()
+
+  const [job, setJob] = useState<JobForm>(initialJob)
+  const [savedJob, setSavedJob] = useState<JobForm>(initialJob)
+  const [message, setMessage] = useState('')
+  const [isClosed, setIsClosed] = useState(false)
+
+  function handleChange(
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) {
+    const { name, value } = event.target
+
+    setJob((currentJob) => ({
+      ...currentJob,
+      [name]: value,
+    }))
+  }
+
+  function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (isClosed) {
+      setMessage('This job is closed and cannot be edited.')
+
+      setTimeout(() => {
+        setMessage('')
+      }, 3000)
+
+      return
+    }
+
+    setSavedJob(job)
+
+    setMessage('Job changes saved successfully.')
+
+    setTimeout(() => {
+      setMessage('')
+    }, 3000)
+  }
+
+  function handleCancel() {
+    setJob(savedJob)
+
+    setMessage('Changes have been cancelled.')
+
+    setTimeout(() => {
+      navigate('/my-job-posts')
+    }, 1000)
+  }
+
+  function handleCloseJob() {
+    const confirmed = window.confirm(
+      'Are you sure you want to close this job? New applications will no longer be accepted.',
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setIsClosed(true)
+
+    setJob((currentJob) => ({
+      ...currentJob,
+      status: 'Closed',
+    }))
+
+    setSavedJob((currentJob) => ({
+      ...currentJob,
+      status: 'Closed',
+    }))
+
+    setMessage('Job has been closed successfully.')
+
+    setTimeout(() => {
+      setMessage('')
+    }, 3000)
+  }
+
   return (
     <div className="min-h-screen bg-muted/40 md:flex">
-
       {/* Sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r bg-background md:flex md:min-h-screen md:flex-col">
-        <div className="flex h-16 items-center border-b px-6">
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary p-2 text-primary-foreground">
-              <Briefcase className="h-5 w-5" />
-            </div>
-            <span className="text-lg font-bold">JobPlatform</span>
-          </div>
-        </div>
+      <EmployerSidebar />
 
-        <nav className="flex-1 space-y-1 p-4">
-          <a
-            href="/employer-dashboard"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Briefcase className="h-4 w-4" />
-            Dashboard
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <User className="h-4 w-4" />
-            Company Profile
-          </a>
-
-          <a
-            href="/my-job-posts"
-            className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-          >
-            <Briefcase className="h-4 w-4" />
-            My Job Posts
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Users className="h-4 w-4" />
-            Applicants
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </a>
-        </nav>
-
-        <div className="border-t p-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted">
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* Main */}
+      {/* Main area */}
       <div className="min-w-0 flex-1">
+        {/* Header */}
+        <EmployerHeader title="Edit Job" />
 
-        {/* Top bar */}
-        <header className="border-b bg-background">
-          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <h1 className="text-xl font-semibold">Edit Job</h1>
-
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                  E
-                </div>
-
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium">Employer</p>
-                  <p className="text-xs text-muted-foreground">
-                    Employer Account
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content */}
         <main className="px-4 py-5 sm:px-6 lg:px-8">
-
-          {/* Header */}
+          {/* Page heading */}
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">
                 Edit Job Post
               </h2>
+
               <p className="text-sm text-muted-foreground">
                 Update the details of your job posting.
               </p>
             </div>
 
-            <span className="w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-              Approved
+            <span
+              className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${
+                isClosed
+                  ? 'bg-gray-100 text-gray-700'
+                  : 'bg-green-100 text-green-700'
+              }`}
+            >
+              {isClosed ? 'Closed' : 'Approved'}
             </span>
           </div>
 
-          <form className="space-y-4">
+          {/* Message */}
+          {message && (
+            <div
+              className={`mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+                isClosed
+                  ? 'border-gray-200 bg-gray-50 text-gray-700'
+                  : 'border-green-200 bg-green-50 text-green-700'
+              }`}
+            >
+              {isClosed ? (
+                <XCircle className="h-5 w-5" />
+              ) : (
+                <CheckCircle className="h-5 w-5" />
+              )}
 
+              {message}
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSave}>
             {/* Basic Information */}
             <Card>
               <CardHeader className="pb-3">
@@ -135,27 +190,34 @@ export default function EditJobPage() {
               </CardHeader>
 
               <CardContent className="grid gap-4 md:grid-cols-4">
-
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="job-title">
-                    Job Title <span className="text-destructive">*</span>
+                  <Label htmlFor="title">
+                    Job Title{' '}
+                    <span className="text-destructive">*</span>
                   </Label>
 
                   <Input
-                    id="job-title"
-                    defaultValue="Senior React Developer"
+                    id="title"
+                    name="title"
+                    value={job.title}
+                    onChange={handleChange}
+                    disabled={isClosed}
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="category">
-                    Job Category <span className="text-destructive">*</span>
+                    Job Category{' '}
+                    <span className="text-destructive">*</span>
                   </Label>
 
                   <select
                     id="category"
-                    defaultValue="Technology"
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    name="category"
+                    value={job.category}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option>Technology</option>
                     <option>Design</option>
@@ -166,14 +228,18 @@ export default function EditJobPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="employment-type">
-                    Employment Type <span className="text-destructive">*</span>
+                  <Label htmlFor="employmentType">
+                    Employment Type{' '}
+                    <span className="text-destructive">*</span>
                   </Label>
 
                   <select
-                    id="employment-type"
-                    defaultValue="Full-time"
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    id="employmentType"
+                    name="employmentType"
+                    value={job.employmentType}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option>Full-time</option>
                     <option>Part-time</option>
@@ -190,58 +256,71 @@ export default function EditJobPage() {
 
                   <Input
                     id="positions"
+                    name="positions"
                     type="number"
-                    defaultValue="2"
                     min="1"
+                    value={job.positions}
+                    onChange={handleChange}
+                    disabled={isClosed}
                   />
                 </div>
-
               </CardContent>
             </Card>
 
             {/* Location */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Location</CardTitle>
+                <CardTitle className="text-base">
+                  Location
+                </CardTitle>
               </CardHeader>
 
               <CardContent className="grid gap-4 md:grid-cols-2">
-
                 <div className="space-y-1.5">
                   <Label htmlFor="location">
-                    Location <span className="text-destructive">*</span>
+                    Location{' '}
+                    <span className="text-destructive">*</span>
                   </Label>
 
                   <Input
                     id="location"
-                    defaultValue="Addis Ababa, Ethiopia"
+                    name="location"
+                    value={job.location}
+                    onChange={handleChange}
+                    disabled={isClosed}
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="work-mode">Work Location</Label>
+                  <Label htmlFor="workMode">
+                    Work Location
+                  </Label>
 
                   <select
-                    id="work-mode"
-                    defaultValue="On-site"
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    id="workMode"
+                    name="workMode"
+                    value={job.workMode}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option>On-site</option>
                     <option>Remote</option>
+                    <option>Hybrid</option>
                   </select>
                 </div>
-
               </CardContent>
             </Card>
 
             {/* Job Details */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Job Details</CardTitle>
+                <CardTitle className="text-base">
+                  Job Details
+                </CardTitle>
               </CardHeader>
 
               <CardContent className="grid gap-4 md:grid-cols-3">
-
                 <div className="space-y-1.5">
                   <Label htmlFor="description">
                     Job Description{' '}
@@ -250,8 +329,11 @@ export default function EditJobPage() {
 
                   <textarea
                     id="description"
-                    defaultValue="We are looking for a Senior React Developer to build and maintain modern web applications for our growing technology team."
-                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    name="description"
+                    value={job.description}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
 
@@ -263,8 +345,11 @@ export default function EditJobPage() {
 
                   <textarea
                     id="responsibilities"
-                    defaultValue="Develop React applications, collaborate with designers and backend developers, review code, and maintain application performance."
-                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    name="responsibilities"
+                    value={job.responsibilities}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
 
@@ -276,11 +361,13 @@ export default function EditJobPage() {
 
                   <textarea
                     id="requirements"
-                    defaultValue="3+ years of React experience, strong JavaScript and TypeScript knowledge, Git experience, and good communication skills."
-                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    name="requirements"
+                    value={job.requirements}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
-
               </CardContent>
             </Card>
 
@@ -293,7 +380,6 @@ export default function EditJobPage() {
               </CardHeader>
 
               <CardContent className="grid gap-4 md:grid-cols-2">
-
                 <div className="space-y-1.5">
                   <Label htmlFor="deadline">
                     Application Deadline{' '}
@@ -302,8 +388,11 @@ export default function EditJobPage() {
 
                   <Input
                     id="deadline"
+                    name="deadline"
                     type="date"
-                    defaultValue="2026-08-30"
+                    value={job.deadline}
+                    onChange={handleChange}
+                    disabled={isClosed}
                   />
 
                   <p className="text-xs text-muted-foreground">
@@ -312,44 +401,76 @@ export default function EditJobPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="job-status">Job Status</Label>
+                  <Label htmlFor="status">
+                    Job Status
+                  </Label>
 
                   <select
-                    id="job-status"
-                    defaultValue="Open"
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    id="status"
+                    name="status"
+                    value={job.status}
+                    onChange={handleChange}
+                    disabled={isClosed}
+                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option>Open</option>
                     <option>Closed</option>
                   </select>
                 </div>
-
               </CardContent>
             </Card>
 
-            {/* Close confirmation */}
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              <p className="font-medium">Close this job?</p>
-              <p className="mt-1">
-                Closing this job will prevent new applications.
-              </p>
-            </div>
+            {/* Close warning */}
+            {!isClosed && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <p className="font-medium">
+                  Close this job?
+                </p>
+
+                <p className="mt-1">
+                  Closing this job will prevent new applications.
+                </p>
+              </div>
+            )}
+
+            {isClosed && (
+              <div className="rounded-lg border bg-muted px-4 py-3 text-sm">
+                <p className="font-medium">
+                  This job is closed.
+                </p>
+
+                <p className="mt-1 text-muted-foreground">
+                  New applications are no longer being accepted.
+                </p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
-              <Button type="button" variant="outline">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+              >
                 Cancel
               </Button>
 
-              <Button type="button" variant="destructive">
-                Close Job
-              </Button>
+              {!isClosed && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleCloseJob}
+                >
+                  Close Job
+                </Button>
+              )}
 
-              <Button type="submit">
-                Save Changes
-              </Button>
+              {!isClosed && (
+                <Button type="submit">
+                  Save Changes
+                </Button>
+              )}
             </div>
-
           </form>
         </main>
       </div>
