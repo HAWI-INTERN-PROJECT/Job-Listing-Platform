@@ -91,4 +91,14 @@ class EmailVerificationTest extends TestCase
 
         $response->assertUnauthorized();
     }
+
+    public function test_unverified_user_cannot_access_protected_feature_routes(): void
+    {
+        $user = User::factory()->employee()->unverified()->create();
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/v1/employee/dashboard');
+
+        $response->assertForbidden();
+    }
 }
