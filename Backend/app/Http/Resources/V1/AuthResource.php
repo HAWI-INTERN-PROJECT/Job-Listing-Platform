@@ -3,11 +3,24 @@
 namespace App\Http\Resources\V1;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Laravel\Sanctum\NewAccessToken;
 
 class AuthResource extends ApiResponseResource
 {
+    protected ?NewAccessToken $token = null;
+
+    /**
+     * Create a new resource instance.
+     *
+     * @param  mixed  $resource
+     * @param  NewAccessToken|null  $token
+     */
+    public function __construct(mixed $resource, ?NewAccessToken $token = null)
+    {
+        parent::__construct($resource);
+        $this->token = $token;
+    }
+
     /**
      * Transform the resource into an array.
      *
@@ -15,31 +28,11 @@ class AuthResource extends ApiResponseResource
      */
     public function toArray(Request $request): array
     {
-        $user = $this->resource;
-        $remember = request()->boolean('remember_me');
-
-        // Create a personal access token
-        $newToken = $user->createToken('Personal Access Token');
-        // Set token expiration
-        $this->setTokenExpiration($newToken, $remember);
-
         return [
             'user' => UserResource::make($this->resource),
-            'access_token' => $newToken->plainTextToken,
+            'access_token' => $this->token?->plainTextToken,
             'token_type' => 'Bearer',
-            'expires_at' => $newToken->accessToken->expires_at->toDateTimeString(),
-
+            'expires_at' => $this->token?->accessToken->expires_at?->toDateTimeString(),
         ];
-    }
-
-    protected function setTokenExpiration(NewAccessToken $newToken, bool $rememberMe = false): void
-    {
-        $expires = $rememberMe
-            ? Carbon::now()->addMonths(6)
-            : Carbon::now()->addDay();
-
-        $token = $newToken->accessToken;
-        $token->expires_at = $expires;
-        $token->save();
     }
 }

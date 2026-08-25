@@ -118,4 +118,43 @@ class ChangePasswordTest extends TestCase
 
         $response->assertUnauthorized();
     }
+
+    public function test_change_password_revokes_all_tokens(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('old-password'),
+        ]);
+
+        $user->createToken('test-token-1');
+        $user->createToken('test-token-2');
+
+        $this->assertEquals(2, $user->tokens()->count());
+
+        $response = $this->actingAs($user)
+            ->putJson('/api/v1/change-password', [
+                'current_password' => 'old-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
+
+        $response->assertOk();
+        $this->assertEquals(0, $user->tokens()->count());
+    }
+
+    public function test_change_password_fails_when_new_password_is_same_as_current_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('same-password'),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->putJson('/api/v1/change-password', [
+                'current_password' => 'same-password',
+                'password' => 'same-password',
+                'password_confirmation' => 'same-password',
+            ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['password']);
+    }
 }

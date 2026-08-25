@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('users', 'role')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('role')->default('job_seeker')->after('email');
+                $table->string('role')->default(UserRole::EMPLOYEE->value)->after('username');
             });
         }
     }

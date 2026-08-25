@@ -34,7 +34,7 @@ class EmployerTest extends TestCase
 
     public function test_job_seeker_cannot_create_employer_profile(): void
     {
-        $user = User::factory()->create(['role' => 'job_seeker']);
+        $user = User::factory()->create(['role' => 'employee']);
 
         $response = $this->actingAs($user)->postJson('/api/v1/employers', [
             'company_name' => 'Acme Corp',
