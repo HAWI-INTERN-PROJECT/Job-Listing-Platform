@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -61,8 +62,9 @@ class ActivityLogger
         self::auth('password_reset', $request);
     }
 
-    public static function emailVerified(?Request $request = null): void
+    public static function emailVerified(?User $user = null, ?Request $request = null): void
     {
-        self::auth('email_verified', $request);
+        $extra = $user ? ['user_id' => $user->id] : [];
+        self::log('email_verified', 'User email_verified', $request, $extra);
     }
 }

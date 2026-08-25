@@ -46,11 +46,13 @@ class AuthController extends Controller
                     'password' => Hash::make($request->password),
                 ]);
 
+                $token = $user->createAccessToken($request->boolean('remember_me'));
+
                 $user->sendEmailVerificationNotification();
 
                 ActivityLogger::register($request);
 
-                return AuthResource::make($user);
+                return AuthResource::make($user, $token);
             });
         } catch (Exception $e) {
             return $this->error(
@@ -71,14 +73,13 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): AuthResource|JsonResponse
     {
+        $user = $request->authenticate();
 
-        $request->authenticate();
-
-        $user = $request->user();
+        $token = $user->createAccessToken($request->boolean('remember_me'));
 
         ActivityLogger::login($request);
 
-        return AuthResource::make($user);
+        return AuthResource::make($user, $token);
     }
 
     /**
@@ -105,24 +106,25 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         // Validate request
         $request->validate([
             'current_password' => ['required'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'confirmed', 'min:8', 'different:current_password'],
         ]);
 
         // check if current password is correct
-        if (! Hash::check($request->current_password, $request->user()->password)) {
-
+        if (! Hash::check($request->current_password, $user->password)) {
             throw ValidationException::withMessages([
-                'current_password' => __('auth.failed')
+                'current_password' => __('auth.failed'),
             ]);
         }
 
-        // Update password
-        $user = User::find($request->user()->id);
+        // Update password & revoke active tokens for security
         $user->password = Hash::make($request->password);
         $user->save();
+        $user->tokens()->delete();
 
         ActivityLogger::passwordChanged($request);
 
@@ -164,7 +166,7 @@ class AuthController extends Controller
         $user->markEmailAsVerified();
         event(new Verified($user));
 
-        ActivityLogger::emailVerified();
+        ActivityLogger::emailVerified($user, request());
 
         return $this->success(null, __('auth.email_verified'));
     }
