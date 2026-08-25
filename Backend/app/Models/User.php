@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\NewAccessToken;
 
 /**
  * @property int $id
@@ -128,5 +129,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function employer(): HasOne
     {
         return $this->hasOne(Employer::class);
+    }
+
+    /**
+     * Create a personal access token with custom expiration.
+     */
+    public function createAccessToken(bool $rememberMe = false): NewAccessToken
+    {
+        $newToken = $this->createToken('Personal Access Token');
+        $expires = $rememberMe
+            ? Carbon::now()->addMonths(6)
+            : Carbon::now()->addDay();
+
+        $token = $newToken->accessToken;
+        $token->expires_at = $expires;
+        $token->save();
+
+        return $newToken;
     }
 }

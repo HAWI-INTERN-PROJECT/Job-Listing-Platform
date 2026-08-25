@@ -46,49 +46,50 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
-    // Role-protected route groups
+    // Protected feature routes requiring verified email address
+    Route::middleware('verified')->group(function (): void {
+        // Administrator Routes
+        Route::middleware(EnsureRole::class.':admin')->prefix('admin')->group(function (): void {
+            Route::get('dashboard', fn () => response()->json([
+                'success' => true,
+                'message' => 'Welcome Administrator',
+            ]))->name('api.v1.admin.dashboard');
+        });
 
-    // Administrator Routes
-    Route::middleware(EnsureRole::class.':admin')->prefix('admin')->group(function (): void {
-        Route::get('dashboard', fn () => response()->json([
-            'success' => true,
-            'message' => 'Welcome Administrator',
-        ]))->name('api.v1.admin.dashboard');
+        // Employer Routes
+        Route::middleware(EnsureRole::class.':employer')->prefix('employer')->group(function (): void {
+            Route::get('dashboard', fn () => response()->json([
+                'success' => true,
+                'message' => 'Welcome Employer',
+            ]))->name('api.v1.employer.dashboard');
+        });
+
+        // Employee Routes
+        Route::middleware(EnsureRole::class.':employee')->prefix('employee')->group(function (): void {
+            Route::get('dashboard', fn () => response()->json([
+                'success' => true,
+                'message' => 'Welcome Employee',
+            ]))->name('api.v1.employee.dashboard');
+        });
+
+        // Employer profiles - protected by auth:sanctum & verified
+        Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
+            Route::get('/', [EmployerController::class, 'index'])->name('index');
+            Route::post('/', [EmployerController::class, 'store'])->name('store');
+            Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
+            Route::put('{employer}', [EmployerController::class, 'update'])->name('update');
+            Route::delete('{employer}', [EmployerController::class, 'destroy'])->name('destroy');
+        });
+
+        // Category management - admin only & verified
+        Route::prefix('categories')->name('api.v1.categories.')->group(function (): void {
+            Route::post('/', [CategoryController::class, 'store'])->name('store');
+            Route::put('{category}', [CategoryController::class, 'update'])->name('update');
+            Route::delete('{category}', [CategoryController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::get('admin/categories', [CategoryController::class, 'adminIndex'])->name('api.v1.admin.categories.index');
     });
-
-    // Employer Routes
-    Route::middleware(EnsureRole::class.':employer')->prefix('employer')->group(function (): void {
-        Route::get('dashboard', fn () => response()->json([
-            'success' => true,
-            'message' => 'Welcome Employer',
-        ]))->name('api.v1.employer.dashboard');
-    });
-
-    // Employee Routes
-    Route::middleware(EnsureRole::class.':employee')->prefix('employee')->group(function (): void {
-        Route::get('dashboard', fn () => response()->json([
-            'success' => true,
-            'message' => 'Welcome Employee',
-        ]))->name('api.v1.employee.dashboard');
-    });
-
-    // Employer profiles - protected by auth:sanctum
-    Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
-        Route::get('/', [EmployerController::class, 'index'])->name('index');
-        Route::post('/', [EmployerController::class, 'store'])->name('store');
-        Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
-        Route::put('{employer}', [EmployerController::class, 'update'])->name('update');
-        Route::delete('{employer}', [EmployerController::class, 'destroy'])->name('destroy');
-    });
-
-    // Category management - admin only
-    Route::prefix('categories')->name('api.v1.categories.')->group(function (): void {
-        Route::post('/', [CategoryController::class, 'store'])->name('store');
-        Route::put('{category}', [CategoryController::class, 'update'])->name('update');
-        Route::delete('{category}', [CategoryController::class, 'destroy'])->name('destroy');
-    });
-
-    Route::get('admin/categories', [CategoryController::class, 'adminIndex'])->name('api.v1.admin.categories.index');
 });
 
 // Password reset routes (public with rate limiting)
