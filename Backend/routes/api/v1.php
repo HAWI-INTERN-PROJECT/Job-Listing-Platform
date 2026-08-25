@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use App\Http\Controllers\Api\V1\JobPostController;
+use App\Http\Controllers\Api\V1\UserCVController;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Support\Facades\Route;
 
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health check
-Route::get('health', fn () => response()->json([
+Route::get('health', fn() => response()->json([
     'status' => 'healthy',
     'timestamp' => now()->toDateTimeString(),
 ]))->name('api.v1.health');
@@ -48,11 +49,17 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
+    // CV upload/download - protected by auth:sanctum
+    Route::prefix('users/cv')->name('api.v1.users.cv.')->group(function (): void {
+        Route::post('upload', [UserCVController::class, 'upload'])->name('upload');
+        Route::get('download', [UserCVController::class, 'download'])->name('download');
+    });
+
     // Protected feature routes requiring verified email address
     Route::middleware('verified')->group(function (): void {
         // Administrator Routes
-        Route::middleware(EnsureRole::class.':admin')->prefix('admin')->group(function (): void {
-            Route::get('dashboard', fn () => response()->json([
+        Route::middleware(EnsureRole::class . ':admin')->prefix('admin')->group(function (): void {
+            Route::get('dashboard', fn() => response()->json([
                 'success' => true,
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
@@ -67,8 +74,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         });
 
         // Employer Routes
-        Route::middleware(EnsureRole::class.':employer')->prefix('employer')->group(function (): void {
-            Route::get('dashboard', fn () => response()->json([
+        Route::middleware(EnsureRole::class . ':employer')->prefix('employer')->group(function (): void {
+            Route::get('dashboard', fn() => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employer',
             ]))->name('api.v1.employer.dashboard');
@@ -85,8 +92,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         });
 
         // Employee Routes
-        Route::middleware(EnsureRole::class.':employee')->prefix('employee')->group(function (): void {
-            Route::get('dashboard', fn () => response()->json([
+        Route::middleware(EnsureRole::class . ':employee')->prefix('employee')->group(function (): void {
+            Route::get('dashboard', fn() => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');
@@ -99,7 +106,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         });
 
         // Employer profiles - protected by auth:sanctum, verified & employer role
-        Route::middleware(EnsureRole::class.':employer')->prefix('employers')->name('api.v1.employers.')->group(function (): void {
+        Route::middleware(EnsureRole::class . ':employer')->prefix('employers')->name('api.v1.employers.')->group(function (): void {
             Route::get('/', [EmployerController::class, 'index'])->name('index');
             Route::post('/', [EmployerController::class, 'store'])->name('store');
             Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
@@ -108,7 +115,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         });
 
         // Category management - admin only & verified
-        Route::middleware(EnsureRole::class.':admin')->prefix('categories')->name('api.v1.categories.')->group(function (): void {
+        Route::middleware(EnsureRole::class . ':admin')->prefix('categories')->name('api.v1.categories.')->group(function (): void {
             Route::post('/', [CategoryController::class, 'store'])->name('store');
             Route::put('{category}', [CategoryController::class, 'update'])->name('update');
             Route::delete('{category}', [CategoryController::class, 'destroy'])->name('destroy');
