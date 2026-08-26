@@ -185,13 +185,16 @@ export default function ApplicantDetailsPage() {
                   Change Application Status
                 </p>
 
-                <select className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-                  <option>Submitted</option>
-                  <option selected>Under Review</option>
-                  <option>Shortlisted</option>
-                  <option>Rejected</option>
-                  <option>Hired</option>
-                </select>
+                <select
+  defaultValue="Under Review"
+  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+>
+  <option value="Submitted">Submitted</option>
+  <option value="Under Review">Under Review</option>
+  <option value="Shortlisted">Shortlisted</option>
+  <option value="Rejected">Rejected</option>
+  <option value="Hired">Hired</option>
+</select>
 
                 <Button className="mt-3 w-full">
                   Update Status
