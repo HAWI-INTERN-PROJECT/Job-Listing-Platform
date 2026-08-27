@@ -26,3 +26,8 @@ compose.override.yaml
 **/caddy
 frankenphp
 frankenphp-worker.php
+
+.env
+.env.testing
+.env.backup
+.env.production
