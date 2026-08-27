@@ -23,7 +23,7 @@ class EmployerController extends Controller
 
     public function pending(): JsonResponse
     {
-        if (auth()->user()->role !== 'admin') {
+        if (! auth()->user()->hasRole(\App\Enums\UserRole::ADMIN)) {
             return $this->forbidden('Only admins can view pending employers');
         }
 
@@ -58,7 +58,7 @@ class EmployerController extends Controller
 
     public function updateApprovalStatus(Request $request, Employer $employer): JsonResponse
     {
-        if (auth()->user()->role !== 'admin') {
+        if (! auth()->user()->hasRole(\App\Enums\UserRole::ADMIN)) {
             return $this->forbidden('Only admins can update employer approval status');
         }
 
