@@ -74,10 +74,12 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
         // Employer profiles - protected by auth:sanctum & verified
         Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
+            Route::get('pending', [EmployerController::class, 'pending'])->name('pending');
             Route::get('/', [EmployerController::class, 'index'])->name('index');
             Route::post('/', [EmployerController::class, 'store'])->name('store');
             Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
             Route::put('{employer}', [EmployerController::class, 'update'])->name('update');
+            Route::put('{employer}/approval-status', [EmployerController::class, 'updateApprovalStatus'])->name('approval-status');
             Route::delete('{employer}', [EmployerController::class, 'destroy'])->name('destroy');
         });
 

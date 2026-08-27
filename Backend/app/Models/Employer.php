@@ -19,6 +19,7 @@ class Employer extends Model
         'logo',
         'website',
         'location',
+        'approval_status',
     ];
 
     /**
