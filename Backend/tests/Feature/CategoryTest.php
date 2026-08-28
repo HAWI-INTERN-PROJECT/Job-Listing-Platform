@@ -100,4 +100,20 @@ class CategoryTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_unauthenticated_user_cannot_access_admin_categories(): void
+    {
+        $response = $this->getJson('/api/v1/admin/categories');
+
+        $response->assertStatus(401);
+    }
+
+    public function test_non_admin_cannot_access_admin_categories(): void
+    {
+        $jobSeeker = User::factory()->create(['role' => 'employee']);
+
+        $response = $this->actingAs($jobSeeker)->getJson('/api/v1/admin/categories');
+
+        $response->assertStatus(403);
+    }
 }

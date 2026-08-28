@@ -152,6 +152,94 @@ export default function App() {
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+  <Route
+    path="/login"
+    element={
+      <GuestRoute>
+        <LoginPage />
+      </GuestRoute>
+    }
+  />
+
+  <Route
+    path="/register"
+    element={
+      <GuestRoute>
+        <RegisterPage />
+      </GuestRoute>
+    }
+  />
+
+  <Route
+    path="/dashboard"
+    element={
+      <ProtectedRoute>
+        <DashboardPage />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/employer-dashboard"
+    element={
+      <ProtectedRoute>
+        <EmployerDashboardPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/my-job-posts"
+    element={
+      <ProtectedRoute>
+        <MyJobPostsPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/create-job"
+    element={
+      <ProtectedRoute>
+        <CreateJobPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/edit-job"
+    element={
+      <ProtectedRoute>
+        <EditJobPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route 
+    path="/job-applicants" 
+    element={
+      <ProtectedRoute>
+        <JobApplicantsPage />
+      </ProtectedRoute>
+    } 
+  />
+  <Route 
+    path="/applicant-details" 
+    element={
+      <ProtectedRoute>
+        <ApplicantDetailsPage />
+      </ProtectedRoute>
+    } 
+  />
+  <Route
+    path="/company-profile"
+    element={
+      <ProtectedRoute>
+        <CompanyProfilePage />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route path="*" element={<NotFoundPage />} />
+</Routes>
         </BrowserRouter>
 
         <Toaster position="top-right" richColors />

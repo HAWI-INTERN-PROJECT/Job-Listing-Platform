@@ -36,9 +36,9 @@ class RegisterRequest extends FormRequest
     }
 
     /**
-     * Prepare the data for validation.
+     * Handle a passed validation attempt.
      */
-    protected function prepareForValidation(): void
+    protected function passedValidation(): void
     {
         $this->merge([
             'role' => $this->role ?? UserRole::EMPLOYEE->value,
