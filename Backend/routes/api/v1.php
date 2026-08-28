@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\AdminJobPostController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
+use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +57,13 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('api.v1.admin.categories.index');
+
+            // Admin Job Moderation Workflow
+            Route::prefix('jobs')->name('api.v1.admin.jobs.')->group(function (): void {
+                Route::get('pending', [AdminJobPostController::class, 'pendingIndex'])->name('pending');
+                Route::post('{jobPost}/approve', [AdminJobPostController::class, 'approve'])->name('approve');
+                Route::post('{jobPost}/reject', [AdminJobPostController::class, 'reject'])->name('reject');
+            });
         });
 
         // Employer Routes
@@ -63,6 +72,16 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'success' => true,
                 'message' => 'Welcome Employer',
             ]))->name('api.v1.employer.dashboard');
+
+            // Employer Job Post Management
+            Route::prefix('jobs')->name('api.v1.employer.jobs.')->group(function (): void {
+                Route::get('/', [JobPostController::class, 'employerIndex'])->name('index');
+                Route::post('/', [JobPostController::class, 'store'])->name('store');
+                Route::put('{jobPost}', [JobPostController::class, 'update'])->name('update');
+                Route::delete('{jobPost}', [JobPostController::class, 'destroy'])->name('destroy');
+                Route::post('{jobPost}/submit', [JobPostController::class, 'submit'])->name('submit');
+                Route::post('{jobPost}/close', [JobPostController::class, 'close'])->name('close');
+            });
         });
 
         // Employee Routes
@@ -73,16 +92,18 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             ]))->name('api.v1.employee.dashboard');
         });
 
-        // Employer profiles - protected by auth:sanctum & verified
+        // Employer approval routes (Admin controlled with internal role check)
         Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
             Route::get('pending', [EmployerController::class, 'pending'])->name('pending');
+            Route::put('{employer}/approval-status', [EmployerController::class, 'updateApprovalStatus'])->name('approval-status');
+        });
+
         // Employer profiles - protected by auth:sanctum, verified & employer role
         Route::middleware(EnsureRole::class.':employer')->prefix('employers')->name('api.v1.employers.')->group(function (): void {
             Route::get('/', [EmployerController::class, 'index'])->name('index');
             Route::post('/', [EmployerController::class, 'store'])->name('store');
             Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
             Route::put('{employer}', [EmployerController::class, 'update'])->name('update');
-            Route::put('{employer}/approval-status', [EmployerController::class, 'updateApprovalStatus'])->name('approval-status');
             Route::delete('{employer}', [EmployerController::class, 'destroy'])->name('destroy');
         });
 
@@ -107,4 +128,10 @@ Route::middleware('throttle:6,1')->group(function (): void {
 Route::prefix('categories')->name('api.v1.categories.')->group(function (): void {
     Route::get('/', [CategoryController::class, 'index'])->name('index');
     Route::get('{category}', [CategoryController::class, 'show'])->name('show');
+});
+
+// Public Job Post Browsing
+Route::prefix('jobs')->name('api.v1.jobs.')->group(function (): void {
+    Route::get('/', [JobPostController::class, 'index'])->name('index');
+    Route::get('{jobPost:slug}', [JobPostController::class, 'show'])->name('show');
 });
