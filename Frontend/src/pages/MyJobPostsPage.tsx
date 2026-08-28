@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import {
   Bell,
@@ -24,6 +23,7 @@ import {
 
 const initialJobs = [
   {
+    id: 1,
     title: 'Senior React Developer',
     category: 'Technology',
     location: 'Addis Ababa',
@@ -33,6 +33,7 @@ const initialJobs = [
     status: 'Approved',
   },
   {
+    id: 2,
     title: 'UI/UX Designer',
     category: 'Design',
     location: 'Addis Ababa',
@@ -42,6 +43,7 @@ const initialJobs = [
     status: 'Pending',
   },
   {
+    id: 3,
     title: 'Marketing Manager',
     category: 'Marketing',
     location: 'Remote',
@@ -132,10 +134,10 @@ export default function MyJobPostsPage() {
     setCurrentPage(1)
   }
 
-  const handleCloseJob = (jobTitle: string) => {
+  const handleCloseJob = (jobId: number) => {
     setJobs((currentJobs) =>
       currentJobs.map((job) =>
-        job.title === jobTitle
+        job.id === jobId
           ? { ...job, status: 'Closed' }
           : job,
       ),
@@ -144,26 +146,20 @@ export default function MyJobPostsPage() {
 
   return (
     <div className="min-h-screen bg-muted/40 md:flex">
-      {/* Sidebar */}
       <EmployerSidebar />
 
-      {/* Main area */}
       <div className="min-w-0 flex-1">
-        {/* Header */}
         <header className="relative flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
           <h1 className="text-xl font-semibold">
             My Job Posts
           </h1>
 
           <div className="flex items-center gap-4">
-            {/* Notifications */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() =>
-                  setShowNotifications(
-                    !showNotifications,
-                  )
+                  setShowNotifications(!showNotifications)
                 }
                 className="rounded-full p-2 hover:bg-muted"
                 aria-label="Notifications"
@@ -194,7 +190,6 @@ export default function MyJobPostsPage() {
               )}
             </div>
 
-            {/* Profile */}
             <Link
               to="/company-profile"
               className="flex items-center gap-2 rounded-lg p-1 hover:bg-muted"
@@ -216,9 +211,7 @@ export default function MyJobPostsPage() {
           </div>
         </header>
 
-        {/* Content */}
         <main className="px-4 py-6 sm:px-6 lg:px-8">
-          {/* Page heading */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">
@@ -238,11 +231,9 @@ export default function MyJobPostsPage() {
             </Link>
           </div>
 
-          {/* Filters */}
           <Card>
             <CardContent className="p-4">
               <div className="grid gap-3 md:grid-cols-3">
-                {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
@@ -251,21 +242,16 @@ export default function MyJobPostsPage() {
                     placeholder="Search jobs"
                     value={searchTerm}
                     onChange={(event) =>
-                      handleSearchChange(
-                        event.target.value,
-                      )
+                      handleSearchChange(event.target.value)
                     }
                   />
                 </div>
 
-                {/* Status */}
                 <select
                   className="h-10 rounded-md border bg-background px-3 text-sm"
                   value={statusFilter}
                   onChange={(event) =>
-                    handleStatusChange(
-                      event.target.value,
-                    )
+                    handleStatusChange(event.target.value)
                   }
                 >
                   <option>All Status</option>
@@ -275,14 +261,11 @@ export default function MyJobPostsPage() {
                   <option>Closed</option>
                 </select>
 
-                {/* Employment type */}
                 <select
                   className="h-10 rounded-md border bg-background px-3 text-sm"
                   value={typeFilter}
                   onChange={(event) =>
-                    handleTypeChange(
-                      event.target.value,
-                    )
+                    handleTypeChange(event.target.value)
                   }
                 >
                   <option>All Employment Types</option>
@@ -295,7 +278,6 @@ export default function MyJobPostsPage() {
             </CardContent>
           </Card>
 
-          {/* Jobs table */}
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Job Posts</CardTitle>
@@ -344,7 +326,7 @@ export default function MyJobPostsPage() {
                     {paginatedJobs.length > 0 ? (
                       paginatedJobs.map((job) => (
                         <tr
-                          key={job.title}
+                          key={job.id}
                           className="border-b last:border-0 hover:bg-muted/20"
                         >
                           <td className="px-6 py-4 font-medium">
@@ -379,7 +361,6 @@ export default function MyJobPostsPage() {
 
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-1">
-                              {/* View */}
                               <Link to="/job-applicants">
                                 <Button
                                   variant="ghost"
@@ -389,7 +370,6 @@ export default function MyJobPostsPage() {
                                 </Button>
                               </Link>
 
-                              {/* Edit */}
                               <Link to="/edit-job">
                                 <Button
                                   variant="ghost"
@@ -399,7 +379,6 @@ export default function MyJobPostsPage() {
                                 </Button>
                               </Link>
 
-                              {/* Close */}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -407,9 +386,7 @@ export default function MyJobPostsPage() {
                                   job.status === 'Closed'
                                 }
                                 onClick={() =>
-                                  handleCloseJob(
-                                    job.title,
-                                  )
+                                  handleCloseJob(job.id)
                                 }
                               >
                                 {job.status === 'Closed'
@@ -417,7 +394,6 @@ export default function MyJobPostsPage() {
                                   : 'Close'}
                               </Button>
 
-                              {/* More */}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -444,7 +420,6 @@ export default function MyJobPostsPage() {
             </CardContent>
           </Card>
 
-          {/* Pagination */}
           <div className="flex items-center justify-between py-5">
             <p className="text-sm text-muted-foreground">
               Showing {paginatedJobs.length} of{' '}
@@ -505,7 +480,6 @@ export default function MyJobPostsPage() {
             </div>
           </div>
 
-          {/* Empty state */}
           <Card className="mt-4 hidden">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="mb-4 rounded-full bg-muted p-4">
@@ -534,4 +508,3 @@ export default function MyJobPostsPage() {
     </div>
   )
 }
-

@@ -1,5 +1,4 @@
-
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Building2,
   Camera,
@@ -62,6 +61,18 @@ export default function CompanyProfilePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+  return () => {
+    if (logo) {
+      URL.revokeObjectURL(logo)
+    }
+
+    if (savedLogo && savedLogo !== logo) {
+      URL.revokeObjectURL(savedLogo)
+    }
+  }
+}, [logo, savedLogo])
+
   function handleChange(
     event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -118,15 +129,12 @@ export default function CompanyProfilePage() {
 
   return (
     <div className="min-h-screen bg-muted/40 md:flex">
-      {/* Sidebar */}
       <EmployerSidebar />
 
-      {/* Main area */}
       <div className="min-w-0 flex-1">
         <EmployerHeader title="Company Profile" />
 
         <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-          {/* Page heading */}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               Company Profile
@@ -137,7 +145,6 @@ export default function CompanyProfilePage() {
             </p>
           </div>
 
-          {/* Success message */}
           {message && (
             <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               <CheckCircle className="h-5 w-5" />
@@ -145,10 +152,8 @@ export default function CompanyProfilePage() {
             </div>
           )}
 
-          {/* Company header */}
           <Card>
             <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center">
-              {/* Logo */}
               <div className="relative">
                 <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl border bg-primary text-3xl font-bold text-primary-foreground">
                   {logo ? (
@@ -180,7 +185,6 @@ export default function CompanyProfilePage() {
                 />
               </div>
 
-              {/* Company information */}
               <div className="flex-1">
                 <h2 className="text-xl font-bold">
                   {profile.companyName}
@@ -216,7 +220,6 @@ export default function CompanyProfilePage() {
           </Card>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* Company information */}
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Company Information</CardTitle>
@@ -383,7 +386,6 @@ export default function CompanyProfilePage() {
                   />
                 </div>
 
-                {/* Actions */}
                 <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
                   <Button
                     type="button"
@@ -405,7 +407,6 @@ export default function CompanyProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Right sidebar */}
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -482,4 +483,3 @@ export default function CompanyProfilePage() {
     </div>
   )
 }
-

@@ -54,6 +54,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'success' => true,
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
+            Route::get('categories', [CategoryController::class, 'adminIndex'])->name('api.v1.admin.categories.index');
         });
 
         // Employer Routes
@@ -75,6 +76,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         // Employer profiles - protected by auth:sanctum & verified
         Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
             Route::get('pending', [EmployerController::class, 'pending'])->name('pending');
+        // Employer profiles - protected by auth:sanctum, verified & employer role
+        Route::middleware(EnsureRole::class.':employer')->prefix('employers')->name('api.v1.employers.')->group(function (): void {
             Route::get('/', [EmployerController::class, 'index'])->name('index');
             Route::post('/', [EmployerController::class, 'store'])->name('store');
             Route::get('{employer}', [EmployerController::class, 'show'])->name('show');
@@ -84,13 +87,11 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
         });
 
         // Category management - admin only & verified
-        Route::prefix('categories')->name('api.v1.categories.')->group(function (): void {
+        Route::middleware(EnsureRole::class.':admin')->prefix('categories')->name('api.v1.categories.')->group(function (): void {
             Route::post('/', [CategoryController::class, 'store'])->name('store');
             Route::put('{category}', [CategoryController::class, 'update'])->name('update');
             Route::delete('{category}', [CategoryController::class, 'destroy'])->name('destroy');
         });
-
-        Route::get('admin/categories', [CategoryController::class, 'adminIndex'])->name('api.v1.admin.categories.index');
     });
 });
 

@@ -15,7 +15,16 @@ use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 
 /**
- * @property UserRole $role
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string $username
+ * @property UserRole|null $role
+ * @property Carbon|null $email_verified_at
+ * @property string $password
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -94,7 +103,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
         foreach ($roles as $role) {
             $roleValue = $role instanceof UserRole ? $role->value : $role;
-            if ($this->role->value === $roleValue) {
+            $userRoleValue = $this->role instanceof UserRole ? $this->role->value : $this->role;
+            if ($userRoleValue === $roleValue) {
                 return true;
             }
         }
