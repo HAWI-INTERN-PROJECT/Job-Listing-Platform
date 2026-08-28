@@ -40,7 +40,7 @@ class JobPostResource extends JsonResource
             'is_remote' => $this->is_remote,
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
-            'rejection_reason' => $this->when($this->status->value === 'rejected', $this->rejection_reason),
+            'rejection_reason' => $this->when($this->status === \App\Enums\JobStatus::REJECTED, $this->rejection_reason),
             'published_at' => $this->published_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
             'views_count' => $this->views_count,

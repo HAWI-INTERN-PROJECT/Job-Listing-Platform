@@ -13,8 +13,36 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property int $employer_id
+ * @property int $category_id
+ * @property string $title
+ * @property string $slug
+ * @property string $description
+ * @property array<int, string>|null $requirements
+ * @property array<int, string>|null $responsibilities
+ * @property JobType $job_type
+ * @property ExperienceLevel $experience_level
+ * @property string|null $location
+ * @property int|null $salary_min
+ * @property int|null $salary_max
+ * @property string $salary_currency
+ * @property bool $is_remote
+ * @property JobStatus $status
+ * @property string|null $rejection_reason
+ * @property Carbon|null $published_at
+ * @property Carbon|null $expires_at
+ * @property int $views_count
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property-read Employer|null $employer
+ * @property-read Category|null $category
+ */
 class JobPost extends Model
 {
     /** @use HasFactory<JobPostFactory> */
