@@ -64,38 +64,62 @@ export default function App() {
     }
   />
 
- <Route
-  path="/employer-dashboard"
-  element={
-    
-      <EmployerDashboardPage />
-    
-      }
-/>
-<Route
-  path="/my-job-posts"
-  element={<MyJobPostsPage />}
-/>
-
-<Route
-  path="/create-job"
-  element={<CreateJobPage />}
-/>
-<Route
-  path="/edit-job"
-  element={<EditJobPage />}
-/>
-<Route 
- path="/job-applicants" 
- element={<JobApplicantsPage />} />
- <Route 
-   path="/applicant-details" 
-   element={<ApplicantDetailsPage />} />
-
-   <Route
-  path="/company-profile"
-  element={<CompanyProfilePage />}
-/>
+  <Route
+    path="/employer-dashboard"
+    element={
+      <ProtectedRoute>
+        <EmployerDashboardPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/my-job-posts"
+    element={
+      <ProtectedRoute>
+        <MyJobPostsPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/create-job"
+    element={
+      <ProtectedRoute>
+        <CreateJobPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/edit-job"
+    element={
+      <ProtectedRoute>
+        <EditJobPage />
+      </ProtectedRoute>
+    }
+  />
+  <Route 
+    path="/job-applicants" 
+    element={
+      <ProtectedRoute>
+        <JobApplicantsPage />
+      </ProtectedRoute>
+    } 
+  />
+  <Route 
+    path="/applicant-details" 
+    element={
+      <ProtectedRoute>
+        <ApplicantDetailsPage />
+      </ProtectedRoute>
+    } 
+  />
+  <Route
+    path="/company-profile"
+    element={
+      <ProtectedRoute>
+        <CompanyProfilePage />
+      </ProtectedRoute>
+    }
+  />
 
   <Route path="*" element={<NotFoundPage />} />
 </Routes>
