@@ -18,6 +18,14 @@ import ApplicantDetailsPage from '@/pages/ApplicantDetailsPage'
 import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
 
+import AdminApplicationsPage from '@/pages/AdminApplicationsPage'
+import AdminJobsPage from '@/pages/AdminJobsPage'
+import AdminLayoutPage from '@/pages/AdminLayoutPage'
+import AdminOverviewPage from '@/pages/AdminOverviewPage'
+import AdminSettingsPage from '@/pages/AdminSettingsPage'
+import AdminUsersPage from '@/pages/AdminUsersPage'
+import AdmincompaniesPage from '@/pages/AdmincompaniesPage'
+
 const queryClient = new QueryClient()
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -150,96 +158,75 @@ export default function App() {
               }
             />
 
-            <Route path="*" element={<NotFoundPage />} />
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminLayoutPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/overview"
+              element={
+                <ProtectedRoute>
+                  <AdminOverviewPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/applications"
+              element={
+                <ProtectedRoute>
+                  <AdminApplicationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/jobs"
+              element={
+                <ProtectedRoute>
+                  <AdminJobsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute>
+                  <AdminUsersPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/companies"
+              element={
+                <ProtectedRoute>
+                  <AdmincompaniesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute>
+                  <AdminSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="*"
+              element={<NotFoundPage />}
+            />
           </Routes>
-  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-  <Route
-    path="/login"
-    element={
-      <GuestRoute>
-        <LoginPage />
-      </GuestRoute>
-    }
-  />
-
-  <Route
-    path="/register"
-    element={
-      <GuestRoute>
-        <RegisterPage />
-      </GuestRoute>
-    }
-  />
-
-  <Route
-    path="/dashboard"
-    element={
-      <ProtectedRoute>
-        <DashboardPage />
-      </ProtectedRoute>
-    }
-  />
-
-  <Route
-    path="/employer-dashboard"
-    element={
-      <ProtectedRoute>
-        <EmployerDashboardPage />
-      </ProtectedRoute>
-    }
-  />
-  <Route
-    path="/my-job-posts"
-    element={
-      <ProtectedRoute>
-        <MyJobPostsPage />
-      </ProtectedRoute>
-    }
-  />
-  <Route
-    path="/create-job"
-    element={
-      <ProtectedRoute>
-        <CreateJobPage />
-      </ProtectedRoute>
-    }
-  />
-  <Route
-    path="/edit-job"
-    element={
-      <ProtectedRoute>
-        <EditJobPage />
-      </ProtectedRoute>
-    }
-  />
-  <Route 
-    path="/job-applicants" 
-    element={
-      <ProtectedRoute>
-        <JobApplicantsPage />
-      </ProtectedRoute>
-    } 
-  />
-  <Route 
-    path="/applicant-details" 
-    element={
-      <ProtectedRoute>
-        <ApplicantDetailsPage />
-      </ProtectedRoute>
-    } 
-  />
-  <Route
-    path="/company-profile"
-    element={
-      <ProtectedRoute>
-        <CompanyProfilePage />
-      </ProtectedRoute>
-    }
-  />
-
-  <Route path="*" element={<NotFoundPage />} />
-</Routes>
         </BrowserRouter>
 
         <Toaster position="top-right" richColors />
