@@ -226,11 +226,11 @@ export default function App() {
               path="*"
               element={<NotFoundPage />}
             />
+                    <Route
+              path="*"
+              element={<NotFoundPage />}
+            />
           </Routes>
         </BrowserRouter>
 
         <Toaster position="top-right" richColors />
-      </QueryClientProvider>
-    </ErrorBoundary>
-  )
-}
