@@ -158,7 +158,9 @@ export default function App() {
               }
             />
 
-            {/* Admin Routes */}
+            {/* Admin Routes - nested under AdminLayoutPage so the sidebar/header
+               render once and every sub-page shows inside it via <Outlet />.
+               Only the parent needs ProtectedRoute; children inherit the guard. */}
             <Route
               path="/admin"
               element={
@@ -166,67 +168,17 @@ export default function App() {
                   <AdminLayoutPage />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="overview" element={<AdminOverviewPage />} />
+              <Route path="applications" element={<AdminApplicationsPage />} />
+              <Route path="jobs" element={<AdminJobsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="companies" element={<AdmincompaniesPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
 
             <Route
-              path="/admin/overview"
-              element={
-                <ProtectedRoute>
-                  <AdminOverviewPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/applications"
-              element={
-                <ProtectedRoute>
-                  <AdminApplicationsPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/jobs"
-              element={
-                <ProtectedRoute>
-                  <AdminJobsPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/users"
-              element={
-                <ProtectedRoute>
-                  <AdminUsersPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/companies"
-              element={
-                <ProtectedRoute>
-                  <AdmincompaniesPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin/settings"
-              element={
-                <ProtectedRoute>
-                  <AdminSettingsPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="*"
-              element={<NotFoundPage />}
-            />
-                    <Route
               path="*"
               element={<NotFoundPage />}
             />
@@ -234,3 +186,7 @@ export default function App() {
         </BrowserRouter>
 
         <Toaster position="top-right" richColors />
+      </QueryClientProvider>
+    </ErrorBoundary>
+  )
+}
