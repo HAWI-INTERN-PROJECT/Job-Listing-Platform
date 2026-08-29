@@ -17,6 +17,7 @@ import JobApplicantsPage from '@/pages/JobApplicantsPage'
 import ApplicantDetailsPage from '@/pages/ApplicantDetailsPage'
 import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
+import MyProfilePage from '@/pages/MyProfilePage'
 
 const queryClient = new QueryClient()
 
@@ -151,6 +152,14 @@ export default function App() {
             />
 
             <Route path="*" element={<NotFoundPage />} />
+                        <Route
+              path="/my-profile"
+              element={
+                <ProtectedRoute>
+                  <MyProfilePage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
           <Toaster position="top-right" richColors />
         </BrowserRouter>
