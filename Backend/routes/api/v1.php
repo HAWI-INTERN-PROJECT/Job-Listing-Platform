@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AdminJobPostController;
+use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
@@ -81,7 +82,11 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::delete('{jobPost}', [JobPostController::class, 'destroy'])->name('destroy');
                 Route::post('{jobPost}/submit', [JobPostController::class, 'submit'])->name('submit');
                 Route::post('{jobPost}/close', [JobPostController::class, 'close'])->name('close');
+                Route::get('{jobPost}/applicants', [ApplicationController::class, 'jobApplicants'])->name('applicants');
             });
+
+            // Application status management
+            Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
         });
 
         // Employee Routes
@@ -90,7 +95,15 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'success' => true,
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');
+
+            // Job Applications
+            Route::prefix('applications')->name('api.v1.employee.applications.')->group(function (): void {
+                Route::get('/', [ApplicationController::class, 'index'])->name('index');
+            });
         });
+
+        // Apply to a job post (employee role, enforced in FormRequest)
+        Route::post('jobs/{jobPost}/apply', [ApplicationController::class, 'store'])->name('api.v1.jobs.apply');
 
         // Employer approval routes (Admin controlled with internal role check)
         Route::prefix('employers')->name('api.v1.employers.')->group(function (): void {
