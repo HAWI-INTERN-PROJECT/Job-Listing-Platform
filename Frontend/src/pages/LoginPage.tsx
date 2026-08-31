@@ -28,9 +28,13 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data)
+      const user = await login(data)
       toast.success('Logged in successfully')
-      navigate('/dashboard')
+      if (user?.role === 'employer') {
+        navigate('/employer-dashboard')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Login failed'
       toast.error(message)

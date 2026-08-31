@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { useAuthStore } from '@/stores/auth'
+import type { UserRole } from '@/types'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 import LoginPage from '@/pages/LoginPage'
@@ -20,8 +22,33 @@ import SettingsPage from '@/pages/SettingsPage'
 
 const queryClient = new QueryClient()
 
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const { initialize } = useAuthStore()
+
+  useEffect(() => {
+    initialize()
+  }, [initialize])
+
+  return <>{children}</>
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading app session...</p>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isInitialized } = useAuthStore()
+
+  if (!isInitialized) {
+    return <LoadingFallback />
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
@@ -30,11 +57,41 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function RoleProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode
+  allowedRoles: UserRole[]
+}) {
+  const { isAuthenticated, isInitialized, user, hasRole } = useAuthStore()
+
+  if (!isInitialized) {
+    return <LoadingFallback />
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (user && !hasRole(allowedRoles)) {
+    const fallbackPath = user.role === 'employer' ? '/employer-dashboard' : '/dashboard'
+    return <Navigate to={fallbackPath} replace />
+  }
+
+  return <>{children}</>
+}
+
 function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isInitialized, user } = useAuthStore()
+
+  if (!isInitialized) {
+    return <LoadingFallback />
+  }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    const defaultPath = user?.role === 'employer' ? '/employer-dashboard' : '/dashboard'
+    return <Navigate to={defaultPath} replace />
   }
 
   return <>{children}</>
@@ -44,116 +101,118 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/"
-              element={<Navigate to="/dashboard" replace />}
-            />
+        <AuthInitializer>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={<Navigate to="/dashboard" replace />}
+              />
 
-            <Route
-              path="/login"
-              element={
-                <GuestRoute>
-                  <LoginPage />
-                </GuestRoute>
-              }
-            />
+              <Route
+                path="/login"
+                element={
+                  <GuestRoute>
+                    <LoginPage />
+                  </GuestRoute>
+                }
+              />
 
-            <Route
-              path="/register"
-              element={
-                <GuestRoute>
-                  <RegisterPage />
-                </GuestRoute>
-              }
-            />
+              <Route
+                path="/register"
+                element={
+                  <GuestRoute>
+                    <RegisterPage />
+                  </GuestRoute>
+                }
+              />
 
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/employer-dashboard"
-              element={
-                <ProtectedRoute>
-                  <EmployerDashboardPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/employer-dashboard"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <EmployerDashboardPage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/my-job-posts"
-              element={
-                <ProtectedRoute>
-                  <MyJobPostsPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/my-job-posts"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <MyJobPostsPage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/create-job"
-              element={
-                <ProtectedRoute>
-                  <CreateJobPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/create-job"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <CreateJobPage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/edit-job"
-              element={
-                <ProtectedRoute>
-                  <EditJobPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/edit-job"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <EditJobPage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/job-applicants"
-              element={
-                <ProtectedRoute>
-                  <JobApplicantsPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/job-applicants"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <JobApplicantsPage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/applicant-details"
-              element={
-                <ProtectedRoute>
-                  <ApplicantDetailsPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/applicant-details"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <ApplicantDetailsPage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/company-profile"
-              element={
-                <ProtectedRoute>
-                  <CompanyProfilePage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/company-profile"
+                element={
+                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <CompanyProfilePage />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-          <Toaster position="top-right" richColors />
-        </BrowserRouter>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+            <Toaster position="top-right" richColors />
+          </BrowserRouter>
+        </AuthInitializer>
       </QueryClientProvider>
     </ErrorBoundary>
   )
