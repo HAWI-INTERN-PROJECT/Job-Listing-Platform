@@ -19,6 +19,14 @@ import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
 import MyProfilePage from '@/pages/MyProfilePage'
 
+import AdminApplicationsPage from '@/pages/AdminApplicationsPage'
+import AdminJobsPage from '@/pages/AdminJobsPage'
+import AdminLayoutPage from '@/pages/AdminLayoutPage'
+import AdminOverviewPage from '@/pages/AdminOverviewPage'
+import AdminSettingsPage from '@/pages/AdminSettingsPage'
+import AdminUsersPage from '@/pages/AdminUsersPage'
+import AdmincompaniesPage from '@/pages/AdmincompaniesPage'
+
 const queryClient = new QueryClient()
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -151,8 +159,7 @@ export default function App() {
               }
             />
 
-            <Route path="*" element={<NotFoundPage />} />
-                        <Route
+            <Route
               path="/my-profile"
               element={
                 <ProtectedRoute>
@@ -160,9 +167,35 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Admin Routes - nested under AdminLayoutPage so the sidebar/header
+               render once and every sub-page shows inside it via <Outlet />.
+               Only the parent needs ProtectedRoute; children inherit the guard. */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminLayoutPage />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="overview" element={<AdminOverviewPage />} />
+              <Route path="applications" element={<AdminApplicationsPage />} />
+              <Route path="jobs" element={<AdminJobsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="companies" element={<AdmincompaniesPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
+
+            <Route
+              path="*"
+              element={<NotFoundPage />}
+            />
           </Routes>
-          <Toaster position="top-right" richColors />
         </BrowserRouter>
+
+        <Toaster position="top-right" richColors />
       </QueryClientProvider>
     </ErrorBoundary>
   )
