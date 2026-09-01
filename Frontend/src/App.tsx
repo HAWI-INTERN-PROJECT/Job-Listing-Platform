@@ -18,6 +18,7 @@ import ApplicantDetailsPage from '@/pages/ApplicantDetailsPage'
 import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
 import MyProfilePage from '@/pages/MyProfilePage'
+import MyApplicationsPage from '@/pages/MyApplicationsPage'
 
 import AdminApplicationsPage from '@/pages/AdminApplicationsPage'
 import AdminJobsPage from '@/pages/AdminJobsPage'
@@ -164,6 +165,15 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <MyProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/my-applications"
+              element={
+                <ProtectedRoute>
+                  <MyApplicationsPage />
                 </ProtectedRoute>
               }
             />
