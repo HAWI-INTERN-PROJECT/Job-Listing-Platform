@@ -19,6 +19,7 @@ import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
 import MyProfilePage from '@/pages/MyProfilePage'
 import MyApplicationsPage from '@/pages/MyApplicationsPage'
+import EditProfilePage from '@/pages/EditProfilePage'
 
 import AdminApplicationsPage from '@/pages/AdminApplicationsPage'
 import AdminJobsPage from '@/pages/AdminJobsPage'
@@ -168,6 +169,13 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route 
+            path="/edit-profile"
+             element={
+             <EditProfilePage />
+             } 
+             />
 
             <Route
               path="/my-applications"
