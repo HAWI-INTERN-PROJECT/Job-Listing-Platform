@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ApplicationController extends Controller
 {
@@ -95,5 +96,23 @@ class ApplicationController extends Controller
         $application->update(['status' => $request->status]);
 
         return $this->success($application, 'Application status updated successfully');
+    }
+
+    /**
+     * Download an applicant's CV (employer only, for their own job posts).
+     */
+    public function downloadCv(Request $request, Application $application): StreamedResponse|JsonResponse
+    {
+        $employer = $request->user()->employer;
+
+        if (! $employer || $application->jobPost->employer_id !== $employer->id) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        if (! Storage::disk('local')->exists($application->cv_path)) {
+            return $this->error('CV not found', 404);
+        }
+
+        return Storage::disk('local')->download($application->cv_path);
     }
 }
