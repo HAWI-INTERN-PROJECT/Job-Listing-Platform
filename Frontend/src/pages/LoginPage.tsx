@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
+import axios from 'axios'
+
 export default function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -36,6 +38,13 @@ export default function LoginPage() {
         navigate('/dashboard')
       }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const serverData = error.response.data
+        if (serverData.message) {
+          toast.error(serverData.message)
+          return
+        }
+      }
       const message = error instanceof Error ? error.message : 'Login failed'
       toast.error(message)
     }

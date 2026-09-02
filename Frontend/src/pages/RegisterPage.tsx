@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
+import axios from 'axios'
+
 export default function RegisterPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -31,7 +33,7 @@ export default function RegisterPage() {
 
   type RegisterForm = z.infer<typeof registerSchema>
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<RegisterForm>({
+  const { register, handleSubmit, setValue, watch, setError, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: 'employee',
@@ -50,6 +52,27 @@ export default function RegisterPage() {
         navigate('/dashboard')
       }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const serverData = error.response.data
+        if (serverData.errors && typeof serverData.errors === 'object') {
+          let firstErrorMessage = ''
+          Object.entries(serverData.errors).forEach(([field, messages]) => {
+            const msgList = messages as string[]
+            if (msgList && msgList[0]) {
+              if (!firstErrorMessage) firstErrorMessage = msgList[0]
+              if (['name', 'email', 'username', 'role', 'password', 'password_confirmation'].includes(field)) {
+                setError(field as keyof RegisterForm, { message: msgList[0] })
+              }
+            }
+          })
+          toast.error(firstErrorMessage || serverData.message || 'Validation failed')
+          return
+        }
+        if (serverData.message) {
+          toast.error(serverData.message)
+          return
+        }
+      }
       const message = error instanceof Error ? error.message : 'Registration failed'
       toast.error(message)
     }
