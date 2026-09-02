@@ -22,7 +22,7 @@ export default function RegisterPage() {
     email: z.string().email('Invalid email address'),
     username: z.string().min(3, 'Username must be at least 3 characters'),
     role: z.enum(['employee', 'employer'], {
-      required_error: 'Please select an account type',
+      message: 'Please select an account type',
     }),
     password: z.string().min(8, t('auth.passwordMin')),
     password_confirmation: z.string(),
