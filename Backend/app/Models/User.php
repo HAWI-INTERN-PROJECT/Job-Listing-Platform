@@ -7,6 +7,7 @@ use App\Notifications\V1\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -23,6 +24,8 @@ use Laravel\Sanctum\NewAccessToken;
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $remember_token
+ * @property string|null $cv_path
+ * @property Carbon|null $cv_uploaded_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -42,6 +45,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'username',
         'role',
         'password',
+        'cv_path',
+        'cv_uploaded_at',
     ];
 
     /**
@@ -104,6 +109,7 @@ class User extends Authenticatable implements MustVerifyEmail
         foreach ($roles as $role) {
             $roleValue = $role instanceof UserRole ? $role->value : $role;
             $userRoleValue = $this->role instanceof UserRole ? $this->role->value : $this->role;
+
             if ($userRoleValue === $roleValue) {
                 return true;
             }
@@ -132,11 +138,20 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<Application, $this>
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class);
+    }
+
+    /**
      * Create a personal access token with custom expiration.
      */
     public function createAccessToken(bool $rememberMe = false): NewAccessToken
     {
         $newToken = $this->createToken('Personal Access Token');
+
         $expires = $rememberMe
             ? Carbon::now()->addMonths(6)
             : Carbon::now()->addDay();
