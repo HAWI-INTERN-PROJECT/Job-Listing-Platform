@@ -85,7 +85,14 @@ function RoleProtectedRoute({
   }
 
   if (user && !hasRole(allowedRoles)) {
-    const fallbackPath = user.role === 'employer' ? '/employer-dashboard' : '/dashboard'
+    const fallbackPath =
+      user.role === 'employer'
+        ? '/employer-dashboard'
+        : user.role === 'employee'
+          ? '/my-applications'
+          : user.role === 'admin'
+            ? '/admin'
+            : '/dashboard'
     return <Navigate to={fallbackPath} replace />
   }
 
@@ -100,7 +107,14 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
-    const defaultPath = user?.role === 'employer' ? '/employer-dashboard' : '/dashboard'
+    const defaultPath =
+      user?.role === 'employer'
+        ? '/employer-dashboard'
+        : user?.role === 'employee'
+          ? '/my-applications'
+          : user?.role === 'admin'
+            ? '/admin'
+            : '/dashboard'
     return <Navigate to={defaultPath} replace />
   }
 

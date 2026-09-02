@@ -48,6 +48,10 @@ export default function RegisterPage() {
       toast.success('Account created successfully')
       if (user?.role === 'employer') {
         navigate('/employer-dashboard')
+      } else if (user?.role === 'employee') {
+        navigate('/my-applications')
+      } else if (user?.role === 'admin') {
+        navigate('/admin')
       } else {
         navigate('/dashboard')
       }
