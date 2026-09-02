@@ -27,6 +27,7 @@ import AdminOverviewPage from '@/pages/AdminOverviewPage'
 import AdminSettingsPage from '@/pages/AdminSettingsPage'
 import AdminUsersPage from '@/pages/AdminUsersPage'
 import AdmincompaniesPage from '@/pages/AdmincompaniesPage'
+import CVResumePage from './pages/CVResumePage'
 
 const queryClient = new QueryClient()
 
@@ -177,10 +178,22 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+        
 
+    
             {/* Admin Routes - nested under AdminLayoutPage so the sidebar/header
                render once and every sub-page shows inside it via <Outlet />.
                Only the parent needs ProtectedRoute; children inherit the guard. */}
+
+
+              <Route
+  path="/cv-resume"
+  element={
+    <ProtectedRoute>
+      <CVResumePage />
+    </ProtectedRoute>
+  }
+/>
             <Route
               path="/admin"
               element={
