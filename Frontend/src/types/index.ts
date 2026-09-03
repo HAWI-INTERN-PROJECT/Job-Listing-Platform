@@ -1,8 +1,12 @@
+export type UserRole = 'admin' | 'employer' | 'employee'
+
 export interface User {
   id: number
   name: string
   email: string
   username: string
+  role: UserRole
+  role_label?: string
   email_verified_at: string | null
   created_at: string
   updated_at: string
@@ -12,7 +16,7 @@ export interface AuthResponse {
   user: User
   access_token: string
   token_type: string
-  expires_at: string
+  expires_at?: string
 }
 
 export interface LoginRequest {
@@ -27,6 +31,7 @@ export interface RegisterRequest {
   username: string
   password: string
   password_confirmation: string
+  role: UserRole
   remember_me?: boolean
 }
 
