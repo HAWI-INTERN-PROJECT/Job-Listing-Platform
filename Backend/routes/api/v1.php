@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AdminJobPostController;
+use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -65,6 +66,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
             Route::get('categories', [CategoryController::class, 'adminIndex'])->name('api.v1.admin.categories.index');
+            Route::get('stats', [AdminStatsController::class, 'index'])->name('api.v1.admin.stats');
 
             // Admin Job Moderation Workflow
             Route::prefix('jobs')->name('api.v1.admin.jobs.')->group(function (): void {
