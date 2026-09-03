@@ -18,6 +18,8 @@ export default function DashboardPage() {
       getProfile().catch(() => {
         navigate('/login')
       })
+    } else if (user.role === 'employer') {
+      navigate('/employer-dashboard', { replace: true })
     }
   }, [user, getProfile, navigate])
 

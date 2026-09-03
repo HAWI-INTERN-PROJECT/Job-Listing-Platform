@@ -55,7 +55,7 @@ describe('Auth Store', () => {
   })
 
   it('logs in user', async () => {
-    const mockUser = { id: 1, name: 'John', email: 'john@example.com', username: 'john', email_verified_at: null, created_at: '2026-01-01', updated_at: '2026-01-01' }
+    const mockUser = { id: 1, name: 'John', email: 'john@example.com', username: 'john', role: 'employee' as const, email_verified_at: null, created_at: '2026-01-01', updated_at: '2026-01-01' }
     vi.mocked(api.post).mockResolvedValue({
       data: {
         user: mockUser,
@@ -82,7 +82,7 @@ describe('Auth Store', () => {
     // First set authenticated state
     act(() => {
       useAuthStore.setState({
-        user: { id: 1, name: 'John', email: 'john@example.com', username: 'john', email_verified_at: null, created_at: '2026-01-01', updated_at: '2026-01-01' },
+        user: { id: 1, name: 'John', email: 'john@example.com', username: 'john', role: 'employee', email_verified_at: null, created_at: '2026-01-01', updated_at: '2026-01-01' },
         token: 'token-123',
         isAuthenticated: true,
       })
@@ -99,7 +99,7 @@ describe('Auth Store', () => {
   })
 
   it('fetches user profile', async () => {
-    const mockUser = { id: 1, name: 'John', email: 'john@example.com', username: 'john', email_verified_at: null, created_at: '2026-01-01', updated_at: '2026-01-01' }
+    const mockUser = { id: 1, name: 'John', email: 'john@example.com', username: 'john', role: 'employee' as const, email_verified_at: null, created_at: '2026-01-01', updated_at: '2026-01-01' }
     vi.mocked(api.get).mockResolvedValue({ data: { data: mockUser } })
 
     const { result } = renderHook(() => useAuthStore())
