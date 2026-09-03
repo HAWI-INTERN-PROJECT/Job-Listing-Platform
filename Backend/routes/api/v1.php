@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AdminApplicationController;
+use App\Http\Controllers\Api\V1\AdminCompanyController;
 use App\Http\Controllers\Api\V1\AdminJobPostController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminUserController;
@@ -92,6 +93,16 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::patch('{application}/status', [AdminApplicationController::class, 'updateStatus'])->name('update-status');
                 Route::delete('{application}', [AdminApplicationController::class, 'destroy'])->name('destroy');
                 Route::get('{application}/download-cv', [AdminApplicationController::class, 'downloadCv'])->name('download-cv');
+            });
+
+            // Admin Companies / Employers Management Workflow
+            Route::prefix('companies')->name('api.v1.admin.companies.')->group(function (): void {
+                Route::get('/', [AdminCompanyController::class, 'index'])->name('index');
+                Route::get('{employer}', [AdminCompanyController::class, 'show'])->name('show');
+                Route::patch('{employer}/status', [AdminCompanyController::class, 'updateStatus'])->name('update-status');
+                Route::post('{employer}/approve', [AdminCompanyController::class, 'approve'])->name('approve');
+                Route::post('{employer}/reject', [AdminCompanyController::class, 'reject'])->name('reject');
+                Route::delete('{employer}', [AdminCompanyController::class, 'destroy'])->name('destroy');
             });
         });
 
