@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AdminJobPostController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
+use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -75,6 +76,13 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::post('{jobPost}/approve', [AdminJobPostController::class, 'approve'])->name('approve');
                 Route::post('{jobPost}/reject', [AdminJobPostController::class, 'reject'])->name('reject');
                 Route::delete('{jobPost}', [AdminJobPostController::class, 'destroy'])->name('destroy');
+            });
+
+            // Admin User Management Workflow
+            Route::prefix('users')->name('api.v1.admin.users.')->group(function (): void {
+                Route::get('/', [AdminUserController::class, 'index'])->name('index');
+                Route::post('{user}/toggle-suspend', [AdminUserController::class, 'toggleSuspend'])->name('toggle-suspend');
+                Route::delete('{user}', [AdminUserController::class, 'destroy'])->name('destroy');
             });
         });
 
