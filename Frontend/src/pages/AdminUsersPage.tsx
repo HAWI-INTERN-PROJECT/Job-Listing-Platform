@@ -6,7 +6,6 @@ import {
   MoreVertical,
   Loader2,
   AlertCircle,
-  User as UserIcon,
   Mail,
   Building2,
   Calendar,
