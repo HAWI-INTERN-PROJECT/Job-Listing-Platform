@@ -144,6 +144,7 @@ describe('RegisterPage', () => {
       name: 'John Doe',
       email: 'john@example.com',
       username: 'johndoe',
+      role: 'employee',
       password: 'password123',
       password_confirmation: 'password123',
     })
