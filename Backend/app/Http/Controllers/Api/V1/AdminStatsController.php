@@ -28,7 +28,7 @@ class AdminStatsController extends Controller
             ->map(fn (JobPost $job) => [
                 'id' => $job->id,
                 'title' => $job->title,
-                'company' => $job->employer?->company_name ?? 'N/A',
+                'company' => $job->employer->company_name ?? 'N/A',
                 'applications' => $job->applications_count,
                 'status' => $job->status->label(),
             ]);
