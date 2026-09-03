@@ -83,6 +83,11 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'message' => 'Welcome Employer',
             ]))->name('api.v1.employer.dashboard');
 
+            // Employer Profile Management
+            Route::get('profile', [EmployerController::class, 'myProfile'])->name('api.v1.employer.profile');
+            Route::post('profile', [EmployerController::class, 'updateMyProfile'])->name('api.v1.employer.profile.update');
+            Route::put('profile', [EmployerController::class, 'updateMyProfile'])->name('api.v1.employer.profile.put');
+
             // Employer Job Post Management
             Route::prefix('jobs')->name('api.v1.employer.jobs.')->group(function (): void {
                 Route::get('/', [JobPostController::class, 'employerIndex'])->name('index');

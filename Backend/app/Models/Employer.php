@@ -15,10 +15,14 @@ class Employer extends Model
     protected $fillable = [
         'user_id',
         'company_name',
+        'email',
+        'phone',
         'description',
         'logo',
         'website',
         'location',
+        'industry',
+        'company_size',
         'approval_status',
     ];
 

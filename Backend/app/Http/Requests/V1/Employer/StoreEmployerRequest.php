@@ -19,10 +19,14 @@ class StoreEmployerRequest extends FormRequest
     {
         return [
             'company_name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'website' => ['nullable', 'url'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'industry' => ['nullable', 'string', 'max:100'],
+            'company_size' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string'],
+            'logo' => ['nullable'],
         ];
     }
 }

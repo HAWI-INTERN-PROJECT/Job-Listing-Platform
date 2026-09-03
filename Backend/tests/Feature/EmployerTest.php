@@ -96,4 +96,61 @@ class EmployerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseMissing('employers', ['id' => $employer->id]);
     }
+
+    public function test_employer_can_get_my_profile(): void
+    {
+        $user = User::factory()->create(['role' => 'employer']);
+        $employer = Employer::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/employer/profile');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'id' => $employer->id,
+                    'user_id' => $user->id,
+                ],
+            ]);
+    }
+
+    public function test_employer_can_update_my_profile_with_all_fields(): void
+    {
+        $user = User::factory()->create(['role' => 'employer']);
+
+        $payload = [
+            'company_name' => 'HireStream Tech',
+            'email' => 'contact@hirestream.com',
+            'phone' => '+251 911 234 567',
+            'location' => 'Addis Ababa, Ethiopia',
+            'website' => 'https://hirestream.com',
+            'industry' => 'Technology',
+            'company_size' => '51–200 employees',
+            'description' => 'Leading digital solution provider',
+        ];
+
+        $response = $this->actingAs($user)->postJson('/api/v1/employer/profile', $payload);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'company_name' => 'HireStream Tech',
+                    'email' => 'contact@hirestream.com',
+                    'phone' => '+251 911 234 567',
+                    'location' => 'Addis Ababa, Ethiopia',
+                    'industry' => 'Technology',
+                    'company_size' => '51–200 employees',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('employers', [
+            'user_id' => $user->id,
+            'company_name' => 'HireStream Tech',
+            'email' => 'contact@hirestream.com',
+            'phone' => '+251 911 234 567',
+            'industry' => 'Technology',
+            'company_size' => '51–200 employees',
+        ]);
+    }
 }

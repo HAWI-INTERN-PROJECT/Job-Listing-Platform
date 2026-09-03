@@ -9,6 +9,7 @@ use App\Http\Traits\ApiResponse;
 use App\Models\Employer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EmployerController extends Controller
 {
@@ -19,6 +20,44 @@ class EmployerController extends Controller
         $employers = Employer::with('user')->paginate(15);
 
         return $this->success($employers, 'Employers retrieved successfully');
+    }
+
+    public function myProfile(Request $request): JsonResponse
+    {
+        $employer = $request->user()->employer;
+
+        if (! $employer) {
+            return $this->error('Employer profile not found', 404);
+        }
+
+        return $this->success($employer->load('user'), 'Employer profile retrieved successfully');
+    }
+
+    public function updateMyProfile(UpdateEmployerRequest $request): JsonResponse
+    {
+        $employer = $request->user()->employer;
+
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            if ($employer && $employer->logo && Storage::disk('public')->exists($employer->logo)) {
+                Storage::disk('public')->delete($employer->logo);
+            }
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        }
+
+        if (! $employer) {
+            $employer = Employer::create([
+                ...$data,
+                'user_id' => $request->user()->id,
+            ]);
+
+            return $this->created($employer, 'Employer profile created successfully');
+        }
+
+        $employer->update($data);
+
+        return $this->success($employer, 'Employer profile updated successfully');
     }
 
     public function pending(): JsonResponse
@@ -36,8 +75,14 @@ class EmployerController extends Controller
 
     public function store(StoreEmployerRequest $request): JsonResponse
     {
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        }
+
         $employer = Employer::create([
-            ...$request->validated(),
+            ...$data,
             'user_id' => $request->user()->id,
         ]);
 
@@ -51,7 +96,16 @@ class EmployerController extends Controller
 
     public function update(UpdateEmployerRequest $request, Employer $employer): JsonResponse
     {
-        $employer->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            if ($employer->logo && Storage::disk('public')->exists($employer->logo)) {
+                Storage::disk('public')->delete($employer->logo);
+            }
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        }
+
+        $employer->update($data);
 
         return $this->success($employer, 'Employer profile updated successfully');
     }
@@ -73,6 +127,10 @@ class EmployerController extends Controller
 
     public function destroy(Employer $employer): JsonResponse
     {
+        if ($employer->logo && Storage::disk('public')->exists($employer->logo)) {
+            Storage::disk('public')->delete($employer->logo);
+        }
+
         $employer->delete();
 
         return $this->deleted('Employer profile deleted successfully');
