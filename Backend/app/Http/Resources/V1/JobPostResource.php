@@ -44,6 +44,7 @@ class JobPostResource extends JsonResource
             'published_at' => $this->published_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
             'views_count' => $this->views_count,
+            'applications_count' => $this->applications_count ?? 0,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'employer' => $this->whenLoaded('employer', fn () => [

@@ -286,4 +286,41 @@ class JobPostWorkflowTest extends TestCase
             ->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.title', 'DevOps Cloud Engineer');
     }
+
+    public function test_admin_can_list_all_job_posts_with_status_filter(): void
+    {
+        JobPost::factory()->published()->create([
+            'title' => 'Published Job',
+            'category_id' => $this->category->id,
+        ]);
+
+        JobPost::factory()->pending()->create([
+            'title' => 'Pending Job',
+            'category_id' => $this->category->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/v1/admin/jobs?status=pending_approval');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.title', 'Pending Job');
+    }
+
+    public function test_admin_can_delete_job_post(): void
+    {
+        $job = JobPost::factory()->published()->create([
+            'category_id' => $this->category->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->deleteJson("/api/v1/admin/jobs/{$job->id}");
+
+        $response->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        $this->assertSoftDeleted('job_posts', [
+            'id' => $job->id,
+        ]);
+    }
 }
