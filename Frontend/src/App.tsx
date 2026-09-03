@@ -29,6 +29,7 @@ import AdminOverviewPage from '@/pages/AdminOverviewPage'
 import AdminSettingsPage from '@/pages/AdminSettingsPage'
 import AdminUsersPage from '@/pages/AdminUsersPage'
 import AdmincompaniesPage from '@/pages/AdmincompaniesPage'
+import CVResumePage from './pages/CVResumePage'
 
 const queryClient = new QueryClient()
 
@@ -246,6 +247,15 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MyApplicationsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/cv-resume"
+                element={
+                  <ProtectedRoute>
+                    <CVResumePage />
                   </ProtectedRoute>
                 }
               />
