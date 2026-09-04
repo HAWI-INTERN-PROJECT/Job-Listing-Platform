@@ -21,6 +21,7 @@ import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
 import MyProfilePage from '@/pages/MyProfilePage'
 import MyApplicationsPage from '@/pages/MyApplicationsPage'
+import EditProfilePage from '@/pages/EditProfilePage'
 
 import AdminApplicationsPage from '@/pages/AdminApplicationsPage'
 import AdminJobsPage from '@/pages/AdminJobsPage'
@@ -242,14 +243,23 @@ export default function App() {
                 }
               />
 
-              <Route
-                path="/my-applications"
+               <Route
+                path="/edit-profile"
                 element={
                   <ProtectedRoute>
-                    <MyApplicationsPage />
+                    <EditProfilePage />
                   </ProtectedRoute>
                 }
               />
+
+            <Route
+              path="/my-applications"
+              element={
+                <ProtectedRoute>
+                  <MyApplicationsPage />
+                </ProtectedRoute>
+              }
+            />
 
               <Route
                 path="/cv-resume"

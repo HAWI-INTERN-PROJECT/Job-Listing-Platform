@@ -143,9 +143,12 @@ export default function MyProfilePage() {
                   </div>
                 </div>
               </div>
-              <button className="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-md">
-                Edit Profile
-              </button>
+              <button
+              onClick={() => navigate('/edit-profile')}
+            className="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-md"
+>
+           Edit Profile 
+           </button>
             </div>
 
             <div className="bg-background border rounded-lg p-5">
