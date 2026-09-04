@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\AdminApplicationController;
 use App\Http\Controllers\Api\V1\AdminJobPostController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminUserController;
@@ -83,6 +84,14 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::get('/', [AdminUserController::class, 'index'])->name('index');
                 Route::post('{user}/toggle-suspend', [AdminUserController::class, 'toggleSuspend'])->name('toggle-suspend');
                 Route::delete('{user}', [AdminUserController::class, 'destroy'])->name('destroy');
+            });
+
+            // Admin Application Management Workflow
+            Route::prefix('applications')->name('api.v1.admin.applications.')->group(function (): void {
+                Route::get('/', [AdminApplicationController::class, 'index'])->name('index');
+                Route::patch('{application}/status', [AdminApplicationController::class, 'updateStatus'])->name('update-status');
+                Route::delete('{application}', [AdminApplicationController::class, 'destroy'])->name('destroy');
+                Route::get('{application}/download-cv', [AdminApplicationController::class, 'downloadCv'])->name('download-cv');
             });
         });
 
