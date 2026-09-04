@@ -11,7 +11,11 @@ class UpdateEmployerRequest extends FormRequest
     {
         $employer = $this->route('employer');
 
-        return $this->user() !== null && $this->user()->id === $employer->user_id;
+        if ($employer) {
+            return $this->user() !== null && (int) $this->user()->id === (int) $employer->user_id;
+        }
+
+        return $this->user()?->isEmployer() ?? false;
     }
 
     /**
@@ -21,10 +25,14 @@ class UpdateEmployerRequest extends FormRequest
     {
         return [
             'company_name' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'website' => ['nullable', 'url'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'industry' => ['nullable', 'string', 'max:100'],
+            'company_size' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string'],
+            'logo' => ['nullable'],
         ];
     }
 }
