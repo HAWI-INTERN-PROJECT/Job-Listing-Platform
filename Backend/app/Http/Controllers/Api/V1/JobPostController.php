@@ -89,8 +89,19 @@ class JobPostController extends Controller
 
         $employer = $request->user()->employer;
 
+        if (! $employer) {
+            return $this->error('Please complete your company profile before creating a job post.', 400);
+        }
+
         $validated = $request->validated();
         unset($validated['submit_now']);
+
+        if (isset($validated['requirements']) && is_string($validated['requirements'])) {
+            $validated['requirements'] = array_values(array_filter(array_map('trim', explode("\n", $validated['requirements']))));
+        }
+        if (isset($validated['responsibilities']) && is_string($validated['responsibilities'])) {
+            $validated['responsibilities'] = array_values(array_filter(array_map('trim', explode("\n", $validated['responsibilities']))));
+        }
 
         $job = JobPost::create([
             ...$validated,
