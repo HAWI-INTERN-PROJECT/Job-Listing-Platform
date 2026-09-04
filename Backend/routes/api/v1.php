@@ -70,9 +70,11 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
             // Admin Job Moderation Workflow
             Route::prefix('jobs')->name('api.v1.admin.jobs.')->group(function (): void {
+                Route::get('/', [AdminJobPostController::class, 'index'])->name('index');
                 Route::get('pending', [AdminJobPostController::class, 'pendingIndex'])->name('pending');
                 Route::post('{jobPost}/approve', [AdminJobPostController::class, 'approve'])->name('approve');
                 Route::post('{jobPost}/reject', [AdminJobPostController::class, 'reject'])->name('reject');
+                Route::delete('{jobPost}', [AdminJobPostController::class, 'destroy'])->name('destroy');
             });
         });
 
