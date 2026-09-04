@@ -8,6 +8,7 @@ use App\Http\Requests\V1\Application\StoreApplicationRequest;
 use App\Http\Traits\ApiResponse;
 use App\Models\Application;
 use App\Models\JobPost;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,7 @@ class ApplicationController extends Controller
      */
     public function store(StoreApplicationRequest $request, JobPost $jobPost): JsonResponse
     {
+        /** @var User $user */
         $user = $request->user();
 
         if (! $user->cv_path || ! Storage::disk('local')->exists($user->cv_path)) {
@@ -65,7 +67,9 @@ class ApplicationController extends Controller
      */
     public function jobApplicants(Request $request, JobPost $jobPost): JsonResponse
     {
-        $employer = $request->user()->employer;
+        /** @var User $user */
+        $user = $request->user();
+        $employer = $user->employer;
 
         if (! $employer || $jobPost->employer_id !== $employer->id) {
             return $this->error('Unauthorized', 403);
@@ -83,7 +87,9 @@ class ApplicationController extends Controller
      */
     public function updateStatus(Request $request, Application $application): JsonResponse
     {
-        $employer = $request->user()->employer;
+        /** @var User $user */
+        $user = $request->user();
+        $employer = $user->employer;
 
         if (! $employer || $application->jobPost->employer_id !== $employer->id) {
             return $this->error('Unauthorized', 403);
@@ -103,7 +109,9 @@ class ApplicationController extends Controller
      */
     public function downloadCv(Request $request, Application $application): StreamedResponse|JsonResponse
     {
-        $employer = $request->user()->employer;
+        /** @var User $user */
+        $user = $request->user();
+        $employer = $user->employer;
 
         if (! $employer || $application->jobPost->employer_id !== $employer->id) {
             return $this->error('Unauthorized', 403);
