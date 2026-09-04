@@ -2,20 +2,13 @@
 
 namespace App\Http\Resources\V1;
 
-use App\Enums\UserRole;
-use Carbon\Carbon;
+use App\Models\Employer;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @property-read int $id
- * @property-read string $name
- * @property-read string $email
- * @property-read string $username
- * @property-read UserRole|null $role
- * @property-read Carbon|null $email_verified_at
- * @property-read Carbon|null $created_at
- * @property-read Carbon|null $updated_at
+ * @mixin User
  */
 class UserResource extends JsonResource
 {
@@ -33,9 +26,26 @@ class UserResource extends JsonResource
             'username' => $this->username,
             'role' => $this->role?->value,
             'role_label' => $this->role?->label(),
+            'is_suspended' => (bool) $this->is_suspended,
+            'status' => $this->is_suspended ? 'Suspended' : 'Active',
             'email_verified_at' => $this->email_verified_at?->toDateTimeString(),
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),
+            'employer' => $this->whenLoaded('employer', function (): ?array {
+                /** @var Employer|null $employer */
+                $employer = $this->employer;
+
+                if (! $employer) {
+                    return null;
+                }
+
+                return [
+                    'id' => $employer->id,
+                    'company_name' => $employer->company_name,
+                    'logo' => $employer->logo,
+                    'approval_status' => $employer->approval_status,
+                ];
+            }),
         ];
     }
 }
