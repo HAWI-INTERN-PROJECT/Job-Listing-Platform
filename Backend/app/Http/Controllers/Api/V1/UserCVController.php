@@ -28,6 +28,7 @@ class UserCVController extends Controller
 
         $user->update([
             'cv_path' => $path,
+            'cv_original_name' => $file->getClientOriginalName(),
             'cv_uploaded_at' => now(),
         ]);
 
@@ -61,7 +62,7 @@ class UserCVController extends Controller
             'has_cv' => (bool) $hasCv,
             'cv_path' => $hasCv ? $user->cv_path : null,
             'cv_uploaded_at' => $hasCv ? $user->cv_uploaded_at : null,
-            'file_name' => $hasCv ? basename($user->cv_path) : null,
+            'file_name' => $hasCv ? $user->cv_original_name : null,
             'file_size' => $hasCv ? Storage::disk('local')->size($user->cv_path) : null,
         ], 'CV status retrieved successfully');
     }
