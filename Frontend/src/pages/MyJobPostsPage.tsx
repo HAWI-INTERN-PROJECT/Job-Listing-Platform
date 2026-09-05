@@ -145,10 +145,10 @@ export default function MyJobPostsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 md:flex">
+    <div className="h-screen flex overflow-hidden bg-muted/40">
       <EmployerSidebar />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-y-auto pt-14 md:pt-0">
         <header className="relative flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
           <h1 className="text-xl font-semibold">
             My Job Posts

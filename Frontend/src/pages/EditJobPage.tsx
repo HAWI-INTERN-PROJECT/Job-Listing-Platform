@@ -128,12 +128,12 @@ export default function EditJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 md:flex">
+    <div className="h-screen flex overflow-hidden bg-muted/40">
       {/* Sidebar */}
       <EmployerSidebar />
 
       {/* Main area */}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-y-auto pt-14 md:pt-0">
         {/* Header */}
         <EmployerHeader title="Edit Job" />
 
