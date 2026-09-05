@@ -10,7 +10,7 @@ import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
 import DashboardPage from '@/pages/DashboardPage'
 import NotFoundPage from '@/pages/NotFoundPage'
-
+import JobSearchPage from '@/pages/JobSearchPage'
 import EmployerDashboardPage from '@/pages/EmployerDashboardPage'
 import MyJobPostsPage from '@/pages/MyJobPostsPage'
 import CreateJobPage from '@/pages/CreateJobPage'
@@ -269,6 +269,14 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+  path="/job-search"
+  element={
+    <ProtectedRoute>
+      <JobSearchPage />
+    </ProtectedRoute>
+  }
+/>
 
               {/* Admin Routes - nested under AdminLayoutPage so the sidebar/header
                  render once and every sub-page shows inside it via <Outlet />.
