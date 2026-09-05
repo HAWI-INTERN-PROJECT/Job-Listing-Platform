@@ -1,23 +1,26 @@
-import { LayoutDashboard, Building2, Briefcase, Users, Settings, LogOut, Menu, X } from 'lucide-react'
+import { LayoutGrid, User, FileText, ClipboardList, Search, Settings, LogOut, Menu, X, Briefcase } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
-
-const navItems = [
-  { label: 'Dashboard',       icon: LayoutDashboard, path: '/employer-dashboard' },
-  { label: 'Company Profile', icon: Building2,        path: '/company-profile' },
-  { label: 'My Job Posts',    icon: Briefcase,        path: '/my-job-posts' },
-  { label: 'Applicants',      icon: Users,            path: '/job-applicants' },
-  { label: 'Settings',        icon: Settings,         path: '/settings' },
-]
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { logout } = useAuthStore()
   const [showConfirm, setShowConfirm] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const navItems = [
+    { label: t('nav.dashboard'),    icon: LayoutGrid,   path: '/dashboard' },
+    { label: t('nav.myProfile'),    icon: User,         path: '/my-profile' },
+    { label: t('nav.applications'), icon: FileText,      path: '/my-applications' },
+    { label: t('nav.cvResume'),     icon: ClipboardList, path: '/cv-resume' },
+    { label: t('nav.jobSearch'),    icon: Search,        path: '/job-search' },
+    { label: t('nav.settings'),     icon: Settings,      path: '/settings' },
+  ]
 
   async function handleLogout() {
     setIsLoggingOut(true)
@@ -33,7 +36,9 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
       <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = location.pathname === item.path
+          const isActive =
+            location.pathname === item.path ||
+            (item.path === '/my-profile' && location.pathname === '/edit-profile')
           return (
             <button
               key={item.label}
@@ -90,7 +95,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   )
 }
 
-export default function EmployerSidebar() {
+export default function EmployeeSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
