@@ -47,4 +47,43 @@ class UserCVController extends Controller
 
         return Storage::disk('local')->download($user->cv_path);
     }
+
+    /**
+     * Return the current CV status without downloading the file.
+     */
+    public function status(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $hasCv = $user->cv_path && Storage::disk('local')->exists($user->cv_path);
+
+        return $this->success([
+            'has_cv' => (bool) $hasCv,
+            'cv_path' => $hasCv ? $user->cv_path : null,
+            'cv_uploaded_at' => $hasCv ? $user->cv_uploaded_at : null,
+            'file_name' => $hasCv ? basename($user->cv_path) : null,
+            'file_size' => $hasCv ? Storage::disk('local')->size($user->cv_path) : null,
+        ], 'CV status retrieved successfully');
+    }
+
+    /**
+     * Delete the authenticated user's CV.
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user->cv_path || ! Storage::disk('local')->exists($user->cv_path)) {
+            return $this->error('CV not found', 404);
+        }
+
+        Storage::disk('local')->delete($user->cv_path);
+
+        $user->update([
+            'cv_path' => null,
+            'cv_uploaded_at' => null,
+        ]);
+
+        return $this->success(null, 'CV deleted successfully');
+    }
 }

@@ -88,4 +88,50 @@ class UserCVTest extends TestCase
         $response->assertStatus(404)
             ->assertJsonPath('message', 'CV not found');
     }
+
+    public function test_status_returns_no_cv_when_none_uploaded(): void
+    {
+        $response = $this->actingAs($this->jobSeeker)
+            ->getJson('/api/v1/users/cv/status');
+
+        $response->assertOk()
+            ->assertJsonPath('data.has_cv', false);
+    }
+
+    public function test_status_returns_cv_info_when_uploaded(): void
+    {
+        Storage::disk('local')->put('cvs/users/test.pdf', 'fake pdf content');
+        $this->jobSeeker->update([
+            'cv_path' => 'cvs/users/test.pdf',
+            'cv_uploaded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->jobSeeker)
+            ->getJson('/api/v1/users/cv/status');
+
+        $response->assertOk()
+            ->assertJsonPath('data.has_cv', true)
+            ->assertJsonPath('data.file_name', 'test.pdf');
+    }
+
+    public function test_job_seeker_can_delete_own_cv(): void
+    {
+        Storage::disk('local')->put('cvs/users/test.pdf', 'fake pdf content');
+        $this->jobSeeker->update(['cv_path' => 'cvs/users/test.pdf']);
+
+        $response = $this->actingAs($this->jobSeeker)
+            ->deleteJson('/api/v1/users/cv');
+
+        $response->assertOk();
+        $this->assertNull($this->jobSeeker->fresh()->cv_path);
+        Storage::disk('local')->assertMissing('cvs/users/test.pdf');
+    }
+
+    public function test_delete_nonexistent_cv_returns_404(): void
+    {
+        $response = $this->actingAs($this->jobSeeker)
+            ->deleteJson('/api/v1/users/cv');
+
+        $response->assertStatus(404);
+    }
 }
