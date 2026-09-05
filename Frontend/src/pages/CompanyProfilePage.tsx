@@ -187,10 +187,10 @@ export default function CompanyProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 md:flex">
+    <div className="h-screen flex overflow-hidden bg-muted/40">
       <EmployerSidebar />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title="Company Profile" />
 
         <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { useAuthStore } from '@/stores/auth'
+import { useTheme } from '@/hooks/useTheme'
 import type { UserRole } from '@/types'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
@@ -31,15 +32,22 @@ import AdminSettingsPage from '@/pages/AdminSettingsPage'
 import AdminUsersPage from '@/pages/AdminUsersPage'
 import AdmincompaniesPage from '@/pages/AdmincompaniesPage'
 import CVResumePage from './pages/CVResumePage'
+import JobDetailPage from './pages/JobDetailPage'
 
 const queryClient = new QueryClient()
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initialize } = useAuthStore()
+  const { resolvedTheme } = useTheme()
 
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  useEffect(() => {
+    document.documentElement.classList.remove('light', 'dark')
+    document.documentElement.classList.add(resolvedTheme)
+  }, [resolvedTheme])
 
   return <>{children}</>
 }
@@ -269,6 +277,15 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/jobs/:slug"
+                element={
+                  <ProtectedRoute>
+                    <JobDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route
   path="/job-search"
   element={
