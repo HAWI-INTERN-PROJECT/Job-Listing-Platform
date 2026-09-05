@@ -26,6 +26,7 @@ use Laravel\Sanctum\NewAccessToken;
  * @property string $password
  * @property string|null $remember_token
  * @property string|null $cv_path
+ * @property string|null $cv_original_name
  * @property Carbon|null $cv_uploaded_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -48,6 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_suspended',
         'password',
         'cv_path',
+        'cv_original_name',
         'cv_uploaded_at',
         'email_verified_at',
     ];

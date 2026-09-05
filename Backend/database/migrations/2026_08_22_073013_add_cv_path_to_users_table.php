@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->string('cv_path')->nullable();
+            $table->string('cv_original_name')->nullable();
             $table->timestamp('cv_uploaded_at')->nullable();
         });
     }
@@ -18,6 +19,9 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn(['cv_path', 'cv_uploaded_at']);
+            if (Schema::hasColumn('users', 'cv_original_name')) {
+                $table->dropColumn('cv_original_name');
+            }
         });
     }
 };
