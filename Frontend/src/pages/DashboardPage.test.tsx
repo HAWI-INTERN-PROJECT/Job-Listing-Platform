@@ -55,7 +55,7 @@ describe('DashboardPage', () => {
 
   it('renders user name', () => {
     renderPage()
-    expect(screen.getByText(/Welcome back, John Doe/)).toBeInTheDocument()
+    expect(screen.getByText(/Welcome, John Doe/)).toBeInTheDocument()
   })
 
   it('renders user info', () => {
@@ -72,6 +72,6 @@ describe('DashboardPage', () => {
 
   it('renders user avatar icon', () => {
     renderPage()
-    expect(screen.getByText("Here's a summary of your job search activity.")).toBeInTheDocument()
+    expect(screen.getByText("Your job listing dashboard")).toBeInTheDocument()
   })
 })

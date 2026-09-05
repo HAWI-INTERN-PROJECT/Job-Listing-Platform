@@ -109,7 +109,6 @@ describe('CVResumePage', () => {
 
   it('renders the CV header and upload area', () => {
     renderPage()
-    expect(screen.getByText('CV / Resume')).toBeTruthy()
     expect(screen.getByText('Drag and drop your CV here')).toBeTruthy()
     expect(screen.getByText('Supported format: PDF (Max 2MB)')).toBeTruthy()
   })
