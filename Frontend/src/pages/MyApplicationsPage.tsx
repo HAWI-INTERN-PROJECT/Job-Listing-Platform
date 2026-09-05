@@ -1,201 +1,149 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import {
-  LayoutGrid,
-  User,
-  FileText,
-  ClipboardList,
-  Search,
-  Settings,
-  LogOut,
-  Bell,
-  Briefcase,
-  MoreVertical,
-} from 'lucide-react'
-import { useAuthStore } from '@/stores/auth'
+import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+import { Briefcase, MoreVertical } from 'lucide-react'
+import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
+import EmployerHeader from '@/components/employer/EmployerHeader'
+import api from '@/lib/api'
 
-type ApplicationStatus = 'Applied' | 'Shortlisted' | 'Interview Scheduled' | 'Rejected'
+type StatusLabel = 'Submitted' | 'Under Review' | 'Shortlisted' | 'Rejected' | 'Hired'
 
 interface Application {
   id: number
-  jobTitle: string
-  company: string
-  location: string
-  salary: string
-  postedAgo: string
-  status: ApplicationStatus
+  status_label: StatusLabel
+  created_at: string
+  job_post: {
+    id: number; title: string; slug: string; job_type_label: string
+    location: string | null; salary_min: number | null; salary_max: number | null
+    salary_currency: string; employer: { company_name: string } | null
+  } | null
 }
 
-const applications: Application[] = [
-  { id: 1, jobTitle: 'Senior Frontend Developer', company: 'Ethiopian Airlines', location: 'Addis Ababa, ET', salary: '45,000 - 55,000 ETB', postedAgo: '2 days ago', status: 'Applied' },
-  { id: 2, jobTitle: 'Full Stack Developer', company: 'Dashen Bank', location: 'Addis Ababa, ET', salary: '38,000 - 48,000 ETB', postedAgo: '5 days ago', status: 'Shortlisted' },
-  { id: 3, jobTitle: 'React Developer', company: 'Commercial Bank of Ethiopia', location: 'Addis Ababa, ET', salary: '40,000 - 50,000 ETB', postedAgo: '1 week ago', status: 'Interview Scheduled' },
-  { id: 4, jobTitle: 'UI Developer', company: 'Ethio Telecom', location: 'Addis Ababa, ET', salary: '35,000 - 45,000 ETB', postedAgo: '2 weeks ago', status: 'Rejected' },
-  { id: 5, jobTitle: 'Frontend Engineer', company: 'Awash Bank', location: 'Addis Ababa, ET', salary: '37,000 - 44,000 ETB', postedAgo: '3 days ago', status: 'Applied' },
-]
-
-const tabs = [
-  { label: 'All', count: applications.length },
-  { label: 'Applied', count: applications.filter((a) => a.status === 'Applied').length },
-  { label: 'Shortlisted', count: applications.filter((a) => a.status === 'Shortlisted').length },
-  { label: 'Interview', count: applications.filter((a) => a.status === 'Interview Scheduled').length },
-  { label: 'Rejected', count: applications.filter((a) => a.status === 'Rejected').length },
-]
-
-const statusStyles: Record<ApplicationStatus, string> = {
-  Applied: 'bg-blue-50 text-blue-600',
+const statusStyles: Record<StatusLabel, string> = {
+  Submitted: 'bg-blue-50 text-blue-600',
+  'Under Review': 'bg-amber-50 text-amber-600',
   Shortlisted: 'bg-green-50 text-green-600',
-  'Interview Scheduled': 'bg-amber-50 text-amber-600',
   Rejected: 'bg-red-50 text-red-600',
+  Hired: 'bg-purple-50 text-purple-600',
 }
 
-const navItems = [
-  { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
-  { label: 'My Profile', icon: User, path: '/my-profile' },
-  { label: 'Applications', icon: FileText, path: '/my-applications' },
-  { label: 'CV/Resume', icon: ClipboardList, path: '/cv-resume' },
-  { label: 'Job Search', icon: Search, path: '/job-search' },
-  { label: 'Settings', icon: Settings, path: '/settings' },
-]
+function formatSalary(app: Application['job_post']): string {
+  if (!app || (!app.salary_min && !app.salary_max)) return ''
+  if (app.salary_min && app.salary_max)
+    return `${app.salary_min.toLocaleString()} – ${app.salary_max.toLocaleString()} ${app.salary_currency}`
+  return `${(app.salary_min ?? app.salary_max)?.toLocaleString()} ${app.salary_currency}`
+}
 
 export default function MyApplicationsPage() {
-  const { t } = useTranslation()
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
-  const [activeTab, setActiveTab] = useState('Applied')
+  const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState<StatusLabel | 'All'>('All')
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['applications'],
+    queryFn: async () => {
+      const res = await api.get('/employee/applications')
+      return (res.data.data ?? res.data) as Application[]
+    },
+  })
 
-  const filteredApplications =
-    activeTab === 'All'
-      ? applications
-      : applications.filter((app) =>
-          activeTab === 'Interview' ? app.status === 'Interview Scheduled' : app.status === activeTab
-        )
+  const applications = data ?? []
+  const filtered = activeTab === 'All' ? applications : applications.filter((a) => a.status_label === activeTab)
+  const countFor = (val: StatusLabel | 'All') =>
+    val === 'All' ? applications.length : applications.filter((a) => a.status_label === val).length
+
+  const tabs: { label: string; value: StatusLabel | 'All' }[] = [
+    { label: t('applications.all'), value: 'All' },
+    { label: t('applications.submitted'), value: 'Submitted' },
+    { label: t('applications.underReview'), value: 'Under Review' },
+    { label: t('applications.shortlisted'), value: 'Shortlisted' },
+    { label: t('applications.rejected'), value: 'Rejected' },
+    { label: t('applications.hired'), value: 'Hired' },
+  ]
 
   return (
-    <div className="min-h-screen flex bg-muted/30">
-      <aside className="w-64 bg-background border-r flex flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-2 px-6 py-5">
-            <div className="h-8 w-8 rounded-md bg-blue-600 flex items-center justify-center">
-              <Briefcase className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-semibold text-lg">HireStream</span>
-          </div>
+    <div className="h-screen flex overflow-hidden bg-muted/30">
+      <EmployeeSidebar />
 
-          <nav className="px-3 mt-2 space-y-1">
-            {navItems.map((item) => {
-              const isActive = item.label === 'Applications'
-              const Icon = item.icon
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600 font-medium'
-                      : 'text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </button>
-              )
-            })}
-          </nav>
-        </div>
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+        <EmployerHeader title={t('applications.title')} />
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-6 py-4 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <LogOut className="h-4 w-4" />
-          {t('auth.logout')}
-        </button>
-      </aside>
-
-      <div className="flex-1">
-        <header className="flex items-center justify-between px-8 py-5 border-b bg-background">
-          <h1 className="text-xl font-semibold">My Applications</h1>
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search jobs..."
-                className="pl-9 pr-3 py-2 text-sm rounded-md border bg-muted/40 focus:outline-none"
-              />
-            </div>
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-full bg-muted overflow-hidden flex items-center justify-center text-sm font-medium">
-                {user?.name?.[0] ?? 'U'}
-              </div>
-              <div className="text-sm">
-                <p className="font-medium leading-tight">{user?.name ?? 'User'}</p>
-                <p className="text-muted-foreground text-xs leading-tight">Addis Ababa, ET</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="px-8 py-6">
-          <div className="flex items-center gap-3 mb-6">
+        <main className="px-4 sm:px-8 py-6">
+          <div className="flex flex-wrap items-center gap-2 mb-6">
             {tabs.map((tab) => {
-              const isActive = tab.label === activeTab
+              const isActive = tab.value === activeTab
               return (
-                <button
-                  key={tab.label}
-                  onClick={() => setActiveTab(tab.label)}
-                  className={`px-4 py-2 rounded-full text-sm border ${
-                    isActive
-                      ? 'bg-green-500 text-white border-green-500'
-                      : 'bg-background text-foreground border-border hover:bg-muted'
-                  }`}
-                >
-                  {tab.label} ({tab.count})
+                <button key={tab.value} onClick={() => setActiveTab(tab.value)}
+                  className={`px-4 py-2 rounded-full text-sm border ${isActive ? 'bg-green-500 text-white border-green-500' : 'bg-background text-foreground border-border hover:bg-muted'}`}>
+                  {tab.label} ({countFor(tab.value)})
                 </button>
               )
             })}
           </div>
 
-          <div className="space-y-4">
-            {filteredApplications.map((app) => (
-              <div
-                key={app.id}
-                className="flex items-center justify-between bg-background border rounded-lg px-5 py-4"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center">
-                    <Briefcase className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{app.jobTitle}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {app.company} &nbsp;•&nbsp; {app.location} &nbsp;•&nbsp; {app.salary}
-                    </p>
+          {isLoading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-background border rounded-lg px-5 py-4 animate-pulse">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-md bg-muted" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-muted rounded w-1/3" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
 
-                <div className="flex items-center gap-6">
-                  <span className="text-sm text-muted-foreground">{app.postedAgo}</span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusStyles[app.status]}`}
-                  >
-                    {app.status}
-                  </span>
-                  <button className="text-muted-foreground hover:text-foreground">
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          {isError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-sm text-red-600">{t('applications.failedToLoad')}</div>
+          )}
+
+          {!isLoading && !isError && filtered.length === 0 && (
+            <div className="text-center text-sm text-muted-foreground py-16">
+              {activeTab === 'All' ? t('applications.noApplications') : t('applications.noStatusApplications', { status: activeTab })}
+            </div>
+          )}
+
+          {!isLoading && !isError && filtered.length > 0 && (
+            <div className="space-y-4">
+              {filtered.map((app) => {
+                const job = app.job_post
+                const salary = formatSalary(job)
+                return (
+                  <div key={app.id} className="flex items-center justify-between bg-background border rounded-lg px-5 py-4 gap-4 flex-wrap">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <Briefcase className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <button onClick={() => job?.slug && navigate(`/jobs/${job.slug}`)} className="font-medium text-left hover:text-blue-600 hover:underline">
+                          {job?.title ?? t('applications.unknownPosition')}
+                        </button>
+                        <p className="text-sm text-muted-foreground">
+                          {job?.employer?.company_name ?? '—'}
+                          {job?.location ? ` • ${job.location}` : ''}
+                          {salary ? ` • ${salary}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-muted-foreground">{new Date(app.created_at).toLocaleDateString()}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusStyles[app.status_label] ?? 'bg-muted text-muted-foreground'}`}>
+                        {app.status_label}
+                      </span>
+                      <button onClick={() => job?.slug && navigate(`/jobs/${job.slug}`)} className="text-muted-foreground hover:text-foreground" title="View job">
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </main>
       </div>
     </div>
