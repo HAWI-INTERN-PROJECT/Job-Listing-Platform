@@ -43,6 +43,14 @@ vi.mock('@/lib/api', () => ({
   },
 }))
 
+vi.mock('@/components/employee/EmployeeSidebar', () => ({
+  default: () => null,
+}))
+
+vi.mock('@/components/employer/EmployerHeader', () => ({
+  default: () => null,
+}))
+
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
     user: { name: 'Lidiya Getachew', email: 'lidiya.getachew@gmail.com' },
@@ -139,6 +147,8 @@ describe('CVResumePage', () => {
 
     expect(vi.mocked(api.post).mock.calls[0][0]).toBe('/users/cv/upload')
     expect(vi.mocked(api.post).mock.calls[0][1]).toBeInstanceOf(FormData)
-    expect(vi.mocked(api.post).mock.calls[0]).toHaveLength(2)
+    expect(vi.mocked(api.post).mock.calls[0][2]).toMatchObject({
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   })
 })
