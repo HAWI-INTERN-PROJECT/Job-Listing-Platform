@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   LayoutGrid,
   User,
@@ -16,6 +17,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/lib/api'
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
@@ -28,10 +30,19 @@ const navItems = [
 
 const MAX_SIZE_MB = 2
 
-interface ActiveCV {
-  name: string
-  uploadedAt: string
-  size: string
+interface CvStatus {
+  has_cv: boolean
+  file_name: string | null
+  cv_uploaded_at: string | null
+  file_size: number | null
+}
+
+function formatSize(bytes: number | null): string {
+  if (!bytes) return ''
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
 export default function CVResumePage() {
@@ -39,70 +50,57 @@ export default function CVResumePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
+  const queryClient = useQueryClient()
 
-  const [activeCV, setActiveCV] = useState<ActiveCV | null>({
-    name: 'Lidiya_Getachew_CV.pdf',
-    uploadedAt: 'Aug 15, 2026',
-    size: '245 KB',
-  })
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
-  const [progress, setProgress] = useState(0)
   const [errorTitle, setErrorTitle] = useState('')
   const [errorHint, setErrorHint] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const timerRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current !== null) {
-        window.clearInterval(timerRef.current)
-      }
-    }
-  }, [])
+  const { data: cvStatus, isLoading } = useQuery({
+    queryKey: ['cv-status'],
+    queryFn: async () => {
+      const res = await api.get('/users/cv/status')
+      return res.data.data as CvStatus
+    },
+  })
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData()
+      formData.append('cv', file)
+      return api.post('/users/cv/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    },
+    onSuccess: () => {
+      setUploadState('success')
+      queryClient.invalidateQueries({ queryKey: ['cv-status'] })
+    },
+    onError: (error: any) => {
+      setUploadState('error')
+      const message =
+        error.response?.data?.errors?.cv?.[0] ?? error.response?.data?.message ?? 'Upload failed'
+      setErrorTitle(message)
+      setErrorHint('Please try again')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete('/users/cv'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cv-status'] })
+    },
+  })
 
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
 
-  const formatSize = (bytes: number): string => {
-    if (bytes >= 1024 * 1024) {
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-    }
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`
-  }
-
-  const startUpload = (file: File) => {
-    setUploadState('uploading')
-    setProgress(0)
-    let current = 0
-    timerRef.current = window.setInterval(() => {
-      current += 10
-      setProgress(current)
-      if (current >= 100) {
-        if (timerRef.current !== null) {
-          window.clearInterval(timerRef.current)
-          timerRef.current = null
-        }
-        setUploadState('success')
-        setActiveCV({
-          name: file.name,
-          uploadedAt: new Date().toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
-          size: formatSize(file.size),
-        })
-      }
-    }, 120)
-  }
-
   const handleFile = (file: File | undefined) => {
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setUploadState('error')
@@ -118,21 +116,32 @@ export default function CVResumePage() {
       return
     }
 
-    startUpload(file)
+    setUploadState('uploading')
+    uploadMutation.mutate(file)
   }
 
   const handleDelete = () => {
     if (window.confirm('Delete this CV? This cannot be undone.')) {
-      setActiveCV(null)
+      deleteMutation.mutate()
     }
   }
 
-  const handleView = () => {
-    alert('View is pending API integration')
+  const handleView = async () => {
+    const response = await api.get('/users/cv/download', { responseType: 'blob' })
+    const url = URL.createObjectURL(response.data)
+    window.open(url, '_blank')
   }
 
-  const handleDownload = () => {
-    alert('Download is pending API integration')
+  const handleDownload = async () => {
+    const response = await api.get('/users/cv/download', { responseType: 'blob' })
+    const url = URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = cvStatus?.file_name ?? 'cv.pdf'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -206,7 +215,11 @@ export default function CVResumePage() {
 
         <main className="px-8 py-6 grid grid-cols-3 gap-6 items-start">
           <div className="col-span-2 space-y-6">
-            {activeCV && (
+            {isLoading ? (
+              <div className="bg-background border rounded-lg p-6 text-sm text-muted-foreground">
+                Loading CV status...
+              </div>
+            ) : cvStatus?.has_cv ? (
               <div className="bg-background border rounded-lg p-6">
                 <h2 className="font-semibold text-base mb-4">Active CV/Resume</h2>
                 <div className="flex items-center justify-between gap-3 bg-muted/40 border rounded-md p-3">
@@ -215,9 +228,12 @@ export default function CVResumePage() {
                       <FileText className="h-5 w-5 text-red-500" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">{activeCV.name}</p>
+                      <p className="text-sm font-semibold">{cvStatus.file_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Uploaded {activeCV.uploadedAt} • {activeCV.size}
+                        {cvStatus.cv_uploaded_at
+                          ? `Uploaded ${new Date(cvStatus.cv_uploaded_at).toLocaleDateString()}`
+                          : ''}
+                        {cvStatus.file_size ? ` • ${formatSize(cvStatus.file_size)}` : ''}
                       </p>
                     </div>
                   </div>
@@ -243,7 +259,7 @@ export default function CVResumePage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             <div
               onClick={() => inputRef.current?.click()}
@@ -284,16 +300,7 @@ export default function CVResumePage() {
               <div className="bg-background border rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-semibold">Uploading your CV...</p>
-                    <p className="text-xs text-muted-foreground">Uploading ({progress}%)</p>
-                  </div>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full mt-3">
-                  <div
-                    className="h-1.5 bg-blue-600 rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
+                  <p className="text-sm font-semibold">Uploading your CV...</p>
                 </div>
               </div>
             )}
@@ -317,40 +324,6 @@ export default function CVResumePage() {
                 </div>
               </div>
             )}
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-base mb-4">Upload Status Examples</h2>
-            <div className="space-y-4">
-              <div className="bg-background border rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-semibold">Lidiya_Getachew_CV_updated.pdf</p>
-                    <p className="text-xs text-muted-foreground">Uploading (60%)</p>
-                  </div>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full mt-3">
-                  <div className="h-1.5 bg-blue-600 rounded-full w-3/5" />
-                </div>
-              </div>
-
-              <div className="border border-green-600 bg-green-50 rounded-lg p-4 flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-semibold text-green-700">CV uploaded successfully</p>
-                  <p className="text-xs text-green-600">Ready to be used for applications</p>
-                </div>
-              </div>
-
-              <div className="border border-red-600 bg-red-50 rounded-lg p-4 flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="text-sm font-semibold text-red-700">File size exceeds 2MB limit</p>
-                  <p className="text-xs text-red-600">Please compress your document</p>
-                </div>
-              </div>
-            </div>
           </div>
         </main>
       </div>
