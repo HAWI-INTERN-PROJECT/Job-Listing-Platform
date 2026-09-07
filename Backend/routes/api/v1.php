@@ -58,6 +58,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::prefix('users/cv')->name('api.v1.users.cv.')->group(function (): void {
         Route::post('upload', [UserCVController::class, 'upload'])->name('upload');
         Route::get('download', [UserCVController::class, 'download'])->name('download');
+        Route::get('status', [UserCVController::class, 'status'])->name('status');
+        Route::delete('/', [UserCVController::class, 'destroy'])->name('destroy');
     });
 
     // Protected feature routes requiring verified email address
@@ -131,6 +133,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
             // Application status management
             Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
+            Route::get('applications/{application}/cv', [ApplicationController::class, 'downloadCv'])->name('api.v1.employer.applications.cv');
         });
 
         // Employee Routes
