@@ -1,19 +1,51 @@
 import { create } from 'zustand'
-import type { User, UserRole, LoginRequest, RegisterRequest, AuthResponse } from '@/types'
+import i18n from '@/i18n'
 import api from '@/lib/api'
+
+export interface User {
+  id: number
+  name: string
+  email: string
+  username: string
+  role: 'employee' | 'employer' | 'admin'
+  role_label: string
+  email_verified_at: string | null
+  cv_path: string | null
+  cv_original_name: string | null
+  cv_uploaded_at: string | null
+}
+
+interface LoginRequest {
+  login: string
+  password: string
+}
+
+interface RegisterRequest {
+  name: string
+  email: string
+  username: string
+  password: string
+  password_confirmation: string
+  role: 'employee' | 'employer' | 'admin'
+}
+
+interface AuthResponse {
+  user: User
+  access_token: string
+}
 
 interface AuthState {
   user: User | null
   token: string | null
   isLoading: boolean
-  isInitialized: boolean
   isAuthenticated: boolean
+  isInitialized: boolean
   login: (data: LoginRequest) => Promise<User>
   register: (data: RegisterRequest) => Promise<User>
   logout: () => Promise<void>
   getProfile: () => Promise<User | null>
   initialize: () => Promise<void>
-  hasRole: (roles: UserRole | UserRole[]) => boolean
+  hasRole: (roles: string | string[]) => boolean
   setToken: (token: string) => void
 }
 
@@ -24,14 +56,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   isAuthenticated: !!localStorage.getItem('token'),
 
-  login: async (data: LoginRequest) => {
+  login: async (data: LoginRequest): Promise<User> => {
     set({ isLoading: true })
     try {
       const response = await api.post('/login', data)
       const resData = response.data
       const authData: AuthResponse = resData.data ?? resData
       const { user, access_token } = authData
-
       localStorage.setItem('token', access_token)
       set({ user, token: access_token, isAuthenticated: true, isLoading: false, isInitialized: true })
       return user
@@ -41,14 +72,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (data: RegisterRequest) => {
+  register: async (data: RegisterRequest): Promise<User> => {
     set({ isLoading: true })
     try {
       const response = await api.post('/register', data)
       const resData = response.data
       const authData: AuthResponse = resData.data ?? resData
       const { user, access_token } = authData
-
       localStorage.setItem('token', access_token)
       set({ user, token: access_token, isAuthenticated: true, isLoading: false, isInitialized: true })
       return user
@@ -64,10 +94,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       localStorage.removeItem('token')
       set({ user: null, token: null, isAuthenticated: false, isInitialized: true })
+      document.documentElement.classList.remove('dark', 'light')
+      await i18n.changeLanguage('en')
+      localStorage.removeItem('language')
     }
   },
 
-  getProfile: async () => {
+  getProfile: async (): Promise<User | null> => {
     set({ isLoading: true })
     try {
       const response = await api.get('/profile')
@@ -82,28 +115,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      set({ isInitialized: true, isAuthenticated: false, user: null })
-      return
-    }
-
+    if (get().isInitialized) return
     try {
-      const response = await api.get('/profile')
-      const resData = response.data
-      const userData: User = resData.data ?? resData
-      set({ user: userData, isAuthenticated: true, isInitialized: true })
+      if (get().token) {
+        await get().getProfile()
+      }
+      set({ isInitialized: true })
     } catch {
       localStorage.removeItem('token')
       set({ user: null, token: null, isAuthenticated: false, isInitialized: true })
     }
   },
 
-  hasRole: (roles: UserRole | UserRole[]) => {
+  hasRole: (roles: string | string[]): boolean => {
     const user = get().user
-    if (!user || !user.role) return false
-    const allowed = Array.isArray(roles) ? roles : [roles]
-    return allowed.includes(user.role)
+    if (!user) return false
+    const roleArray = Array.isArray(roles) ? roles : [roles]
+    return roleArray.includes(user.role)
   },
 
   setToken: (token: string) => {

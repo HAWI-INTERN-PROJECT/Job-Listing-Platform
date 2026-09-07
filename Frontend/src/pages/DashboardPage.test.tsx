@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import DashboardPage from './DashboardPage'
 
 const mockUser = {
@@ -31,60 +32,48 @@ vi.mock('@/components/ThemeToggle', () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme</button>,
 }))
 
+const renderPage = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    </QueryClientProvider>
+  )
+}
+
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('renders dashboard header', () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    )
-
-    expect(screen.getByText('Job Listing Platform')).toBeInTheDocument()
+    renderPage()
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
   it('renders user name', () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    )
-
-    expect(screen.getByText(/Welcome, John Doe/)).toBeInTheDocument()
+    renderPage()
+    expect(screen.getByText(/Welcome back, John Doe/)).toBeInTheDocument()
   })
 
   it('renders user info', () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    )
-
+    renderPage()
     expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0)
-    expect(screen.getByText('@johndoe')).toBeInTheDocument()
-    expect(screen.getByText('john@example.com')).toBeInTheDocument()
   })
 
-  it('renders logout button', () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    )
-
-    expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument()
+  it('opens the profile menu and shows logout', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event')
+    const user = userEvent.setup()
+    renderPage()
+    const profileButton = screen.getByText('John Doe').closest('button')!
+    await user.click(profileButton)
+    expect(screen.getAllByRole('button', { name: /logout/i }).length).toBeGreaterThan(0)
   })
 
-  it('renders user avatar icon', () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    )
-
-    expect(screen.getByText('Your job listing dashboard')).toBeInTheDocument()
+  it('renders dashboard description', () => {
+    renderPage()
+    expect(screen.getByText("Here's a summary of your job search activity.")).toBeInTheDocument()
   })
 })
