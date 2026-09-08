@@ -8,8 +8,8 @@ import {
   Settings,
   LogOut,
   Search,
-  Bell,
 } from 'lucide-react'
+import AdminNotificationDropdown from '@/components/admin/AdminNotificationDropdown'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -74,10 +74,7 @@ export default function AdminLayout() {
               <input type="text" placeholder="Search..." className="outline-none text-sm w-32" />
             </div>
 
-            <button className="relative p-2">
-              <Bell size={21} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
+            <AdminNotificationDropdown />
 
             <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
               L

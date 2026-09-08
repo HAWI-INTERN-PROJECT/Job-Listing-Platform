@@ -10,6 +10,12 @@ use InvalidArgumentException;
 
 class JobPostWorkflowService
 {
+    public function __construct(
+        protected ?AdminNotificationService $adminNotificationService = null
+    ) {
+        $this->adminNotificationService ??= app(AdminNotificationService::class);
+    }
+
     /**
      * Submit a draft or rejected job post for admin review.
      */
@@ -23,6 +29,8 @@ class JobPostWorkflowService
             'status' => JobStatus::PENDING_APPROVAL,
             'rejection_reason' => null,
         ]);
+
+        $this->adminNotificationService->notifyJobSubmittedForReview($job);
 
         return $job;
     }

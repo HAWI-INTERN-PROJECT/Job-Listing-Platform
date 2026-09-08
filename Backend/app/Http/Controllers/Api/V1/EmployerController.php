@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Employer\StoreEmployerRequest;
 use App\Http\Requests\V1\Employer\UpdateEmployerRequest;
 use App\Http\Traits\ApiResponse;
 use App\Models\Employer;
+use App\Services\AdminNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -52,6 +54,8 @@ class EmployerController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
+            app(AdminNotificationService::class)->notifyEmployerPendingApproval($employer);
+
             return $this->created($employer, 'Employer profile created successfully');
         }
 
@@ -62,7 +66,7 @@ class EmployerController extends Controller
 
     public function pending(): JsonResponse
     {
-        if (! auth()->user()->hasRole(\App\Enums\UserRole::ADMIN)) {
+        if (! auth()->user()->hasRole(UserRole::ADMIN)) {
             return $this->forbidden('Only admins can view pending employers');
         }
 
@@ -85,6 +89,8 @@ class EmployerController extends Controller
             ...$data,
             'user_id' => $request->user()->id,
         ]);
+
+        app(AdminNotificationService::class)->notifyEmployerPendingApproval($employer);
 
         return $this->created($employer, 'Employer profile created successfully');
     }
@@ -112,7 +118,7 @@ class EmployerController extends Controller
 
     public function updateApprovalStatus(Request $request, Employer $employer): JsonResponse
     {
-        if (! auth()->user()->hasRole(\App\Enums\UserRole::ADMIN)) {
+        if (! auth()->user()->hasRole(UserRole::ADMIN)) {
             return $this->forbidden('Only admins can update employer approval status');
         }
 
