@@ -147,12 +147,19 @@ export default function SettingsPage() {
                   error={otpError}
                 />
                 <ResendTimer onResend={handleResendOtp} />
-                <div className="flex justify-center gap-3">
+                <div className="flex gap-3 justify-end">
                   <button
                     onClick={handleCancelOtp}
-                    className="px-4 py-2 text-sm font-medium rounded-md border hover:bg-muted"
+                    className="px-6 py-2 text-sm font-medium rounded-md border hover:bg-muted"
                   >
                     {t('common.cancel')}
+                  </button>
+                  <button
+                    onClick={() => handleOtpComplete(otpCode)}
+                    disabled={confirmChangeMutation.isPending}
+                    className="px-6 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {confirmChangeMutation.isPending ? t('settings.saving') : t('common.confirm')}
                   </button>
                 </div>
               </div>

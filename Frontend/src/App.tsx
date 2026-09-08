@@ -139,7 +139,7 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthInitializer>
-          <BrowserRouter>
+          
             <Routes>
               <Route
                 path="/"
@@ -348,7 +348,7 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
-          </BrowserRouter>
+          
         </AuthInitializer>
       </QueryClientProvider>
     </ErrorBoundary>

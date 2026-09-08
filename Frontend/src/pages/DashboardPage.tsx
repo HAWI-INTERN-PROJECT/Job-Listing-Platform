@@ -52,7 +52,7 @@ export default function DashboardPage() {
     queryKey: ['applications'],
     queryFn: async () => {
       const res = await api.get('/employee/applications')
-      return (res.data.data ?? res.data) as Application[]
+      return (res.data.data?.data ?? res.data.data ?? res.data) as Application[]
     },
     enabled: !!user,
   })
