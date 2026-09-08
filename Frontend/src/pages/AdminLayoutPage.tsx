@@ -10,6 +10,7 @@ import {
   Search,
 } from 'lucide-react'
 import AdminNotificationDropdown from '@/components/admin/AdminNotificationDropdown'
+import { useAdminRealtimeNotifications } from '@/hooks/useAdminRealtimeNotifications'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -21,6 +22,9 @@ const navItems = [
 ]
 
 export default function AdminLayout() {
+  // Initialize real-time push listener for admin popups
+  useAdminRealtimeNotifications()
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}

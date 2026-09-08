@@ -111,6 +111,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             // Admin Notifications Workflow
             Route::prefix('notifications')->name('api.v1.admin.notifications.')->group(function (): void {
                 Route::get('/', [AdminNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [AdminNotificationController::class, 'stream'])->name('stream');
                 Route::get('unread-count', [AdminNotificationController::class, 'unreadCount'])->name('unread-count');
                 Route::patch('{id}/read', [AdminNotificationController::class, 'markAsRead'])->name('read');
                 Route::post('mark-all-read', [AdminNotificationController::class, 'markAllAsRead'])->name('mark-all-read');

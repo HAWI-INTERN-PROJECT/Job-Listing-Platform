@@ -207,4 +207,15 @@ class AdminNotificationTest extends TestCase
             EmployerPendingApprovalNotification::class
         );
     }
+
+    public function test_admin_can_connect_to_notification_stream(): void
+    {
+        $this->admin->notify(new EmployerPendingApprovalNotification($this->employer));
+
+        $response = $this->actingAs($this->admin)
+            ->get('/api/v1/admin/notifications/stream');
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('text/event-stream', (string) $response->headers->get('Content-Type'));
+    }
 }

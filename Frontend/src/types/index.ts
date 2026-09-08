@@ -63,6 +63,7 @@ export interface AdminNotification {
   data: AdminNotificationData
   read_at: string | null
   is_read: boolean
+  unread_count?: number
   created_at: string
   created_at_human?: string
 }

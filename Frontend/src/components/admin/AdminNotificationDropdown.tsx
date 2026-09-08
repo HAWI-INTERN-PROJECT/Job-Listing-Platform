@@ -22,7 +22,7 @@ export default function AdminNotificationDropdown() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Poll unread count every 30 seconds
+  // Poll unread count every 30 seconds as background fallback
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['admin-notifications-unread-count'],
     queryFn: () => adminNotificationService.getUnreadCount(),
@@ -55,6 +55,7 @@ export default function AdminNotificationDropdown() {
   const markAllAsReadMutation = useMutation({
     mutationFn: () => adminNotificationService.markAllAsRead(),
     onSuccess: () => {
+      queryClient.setQueryData(['admin-notifications-unread-count'], 0)
       queryClient.invalidateQueries({ queryKey: ['admin-notifications'] })
       queryClient.invalidateQueries({ queryKey: ['admin-notifications-unread-count'] })
       toast.success('All notifications marked as read')
@@ -126,13 +127,17 @@ export default function AdminNotificationDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-        title="Admin Notifications"
+        title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'Admin Notifications'}
+        aria-label="Admin Notifications"
         aria-expanded={isOpen}
       >
         <Bell size={21} className="text-slate-700" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white animate-pulse">
-            {unreadCount > 9 ? '9+' : unreadCount}
+          <span
+            className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-[20px] px-1.5 bg-red-600 text-white text-[11px] font-bold rounded-full border-2 border-white shadow-sm ring-1 ring-red-500/20 animate-pulse"
+            aria-live="polite"
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>

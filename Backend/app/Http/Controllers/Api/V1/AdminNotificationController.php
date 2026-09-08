@@ -10,6 +10,7 @@ use App\Http\Traits\ApiResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminNotificationController extends Controller
 {
@@ -32,6 +33,67 @@ class AdminNotificationController extends Controller
             NotificationResource::collection($notifications)->response()->getData(true),
             'Notifications retrieved successfully'
         );
+    }
+
+    /**
+     * Stream real-time notifications to the administrator via Server-Sent Events (SSE).
+     */
+    public function stream(Request $request): StreamedResponse
+    {
+        $user = $request->user();
+
+        return response()->stream(function () use ($user): void {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
+            $connectionStartTime = now()->subSeconds(5);
+            $seenIds = [];
+            $startTime = time();
+            $maxExecutionTime = app()->runningUnitTests() ? 1 : 25;
+
+            // Initial connected handshake
+            echo "event: connected\ndata: {}\n\n";
+            flush();
+
+            while (time() - $startTime < $maxExecutionTime) {
+                if (connection_aborted()) {
+                    break;
+                }
+
+                $newNotifications = $user->unreadNotifications()
+                    ->whereNotIn('id', $seenIds)
+                    ->where('created_at', '>=', $connectionStartTime)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+
+                if ($newNotifications->isNotEmpty()) {
+                    $unreadCount = $user->unreadNotifications()->count();
+                    foreach ($newNotifications as $notification) {
+                        $seenIds[] = $notification->id;
+                        $payloadData = (new NotificationResource($notification))->resolve();
+                        $payloadData['unread_count'] = $unreadCount;
+                        $payload = json_encode($payloadData);
+                        echo "event: notification\ndata: {$payload}\n\n";
+                    }
+                    flush();
+                } else {
+                    echo ": ping\n\n";
+                    flush();
+                }
+
+                if (app()->runningUnitTests()) {
+                    break;
+                }
+
+                sleep(1);
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     /**
