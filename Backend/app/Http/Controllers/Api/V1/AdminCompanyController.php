@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponse;
 use App\Models\Employer;
 use App\Models\JobPost;
+use App\Notifications\V1\Employer\EmployerApprovedNotification;
+use App\Notifications\V1\Employer\EmployerRejectedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -77,9 +79,16 @@ class AdminCompanyController extends Controller
             'approval_status' => ['required', 'string', 'in:approved,pending,rejected'],
         ]);
 
+        $newStatus = $validated['approval_status'];
         $employer->update([
-            'approval_status' => $validated['approval_status'],
+            'approval_status' => $newStatus,
         ]);
+
+        if ($newStatus === 'approved') {
+            $employer->user?->notify(new EmployerApprovedNotification($employer));
+        } elseif ($newStatus === 'rejected') {
+            $employer->user?->notify(new EmployerRejectedNotification($employer));
+        }
 
         return $this->success($employer->load('user'), 'Company status updated successfully');
     }
@@ -93,6 +102,8 @@ class AdminCompanyController extends Controller
             'approval_status' => 'approved',
         ]);
 
+        $employer->user?->notify(new EmployerApprovedNotification($employer));
+
         return $this->success($employer->load('user'), 'Company profile approved successfully');
     }
 
@@ -104,6 +115,8 @@ class AdminCompanyController extends Controller
         $employer->update([
             'approval_status' => 'rejected',
         ]);
+
+        $employer->user?->notify(new EmployerRejectedNotification($employer));
 
         return $this->success($employer->load('user'), 'Company profile rejected successfully');
     }
