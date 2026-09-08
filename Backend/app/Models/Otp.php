@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,7 +19,6 @@ class Otp extends Model
 {
     protected $table = 'otp_codes';
 
-    use HasFactory;
 
     public const PURPOSE_REGISTER = 'register';
 
@@ -44,6 +42,9 @@ class Otp extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -51,6 +52,9 @@ class Otp extends Model
 
     /**
      * Scope a query to only unused, unexpired codes.
+     *
+     * @param  Builder<Otp>  $query
+     * @return Builder<Otp>
      */
     public function scopeValid(Builder $query): Builder
     {

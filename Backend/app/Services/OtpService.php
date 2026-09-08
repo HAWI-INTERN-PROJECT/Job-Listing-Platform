@@ -28,7 +28,7 @@ class OtpService
             ->valid()
             ->update(['used_at' => now()]);
 
-        $plainCode = (string) random_int(100000, 999999);
+        $plainCode = (string) random_int(10 ** (self::CODE_LENGTH - 1), (10 ** self::CODE_LENGTH) - 1);
 
         $otp = Otp::create([
             'user_id' => $user->id,
