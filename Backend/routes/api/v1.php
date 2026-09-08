@@ -37,10 +37,8 @@ Route::middleware('throttle:auth')->group(function (): void {
     Route::post('login', [AuthController::class, 'login'])->name('api.v1.login');
 });
 
-// Email verification
-Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-    ->middleware('signed')
-    ->name('verification.verify');
+// Email verification (OTP-based)
+// Route registered under authenticated group below as email/verify-otp
 
 // Protected routes with authenticated rate limiter (120/min)
 Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function (): void {
@@ -49,6 +47,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
     // Change password
     Route::put('change-password', [AuthController::class, 'changePassword'])->name('api.v1.change-password');
+    Route::post('confirm-change-password', [AuthController::class, 'confirmChangePassword'])->name('api.v1.confirm-change-password');
+    Route::post('email/verify-otp', [AuthController::class, 'verifyEmailOtp'])->name('verification.verify');
 
     Route::post('email/resend', [AuthController::class, 'resendVerificationEmail'])
         ->middleware('throttle:6,1')

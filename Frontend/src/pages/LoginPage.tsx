@@ -85,6 +85,11 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-sm text-primary underline-offset-4 hover:underline">
+                  {t('auth.forgotPassword', 'Forgot password?')}
+                </Link>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
