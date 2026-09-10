@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Otp;
 use App\Models\User;
+use App\Services\OtpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class EmailVerificationTest extends TestCase
@@ -13,15 +14,21 @@ class EmailVerificationTest extends TestCase
 
     public function test_user_can_verify_email(): void
     {
+        \Illuminate\Support\Facades\Mail::fake();
+
         $user = User::factory()->unverified()->create();
 
-        $url = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->getEmailForVerification())]
-        );
+        app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_REGISTER);
 
-        $response = $this->get($url);
+        $capturedCode = null;
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\OtpCodeMail::class, function ($mail) use (&$capturedCode) {
+            $capturedCode = $mail->code;
+
+            return true;
+        });
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/v1/email/verify-otp', ['code' => $capturedCode]);
 
         $response->assertOk()
             ->assertJsonFragment(['message' => __('auth.email_verified')]);
@@ -29,17 +36,14 @@ class EmailVerificationTest extends TestCase
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
     }
 
-    public function test_verify_email_with_invalid_hash_returns_403(): void
+    public function test_verify_email_with_invalid_code_returns_403(): void
     {
         $user = User::factory()->unverified()->create();
 
-        $url = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => 'invalid-hash']
-        );
+        app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_REGISTER);
 
-        $response = $this->get($url);
+        $response = $this->actingAs($user)
+            ->postJson('/api/v1/email/verify-otp', ['code' => '000000']);
 
         $response->assertForbidden()
             ->assertJsonFragment(['message' => __('auth.invalid_verification_link')]);
@@ -51,13 +55,8 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $url = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->getEmailForVerification())]
-        );
-
-        $response = $this->get($url);
+        $response = $this->actingAs($user)
+            ->postJson('/api/v1/email/verify-otp', ['code' => '000000']);
 
         $response->assertOk()
             ->assertJsonFragment(['message' => __('auth.email_already_verified')]);

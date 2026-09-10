@@ -233,5 +233,22 @@
     "companyProfile": "Company Profile",
     "myJobPosts": "My Job Posts",
     "applicants": "Applicants"
+  },
+  "otp": {
+    "resendIn": "Resend code in {{time}}",
+    "resendCode": "Resend code",
+    "resending": "Sending...",
+    "verify": "Verify",
+    "verifying": "Verifying...",
+    "invalidCode": "Invalid or expired code. Please try again.",
+    "codeSentTo": "We sent a verification code to {{email}}",
+    "registerTitle": "Verify your email",
+    "registerDescription": "Enter the 6-digit code we sent to your email to activate your account.",
+    "forgotPasswordTitle": "Enter verification code",
+    "forgotPasswordDescription": "Enter the code sent to your email, then choose a new password.",
+    "changePasswordTitle": "Confirm password change",
+    "changePasswordDescription": "Enter the code sent to your email to confirm this change.",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password"
   }
 }
