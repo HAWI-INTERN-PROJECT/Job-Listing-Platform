@@ -6,10 +6,18 @@ namespace App\Services;
 
 use App\Enums\JobStatus;
 use App\Models\JobPost;
+use App\Notifications\V1\Employer\JobPostApprovedNotification;
+use App\Notifications\V1\Employer\JobPostRejectedNotification;
 use InvalidArgumentException;
 
 class JobPostWorkflowService
 {
+    public function __construct(
+        protected ?AdminNotificationService $adminNotificationService = null
+    ) {
+        $this->adminNotificationService ??= app(AdminNotificationService::class);
+    }
+
     /**
      * Submit a draft or rejected job post for admin review.
      */
@@ -23,6 +31,8 @@ class JobPostWorkflowService
             'status' => JobStatus::PENDING_APPROVAL,
             'rejection_reason' => null,
         ]);
+
+        $this->adminNotificationService->notifyJobSubmittedForReview($job);
 
         return $job;
     }
@@ -43,6 +53,11 @@ class JobPostWorkflowService
             'rejection_reason' => null,
         ]);
 
+        $employerUser = $job->employer?->user;
+        if ($employerUser) {
+            $employerUser->notify(new JobPostApprovedNotification($job));
+        }
+
         return $job;
     }
 
@@ -59,6 +74,11 @@ class JobPostWorkflowService
             'status' => JobStatus::REJECTED,
             'rejection_reason' => $reason,
         ]);
+
+        $employerUser = $job->employer?->user;
+        if ($employerUser) {
+            $employerUser->notify(new JobPostRejectedNotification($job, $reason));
+        }
 
         return $job;
     }

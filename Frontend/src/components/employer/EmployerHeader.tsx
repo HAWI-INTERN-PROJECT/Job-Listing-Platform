@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import EmployerNotificationDropdown from '@/components/employer/EmployerNotificationDropdown'
+import { useEmployerRealtimeNotifications } from '@/hooks/useEmployerRealtimeNotifications'
 
 interface EmployerHeaderProps {
   title: string
@@ -22,6 +24,9 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  // Stream real-time employer notifications and trigger popups
+  useEmployerRealtimeNotifications()
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -36,6 +41,7 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
     navigate('/login', { replace: true })
   }
 
+  const isEmployer = user?.role === 'employer'
   const isEmployee = user?.role === 'employee'
 
   return (
@@ -45,13 +51,17 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
       <div className="flex items-center gap-3">
         <LanguageSwitcher />
         <ThemeToggle />
-        <button
-          type="button"
-          className="rounded-full p-2 hover:bg-muted text-muted-foreground hover:text-foreground"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+        {isEmployer ? (
+          <EmployerNotificationDropdown />
+        ) : (
+          <button
+            type="button"
+            className="rounded-full p-2 hover:bg-muted text-muted-foreground hover:text-foreground"
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+          </button>
+        )}
 
         <div className="relative" ref={ref}>
           <button
@@ -80,7 +90,10 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
 
               {isEmployee && (
                 <button
-                  onClick={() => { setOpen(false); navigate('/my-profile') }}
+                  onClick={() => {
+                    setOpen(false)
+                    navigate('/my-profile')
+                  }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
                 >
                   <User className="h-4 w-4 text-muted-foreground" />
@@ -89,7 +102,10 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
               )}
 
               <button
-                onClick={() => { setOpen(false); navigate('/settings') }}
+                onClick={() => {
+                  setOpen(false)
+                  navigate('/settings')
+                }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
               >
                 <Settings className="h-4 w-4 text-muted-foreground" />

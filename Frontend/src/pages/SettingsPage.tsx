@@ -9,6 +9,8 @@ import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { OtpInput } from '@/components/ui/otp-input'
+import { ResendTimer } from '@/components/ui/resend-timer'
 import api from '@/lib/api'
 
 function PasswordField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -39,16 +41,34 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [pwError, setPwError] = useState('')
 
-  const passwordMutation = useMutation({
+  const [awaitingOtp, setAwaitingOtp] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpError, setOtpError] = useState(false)
+
+  const requestChangeMutation = useMutation({
     mutationFn: (data: { current_password: string; password: string; password_confirmation: string }) =>
-      api.put('/profile/password', data),
+      api.put('/change-password', data),
     onSuccess: () => {
-      toast.success(t('settings.passwordUpdated'))
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setPwError('')
+      setAwaitingOtp(true)
+      setOtpError(false)
+      toast.success(t('otp.codeSentTo', { email: user?.email ?? '' }))
     },
     onError: (error: any) => {
       const msg = error.response?.data?.errors?.current_password?.[0] ?? error.response?.data?.message ?? 'Failed to update password'
       setPwError(msg); toast.error(msg)
+    },
+  })
+
+  const confirmChangeMutation = useMutation({
+    mutationFn: (code: string) => api.post('/confirm-change-password', { code }),
+    onSuccess: () => {
+      toast.success(t('settings.passwordUpdated'))
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setPwError('')
+      setAwaitingOtp(false); setOtpCode(''); setOtpError(false)
+    },
+    onError: () => {
+      setOtpError(true)
+      toast.error(t('otp.invalidCode'))
     },
   })
 
@@ -57,7 +77,21 @@ export default function SettingsPage() {
     if (!currentPassword || !newPassword || !confirmPassword) { setPwError(t('settings.allFieldsRequired')); return }
     if (newPassword.length < 8) { setPwError(t('settings.passwordMinLength')); return }
     if (newPassword !== confirmPassword) { setPwError(t('settings.passwordsNoMatch')); return }
-    passwordMutation.mutate({ current_password: currentPassword, password: newPassword, password_confirmation: confirmPassword })
+    requestChangeMutation.mutate({ current_password: currentPassword, password: newPassword, password_confirmation: confirmPassword })
+  }
+
+  const handleOtpComplete = (code: string) => {
+    confirmChangeMutation.mutate(code)
+  }
+
+  const handleResendOtp = () => {
+    requestChangeMutation.mutate({ current_password: currentPassword, password: newPassword, password_confirmation: confirmPassword })
+  }
+
+  const handleCancelOtp = () => {
+    setAwaitingOtp(false)
+    setOtpCode('')
+    setOtpError(false)
   }
 
   return (
@@ -67,7 +101,7 @@ export default function SettingsPage() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title={t('settings.title')} />
 
-        <main className="px-4 sm:px-8 py-6 max-w-2xl w-full space-y-5">
+        <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 max-w-2xl w-full space-y-5">
 
           <section className="bg-background border rounded-lg p-5 space-y-4">
             <h2 className="font-semibold">{t('settings.account')}</h2>
@@ -85,17 +119,51 @@ export default function SettingsPage() {
 
           <section className="bg-background border rounded-lg p-5 space-y-4">
             <h2 className="font-semibold">{t('settings.changePassword')}</h2>
-            <div className="space-y-3">
-              <PasswordField label={t('settings.currentPassword')} value={currentPassword} onChange={setCurrentPassword} />
-              <PasswordField label={t('settings.newPassword')} value={newPassword} onChange={setNewPassword} />
-              <PasswordField label={t('settings.confirmNewPassword')} value={confirmPassword} onChange={setConfirmPassword} />
-            </div>
-            {pwError && <p className="text-sm text-red-600">{pwError}</p>}
-            <div className="flex justify-end">
-              <button onClick={handlePasswordSave} disabled={passwordMutation.isPending} className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-                {passwordMutation.isPending ? t('settings.saving') : t('settings.updatePassword')}
-              </button>
-            </div>
+
+            {!awaitingOtp ? (
+              <>
+                <div className="space-y-3">
+                  <PasswordField label={t('settings.currentPassword')} value={currentPassword} onChange={setCurrentPassword} />
+                  <PasswordField label={t('settings.newPassword')} value={newPassword} onChange={setNewPassword} />
+                  <PasswordField label={t('settings.confirmNewPassword')} value={confirmPassword} onChange={setConfirmPassword} />
+                </div>
+                {pwError && <p className="text-sm text-red-600">{pwError}</p>}
+                <div className="flex justify-end">
+                  <button onClick={handlePasswordSave} disabled={requestChangeMutation.isPending} className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                    {requestChangeMutation.isPending ? t('settings.saving') : t('settings.updatePassword')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  {t('otp.changePasswordDescription')}
+                </p>
+                <OtpInput
+                  value={otpCode}
+                  onChange={setOtpCode}
+                  onComplete={handleOtpComplete}
+                  disabled={confirmChangeMutation.isPending}
+                  error={otpError}
+                />
+                <ResendTimer onResend={handleResendOtp} />
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={handleCancelOtp}
+                    className="px-6 py-2 text-sm font-medium rounded-md border hover:bg-muted"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    onClick={() => handleOtpComplete(otpCode)}
+                    disabled={confirmChangeMutation.isPending}
+                    className="px-6 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {confirmChangeMutation.isPending ? t('settings.saving') : t('common.confirm')}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="bg-background border rounded-lg p-5 space-y-4">
@@ -108,7 +176,6 @@ export default function SettingsPage() {
               <ThemeToggle />
             </div>
           </section>
-
           <section className="bg-background border rounded-lg p-5 space-y-4">
             <h2 className="font-semibold">{t('settings.language')}</h2>
             <div className="flex items-center justify-between">
@@ -119,7 +186,6 @@ export default function SettingsPage() {
               <LanguageSwitcher />
             </div>
           </section>
-
         </main>
       </div>
     </div>

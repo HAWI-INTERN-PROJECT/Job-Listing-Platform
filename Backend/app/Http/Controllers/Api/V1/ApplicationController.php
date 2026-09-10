@@ -9,6 +9,7 @@ use App\Http\Traits\ApiResponse;
 use App\Models\Application;
 use App\Models\JobPost;
 use App\Models\User;
+use App\Notifications\V1\Employer\NewApplicationReceivedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -47,6 +48,11 @@ class ApplicationController extends Controller
             'status' => ApplicationStatus::SUBMITTED,
         ]);
 
+        $employerUser = $jobPost->employer?->user;
+        if ($employerUser) {
+            $employerUser->notify(new NewApplicationReceivedNotification($application, $jobPost, $user));
+        }
+
         return $this->created($application, 'Application submitted successfully');
     }
 
@@ -63,64 +69,66 @@ class ApplicationController extends Controller
     }
 
     /**
-     * List applicants for a specific job post (employer view).
+     * List applicants for an employer's job post.
      */
     public function jobApplicants(Request $request, JobPost $jobPost): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
-        $employer = $user->employer;
 
-        if (! $employer || $jobPost->employer_id !== $employer->id) {
-            return $this->error('Unauthorized', 403);
+        if ($jobPost->employer_id !== $user->employer?->id) {
+            return $this->forbidden('You can only view applicants for your own job posts.');
         }
 
-        $applications = Application::with('user')
-            ->where('job_post_id', $jobPost->id)
-            ->paginate(15);
+        $query = Application::with('user:id,name,email,username')
+            ->where('job_post_id', $jobPost->id);
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $applications = $query->latest()->paginate(15);
 
         return $this->success($applications, 'Applicants retrieved successfully');
     }
 
     /**
-     * Update an application's status (employer only, for their own job posts).
+     * Employer updates application status.
      */
     public function updateStatus(Request $request, Application $application): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
-        $employer = $user->employer;
 
-        if (! $employer || $application->jobPost->employer_id !== $employer->id) {
-            return $this->error('Unauthorized', 403);
+        if ($application->jobPost->employer_id !== $user->employer?->id) {
+            return $this->forbidden('You can only update applications for your own job posts.');
         }
 
-        $request->validate([
-            'status' => 'required|in:submitted,under_review,shortlisted,rejected,hired',
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:submitted,reviewed,shortlisted,rejected,accepted'],
         ]);
 
-        $application->update(['status' => $request->status]);
+        $application->update(['status' => $validated['status']]);
 
         return $this->success($application, 'Application status updated successfully');
     }
 
     /**
-     * Download an applicant's CV (employer only, for their own job posts).
+     * Employer downloads applicant CV.
      */
     public function downloadCv(Request $request, Application $application): StreamedResponse|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
-        $employer = $user->employer;
 
-        if (! $employer || $application->jobPost->employer_id !== $employer->id) {
-            return $this->error('Unauthorized', 403);
+        if ($application->jobPost->employer_id !== $user->employer?->id) {
+            return $this->forbidden('You can only download CVs for your own job posts.');
         }
 
         if (! Storage::disk('local')->exists($application->cv_path)) {
-            return $this->error('CV not found', 404);
+            return $this->notFound('CV file not found.');
         }
 
-        return Storage::disk('local')->download($application->cv_path);
+        return Storage::disk('local')->download($application->cv_path, 'applicant-cv.pdf');
     }
 }

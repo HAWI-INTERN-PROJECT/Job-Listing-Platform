@@ -52,7 +52,7 @@ export default function DashboardPage() {
     queryKey: ['applications'],
     queryFn: async () => {
       const res = await api.get('/employee/applications')
-      return (res.data.data ?? res.data) as Application[]
+      return (res.data.data?.data ?? res.data.data ?? res.data) as Application[]
     },
     enabled: !!user,
   })
@@ -84,7 +84,7 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title={t('dashboard.title')} />
 
-        <main className="px-4 sm:px-8 py-6 space-y-6 max-w-5xl w-full">
+        <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-5xl w-full">
           <div>
             <h2 className="text-xl font-semibold">{t('dashboard.welcome', { name: user?.name ?? 'there' })}</h2>
             <p className="text-sm text-muted-foreground mt-1">{t('dashboard.description')}</p>

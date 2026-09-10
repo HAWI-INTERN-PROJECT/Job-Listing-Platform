@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { useAuthStore } from '@/stores/auth'
@@ -9,6 +9,9 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
+import VerifyEmailPage from '@/pages/VerifyEmailPage'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import DashboardPage from '@/pages/DashboardPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import JobSearchPage from '@/pages/JobSearchPage'
@@ -136,7 +139,7 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthInitializer>
-          <BrowserRouter>
+          
             <Routes>
               <Route
                 path="/"
@@ -157,6 +160,33 @@ export default function App() {
                 element={
                   <GuestRoute>
                     <RegisterPage />
+                  </GuestRoute>
+                }
+              />
+
+              <Route
+                path="/verify-email"
+                element={
+                  <ProtectedRoute>
+                    <VerifyEmailPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/forgot-password"
+                element={
+                  <GuestRoute>
+                    <ForgotPasswordPage />
+                  </GuestRoute>
+                }
+              />
+
+              <Route
+                path="/reset-password"
+                element={
+                  <GuestRoute>
+                    <ResetPasswordPage />
                   </GuestRoute>
                 }
               />
@@ -318,7 +348,7 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
-          </BrowserRouter>
+          
         </AuthInitializer>
       </QueryClientProvider>
     </ErrorBoundary>

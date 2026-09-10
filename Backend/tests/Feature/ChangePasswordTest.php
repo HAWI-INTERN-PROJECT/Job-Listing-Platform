@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OtpCodeMail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ChangePasswordTest extends TestCase
@@ -13,23 +15,66 @@ class ChangePasswordTest extends TestCase
 
     public function test_authenticated_user_can_change_password(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create([
             'password' => bcrypt('old-password'),
         ]);
 
-        $response = $this->actingAs($user)
+        $step1 = $this->actingAs($user)
             ->putJson('/api/v1/change-password', [
                 'current_password' => 'old-password',
                 'password' => 'new-password',
                 'password_confirmation' => 'new-password',
             ]);
 
-        $response->assertOk()
+        $step1->assertOk()
+            ->assertJsonFragment(['message' => __('passwords.otp_sent')]);
+
+        $capturedCode = null;
+        Mail::assertSent(OtpCodeMail::class, function ($mail) use (&$capturedCode) {
+            $capturedCode = $mail->code;
+
+            return true;
+        });
+
+        $step2 = $this->actingAs($user)
+            ->postJson('/api/v1/confirm-change-password', [
+                'code' => $capturedCode,
+            ]);
+
+        $step2->assertOk()
             ->assertJsonFragment(['message' => __('passwords.changed')]);
 
-        // Verify new password works
         $this->assertTrue(
             Hash::check('new-password', $user->fresh()->password)
+        );
+    }
+
+    public function test_confirm_change_password_with_invalid_code_fails(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'password' => bcrypt('old-password'),
+        ]);
+
+        $this->actingAs($user)
+            ->putJson('/api/v1/change-password', [
+                'current_password' => 'old-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/v1/confirm-change-password', [
+                'code' => '000000',
+            ]);
+
+        $response->assertBadRequest();
+
+        $this->assertTrue(
+            Hash::check('old-password', $user->fresh()->password)
         );
     }
 
@@ -121,6 +166,8 @@ class ChangePasswordTest extends TestCase
 
     public function test_change_password_revokes_all_tokens(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create([
             'password' => bcrypt('old-password'),
         ]);
@@ -130,11 +177,23 @@ class ChangePasswordTest extends TestCase
 
         $this->assertEquals(2, $user->tokens()->count());
 
-        $response = $this->actingAs($user)
+        $this->actingAs($user)
             ->putJson('/api/v1/change-password', [
                 'current_password' => 'old-password',
                 'password' => 'new-password',
                 'password_confirmation' => 'new-password',
+            ]);
+
+        $capturedCode = null;
+        Mail::assertSent(OtpCodeMail::class, function ($mail) use (&$capturedCode) {
+            $capturedCode = $mail->code;
+
+            return true;
+        });
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/v1/confirm-change-password', [
+                'code' => $capturedCode,
             ]);
 
         $response->assertOk();

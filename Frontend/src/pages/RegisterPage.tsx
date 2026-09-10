@@ -44,17 +44,9 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterForm) => {
     try {
-      const user = await registerUser(data)
+      await registerUser(data)
       toast.success('Account created successfully')
-      if (user?.role === 'employer') {
-        navigate('/employer-dashboard')
-      } else if (user?.role === 'employee') {
-        navigate('/my-applications')
-      } else if (user?.role === 'admin') {
-        navigate('/admin')
-      } else {
-        navigate('/dashboard')
-      }
+      navigate('/verify-email')
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response?.data) {
         const serverData = error.response.data

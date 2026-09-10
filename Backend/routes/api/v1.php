@@ -5,12 +5,14 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\V1\AdminApplicationController;
 use App\Http\Controllers\Api\V1\AdminCompanyController;
 use App\Http\Controllers\Api\V1\AdminJobPostController;
+use App\Http\Controllers\Api\V1\AdminNotificationController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
+use App\Http\Controllers\Api\V1\EmployerNotificationController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
 use App\Http\Middleware\EnsureRole;
@@ -26,7 +28,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health check
-Route::get('health', fn() => response()->json([
+Route::get('health', fn () => response()->json([
     'status' => 'healthy',
     'timestamp' => now()->toDateTimeString(),
 ]))->name('api.v1.health');
@@ -37,10 +39,8 @@ Route::middleware('throttle:auth')->group(function (): void {
     Route::post('login', [AuthController::class, 'login'])->name('api.v1.login');
 });
 
-// Email verification
-Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-    ->middleware('signed')
-    ->name('verification.verify');
+// Email verification (OTP-based)
+// Route registered under authenticated group below as email/verify-otp
 
 // Protected routes with authenticated rate limiter (120/min)
 Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function (): void {
@@ -49,6 +49,8 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
     // Change password
     Route::put('change-password', [AuthController::class, 'changePassword'])->name('api.v1.change-password');
+    Route::post('confirm-change-password', [AuthController::class, 'confirmChangePassword'])->name('api.v1.confirm-change-password');
+    Route::post('email/verify-otp', [AuthController::class, 'verifyEmailOtp'])->name('verification.verify');
 
     Route::post('email/resend', [AuthController::class, 'resendVerificationEmail'])
         ->middleware('throttle:6,1')
@@ -66,7 +68,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::middleware('verified')->group(function (): void {
         // Administrator Routes
         Route::middleware(EnsureRole::class . ':admin')->prefix('admin')->group(function (): void {
-            Route::get('dashboard', fn() => response()->json([
+            Route::get('dashboard', fn () => response()->json([
                 'success' => true,
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
@@ -106,11 +108,21 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::post('{employer}/reject', [AdminCompanyController::class, 'reject'])->name('reject');
                 Route::delete('{employer}', [AdminCompanyController::class, 'destroy'])->name('destroy');
             });
+
+            // Admin Notifications Workflow
+            Route::prefix('notifications')->name('api.v1.admin.notifications.')->group(function (): void {
+                Route::get('/', [AdminNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [AdminNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [AdminNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [AdminNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [AdminNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [AdminNotificationController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // Employer Routes
         Route::middleware(EnsureRole::class . ':employer')->prefix('employer')->group(function (): void {
-            Route::get('dashboard', fn() => response()->json([
+            Route::get('dashboard', fn () => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employer',
             ]))->name('api.v1.employer.dashboard');
@@ -134,11 +146,21 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             // Application status management
             Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
             Route::get('applications/{application}/cv', [ApplicationController::class, 'downloadCv'])->name('api.v1.employer.applications.cv');
+
+            // Employer Notifications Workflow
+            Route::prefix('notifications')->name('api.v1.employer.notifications.')->group(function (): void {
+                Route::get('/', [EmployerNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [EmployerNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [EmployerNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [EmployerNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [EmployerNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [EmployerNotificationController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // Employee Routes
         Route::middleware(EnsureRole::class . ':employee')->prefix('employee')->group(function (): void {
-            Route::get('dashboard', fn() => response()->json([
+            Route::get('dashboard', fn () => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');
