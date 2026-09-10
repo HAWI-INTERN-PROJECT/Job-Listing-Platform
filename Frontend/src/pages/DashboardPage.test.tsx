@@ -9,6 +9,7 @@ const mockUser = {
   name: 'John Doe',
   email: 'john@example.com',
   username: 'johndoe',
+  role: 'employee',
   email_verified_at: '2026-01-01',
   created_at: '2026-01-01',
   updated_at: '2026-01-01',
@@ -30,6 +31,23 @@ vi.mock('@/components/LanguageSwitcher', () => ({
 
 vi.mock('@/components/ThemeToggle', () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme</button>,
+}))
+
+// THIS IS THE FIX: We force the test to translate keys into exact English sentences.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: any) => {
+      if (key === 'dashboard.title') return 'Dashboard'
+      if (key === 'dashboard.welcome') return `Welcome back, ${options?.name || 'there'}`
+      if (key === 'dashboard.description') return "Here's a summary of your job search activities."
+      if (key === 'dashboard.recentApplications') return 'Recent Applications'
+      if (key === 'common.viewAll') return 'View All'
+      if (key === 'dashboard.noApplications') return 'No applications yet.'
+      if (key === 'dashboard.startSearching') return 'Start searching'
+      if (key === 'applications.unknownPosition') return 'Unknown Position'
+      return key
+    }
+  })
 }))
 
 const renderPage = () => {
@@ -74,6 +92,6 @@ describe('DashboardPage', () => {
 
   it('renders dashboard description', () => {
     renderPage()
-    expect(screen.getByText("Here's a summary of your job search activity.")).toBeInTheDocument()
+    expect(screen.getByText("Here's a summary of your job search activities.")).toBeInTheDocument()
   })
 })
