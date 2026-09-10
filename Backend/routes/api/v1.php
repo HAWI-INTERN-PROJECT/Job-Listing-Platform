@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\V1\AdminApplicationController;
 use App\Http\Controllers\Api\V1\AdminCompanyController;
 use App\Http\Controllers\Api\V1\AdminJobPostController;
+use App\Http\Controllers\Api\V1\AdminNotificationController;
 use App\Http\Controllers\Api\V1\AdminStatsController;
 use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\ApplicationController;
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health check
-Route::get('health', fn() => response()->json([
+Route::get('health', fn () => response()->json([
     'status' => 'healthy',
     'timestamp' => now()->toDateTimeString(),
 ]))->name('api.v1.health');
@@ -66,7 +67,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::middleware('verified')->group(function (): void {
         // Administrator Routes
         Route::middleware(EnsureRole::class . ':admin')->prefix('admin')->group(function (): void {
-            Route::get('dashboard', fn() => response()->json([
+            Route::get('dashboard', fn () => response()->json([
                 'success' => true,
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
@@ -106,11 +107,21 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::post('{employer}/reject', [AdminCompanyController::class, 'reject'])->name('reject');
                 Route::delete('{employer}', [AdminCompanyController::class, 'destroy'])->name('destroy');
             });
+
+            // Admin Notifications Workflow
+            Route::prefix('notifications')->name('api.v1.admin.notifications.')->group(function (): void {
+                Route::get('/', [AdminNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [AdminNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [AdminNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [AdminNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [AdminNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [AdminNotificationController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // Employer Routes
         Route::middleware(EnsureRole::class . ':employer')->prefix('employer')->group(function (): void {
-            Route::get('dashboard', fn() => response()->json([
+            Route::get('dashboard', fn () => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employer',
             ]))->name('api.v1.employer.dashboard');
@@ -138,7 +149,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
         // Employee Routes
         Route::middleware(EnsureRole::class . ':employee')->prefix('employee')->group(function (): void {
-            Route::get('dashboard', fn() => response()->json([
+            Route::get('dashboard', fn () => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');

@@ -44,3 +44,26 @@ export interface ApiError {
   message: string
   errors?: Record<string, string[]>
 }
+
+export interface AdminNotificationData {
+  type?: string
+  title?: string
+  message?: string
+  job_post_id?: number
+  job_title?: string
+  employer_id?: number
+  company_name?: string
+  action_url?: string
+  [key: string]: unknown
+}
+
+export interface AdminNotification {
+  id: string
+  type: string
+  data: AdminNotificationData
+  read_at: string | null
+  is_read: boolean
+  unread_count?: number
+  created_at: string
+  created_at_human?: string
+}
