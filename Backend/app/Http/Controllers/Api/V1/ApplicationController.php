@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\Application\StoreApplicationRequest;
+use App\Http\Resources\V1\ApplicationResource;
 use App\Http\Traits\ApiResponse;
 use App\Models\Application;
 use App\Models\JobPost;
@@ -61,11 +62,15 @@ class ApplicationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $applications = Application::with('jobPost')
+        $applications = Application::with(['jobPost.employer'])
             ->where('user_id', $request->user()->id)
+            ->latest()
             ->paginate(15);
 
-        return $this->success($applications, 'Applications retrieved successfully');
+        return $this->success(
+            ApplicationResource::collection($applications)->response()->getData(true),
+            'Applications retrieved successfully'
+        );
     }
 
     /**
@@ -108,13 +113,15 @@ class ApplicationController extends Controller
             'status' => ['required', 'string', 'in:submitted,reviewed,shortlisted,rejected,accepted'],
         ]);
 
-        $application->update(['status' => $validated['status']]);
+        $application->update([
+            'status' => $validated['status'],
+        ]);
 
         return $this->success($application, 'Application status updated successfully');
     }
 
     /**
-     * Employer downloads applicant CV.
+     * Download applicant CV.
      */
     public function downloadCv(Request $request, Application $application): StreamedResponse|JsonResponse
     {
@@ -122,7 +129,7 @@ class ApplicationController extends Controller
         $user = $request->user();
 
         if ($application->jobPost->employer_id !== $user->employer?->id) {
-            return $this->forbidden('You can only download CVs for your own job posts.');
+            return $this->forbidden('You can only download CVs for your own job applicants.');
         }
 
         if (! Storage::disk('local')->exists($application->cv_path)) {
