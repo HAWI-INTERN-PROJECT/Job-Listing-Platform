@@ -82,6 +82,7 @@ class UserCVController extends Controller
 
         $user->update([
             'cv_path' => null,
+            'cv_original_name' => null,
             'cv_uploaded_at' => null,
         ]);
 
