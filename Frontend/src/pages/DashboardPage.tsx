@@ -15,7 +15,8 @@ type StatusLabel = 'Submitted' | 'Under Review' | 'Shortlisted' | 'Rejected' | '
 
 interface Application {
   id: number
-  status_label: StatusLabel
+  status?: string
+  status_label?: StatusLabel
   created_at: string
   job_post: {
     title: string
@@ -33,15 +34,41 @@ const statusStyles: Record<StatusLabel, string> = {
   Hired: 'bg-purple-50 text-purple-600',
 }
 
+const statusMap: Record<string, StatusLabel> = {
+  submitted: 'Submitted',
+  under_review: 'Under Review',
+  shortlisted: 'Shortlisted',
+  rejected: 'Rejected',
+  hired: 'Hired',
+  Submitted: 'Submitted',
+  'Under Review': 'Under Review',
+  Shortlisted: 'Shortlisted',
+  Rejected: 'Rejected',
+  Hired: 'Hired',
+}
+
+function getStatusLabel(app: Application): StatusLabel {
+  if (app.status_label && app.status_label in statusStyles) {
+    return app.status_label
+  }
+  if (app.status && statusMap[app.status]) {
+    return statusMap[app.status]
+  }
+  return 'Submitted'
+}
+
 export default function DashboardPage() {
+  const { user, getProfile } = useAuthStore()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { user, getProfile } = useAuthStore()
 
   useEffect(() => {
-    if (!user) {
-      getProfile().catch(() => navigate('/login'))
-    } else if (user.role === 'employer') {
+    getProfile()
+  }, [getProfile])
+
+  useEffect(() => {
+    if (!user) return
+    if (user.role === 'employer') {
       navigate('/employer-dashboard', { replace: true })
     } else if (user.role === 'admin') {
       navigate('/admin', { replace: true })
@@ -52,16 +79,23 @@ export default function DashboardPage() {
     queryKey: ['applications'],
     queryFn: async () => {
       const res = await api.get('/employee/applications')
-      return (res.data.data?.data ?? res.data.data ?? res.data) as Application[]
+      const raw = res.data?.data?.data ?? res.data?.data ?? res.data
+      return (Array.isArray(raw) ? raw : []) as Application[]
     },
     enabled: !!user,
   })
 
-  const applications = data ?? []
+  const applications = Array.isArray(data) ? data : []
   const total = applications.length
-  const active = applications.filter((a) => a.status_label === 'Submitted' || a.status_label === 'Under Review').length
-  const shortlisted = applications.filter((a) => a.status_label === 'Shortlisted' || a.status_label === 'Hired').length
-  const rejected = applications.filter((a) => a.status_label === 'Rejected').length
+  const active = applications.filter((a) => {
+    const status = getStatusLabel(a)
+    return status === 'Submitted' || status === 'Under Review'
+  }).length
+  const shortlisted = applications.filter((a) => {
+    const status = getStatusLabel(a)
+    return status === 'Shortlisted' || status === 'Hired'
+  }).length
+  const rejected = applications.filter((a) => getStatusLabel(a) === 'Rejected').length
   const recent = applications.slice(0, 4)
 
   const stats = [
@@ -84,101 +118,131 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title={t('dashboard.title')} />
 
-        <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-5xl w-full">
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Welcome Banner */}
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white shadow-sm">
+            <h1 className="text-2xl font-bold">
+              {t('dashboard.welcome', { name: user?.name ?? 'there' })}
+            </h1>
+            <p className="mt-1 text-green-100 text-sm">
+              {t('dashboard.description')}
+            </p>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((stat) => {
+              const Icon = stat.icon
+              return (
+                <div key={stat.label} className="bg-background border rounded-xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
+                    <div className={`p-2 rounded-lg ${stat.bg}`}>
+                      <Icon className={`h-5 w-5 ${stat.color}`} />
+                    </div>
+                  </div>
+                  <p className="mt-3 text-3xl font-bold text-foreground">{isLoading ? '—' : stat.value}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Quick Links */}
           <div>
-            <h2 className="text-xl font-semibold">{t('dashboard.welcome', { name: user?.name ?? 'there' })}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{t('dashboard.description')}</p>
+            <h2 className="text-base font-semibold text-foreground mb-4">{t('dashboard.quickActions')}</h2>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {quickLinks.map((link) => {
+                const Icon = link.icon
+                return (
+                  <button
+                    key={link.path}
+                    onClick={() => navigate(link.path)}
+                    className="flex items-center justify-between p-4 bg-background border rounded-xl hover:border-green-400 hover:shadow-sm transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted group-hover:bg-green-50 transition-colors">
+                        <Icon className="h-5 w-5 text-muted-foreground group-hover:text-green-600 transition-colors" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{link.label}</p>
+                        <p className="text-xs text-muted-foreground">{link.desc}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors ml-2 flex-shrink-0" />
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {stats.map(({ label, value, icon: Icon, bg, color }) => (
-              <div key={label} className="bg-background border rounded-lg p-4 flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-md ${bg} flex items-center justify-center flex-shrink-0`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold leading-tight">
-                    {isLoading ? <span className="inline-block h-6 w-8 bg-muted rounded animate-pulse" /> : value}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {quickLinks.map(({ label, icon: Icon, path, desc }) => (
-              <button
-                key={label}
-                onClick={() => navigate(path)}
-                className="bg-background border rounded-lg p-4 flex items-center gap-3 hover:border-blue-400 hover:bg-blue-50/40 transition-colors text-left group"
-              >
-                <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{label}</p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-blue-600 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-
-          <div className="bg-background border rounded-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h3 className="font-semibold">{t('dashboard.recentApplications')}</h3>
-              <button
-                onClick={() => navigate('/my-applications')}
-                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-              >
-                {t('common.viewAll')} <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+          {/* Recent Applications */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-foreground">{t('dashboard.recentApplications')}</h2>
+              {applications.length > 0 && (
+                <button
+                  onClick={() => navigate('/my-applications')}
+                  className="text-sm text-green-600 hover:text-green-700 font-medium"
+                >
+                  {t('dashboard.viewAll')}
+                </button>
+              )}
             </div>
 
-            {isLoading ? (
-              <div className="space-y-3 p-5">
+            {isLoading && (
+              <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 animate-pulse">
-                    <div className="h-9 w-9 rounded-md bg-muted flex-shrink-0" />
-                    <div className="space-y-1.5 flex-1">
-                      <div className="h-3.5 bg-muted rounded w-1/3" />
-                      <div className="h-3 bg-muted rounded w-1/4" />
+                  <div key={i} className="bg-background border rounded-lg px-5 py-4 animate-pulse">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-md bg-muted" />
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 bg-muted rounded w-1/3" />
+                        <div className="h-3 bg-muted rounded w-1/2" />
+                      </div>
                     </div>
-                    <div className="h-6 w-20 bg-muted rounded-full" />
                   </div>
                 ))}
               </div>
-            ) : recent.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-                {t('dashboard.noApplications')}{' '}
-                <button onClick={() => navigate('/job-search')} className="text-blue-600 hover:underline">
-                  {t('dashboard.startSearching')}
+            )}
+
+            {!isLoading && applications.length === 0 && (
+              <div className="bg-background border rounded-xl p-8 text-center">
+                <Briefcase className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground">{t('dashboard.noApplicationsYet')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('dashboard.startApplying')}</p>
+                <button
+                  onClick={() => navigate('/job-search')}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  <Search className="h-4 w-4" />
+                  {t('dashboard.browseJobs')}
                 </button>
               </div>
-            ) : (
-              <div className="divide-y">
-                {recent.map((app) => (
-                  <div
-                    key={app.id}
-                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 cursor-pointer"
-                    onClick={() => app.job_post?.slug && navigate(`/jobs/${app.job_post.slug}`)}
-                  >
-                    <div className="h-9 w-9 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <Briefcase className="h-4 w-4 text-blue-600" />
+            )}
+
+            {!isLoading && applications.length > 0 && (
+              <div className="space-y-3">
+                {recent.map((app) => {
+                  const statusLabel = getStatusLabel(app)
+                  return (
+                    <div
+                      key={app.id}
+                      onClick={() => app.job_post?.slug && navigate(`/jobs/${app.job_post.slug}`)}
+                      className="flex items-center justify-between p-4 bg-background border rounded-xl hover:border-border/80 transition-colors cursor-pointer gap-4"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{app.job_post?.title ?? t('applications.unknownPosition')}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {app.job_post?.employer?.company_name ?? '—'}
+                          {app.job_post?.location ? ` • ${app.job_post.location}` : ''}
+                        </p>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusStyles[statusLabel] ?? 'bg-muted text-muted-foreground'}`}>
+                        {statusLabel}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{app.job_post?.title ?? t('applications.unknownPosition')}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {app.job_post?.employer?.company_name ?? '—'}
-                        {app.job_post?.location ? ` • ${app.job_post.location}` : ''}
-                      </p>
-                    </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusStyles[app.status_label] ?? 'bg-muted text-muted-foreground'}`}>
-                      {app.status_label}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
