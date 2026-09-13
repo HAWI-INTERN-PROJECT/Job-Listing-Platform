@@ -45,7 +45,7 @@ class ApplicationStatusChangedNotification extends Notification
             ApplicationStatus::HIRED => 'Hired',
         };
 
-        $companyName = $this->jobPost->employer?->company_name ?? 'The employer';
+        $companyName = $this->jobPost->employer->company_name ?? 'The employer';
 
         return [
             'type' => 'application_status_changed',
