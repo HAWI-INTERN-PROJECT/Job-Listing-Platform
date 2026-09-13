@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Bell,
   Briefcase,
@@ -11,6 +11,7 @@ import {
 import { Link } from 'react-router-dom'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
+import api from '@/lib/api'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,6 +88,38 @@ export default function MyJobPostsPage() {
     useState(false)
 
   const jobsPerPage = 2
+
+  useEffect(() => {
+    let mounted = true
+    const fetchEmployerJobs = async () => {
+      try {
+        const res = await api.get('/employer/jobs')
+        const data = res.data?.data?.data || res.data?.data
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setJobs(
+            data.map((j: any) => ({
+              id: j.id,
+              title: j.title,
+              category: j.category?.name || 'General',
+              location: j.location || 'Remote',
+              type: j.job_type_label || j.job_type || 'Full-time',
+              applications: j.applications_count ?? 0,
+              deadline: j.deadline ? new Date(j.deadline).toLocaleDateString() : 'N/A',
+              status: j.status
+                ? j.status.charAt(0).toUpperCase() + j.status.slice(1)
+                : 'Pending',
+            })),
+          )
+        }
+      } catch {
+        // Fallback to initialJobs if guest or offline
+      }
+    }
+    fetchEmployerJobs()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const filteredJobs = jobs.filter((job) => {
     const search = searchTerm.toLowerCase()
@@ -178,48 +211,27 @@ export default function MyJobPostsPage() {
                       You have new applications to review.
                     </div>
 
-                    <div className="border-b pb-3">
-                      Your job post is awaiting review.
-                    </div>
-
-                    <div>
-                      Your employer account is approved.
-                    </div>
+                    <div>Job post approved.</div>
                   </div>
                 </div>
               )}
             </div>
 
-            <Link
-              to="/company-profile"
-              className="flex items-center gap-2 rounded-lg p-1 hover:bg-muted"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                AR
-              </div>
-
-              <div className="hidden sm:block">
-                <p className="text-sm font-medium">
-                  Employer
-                </p>
-
-                <p className="text-xs text-muted-foreground">
-                  Company Profile
-                </p>
-              </div>
-            </Link>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+              TC
+            </div>
           </div>
         </header>
 
         <main className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">
                 My Job Posts
               </h2>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Manage and track all jobs posted by your company.
+                Manage your job listings and track applications.
               </p>
             </div>
 
@@ -231,28 +243,104 @@ export default function MyJobPostsPage() {
             </Link>
           </div>
 
-          <Card>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Jobs
+                </CardTitle>
+
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+
+              <CardContent>
+                <p className="text-2xl font-bold">12</p>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  +2 from last month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Active Jobs
+                </CardTitle>
+
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+              </CardHeader>
+
+              <CardContent>
+                <p className="text-2xl font-bold">8</p>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Currently receiving applications
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Pending Approval
+                </CardTitle>
+
+                <span className="h-2 w-2 rounded-full bg-yellow-500" />
+              </CardHeader>
+
+              <CardContent>
+                <p className="text-2xl font-bold">3</p>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Under admin review
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Applications
+                </CardTitle>
+
+                <span className="text-xs text-muted-foreground">
+                  👥
+                </span>
+              </CardHeader>
+
+              <CardContent>
+                <p className="text-2xl font-bold">142</p>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Across all job posts
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mt-6">
             <CardContent className="p-4">
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
                   <Input
-                    className="pl-9"
-                    placeholder="Search jobs"
+                    placeholder="Search jobs..."
                     value={searchTerm}
-                    onChange={(event) =>
-                      handleSearchChange(event.target.value)
+                    onChange={(e) =>
+                      handleSearchChange(e.target.value)
                     }
+                    className="pl-9"
                   />
                 </div>
 
                 <select
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
                   value={statusFilter}
-                  onChange={(event) =>
-                    handleStatusChange(event.target.value)
+                  onChange={(e) =>
+                    handleStatusChange(e.target.value)
                   }
+                  className="h-10 rounded-md border bg-background px-3 text-sm"
                 >
                   <option>All Status</option>
                   <option>Approved</option>
@@ -262,11 +350,11 @@ export default function MyJobPostsPage() {
                 </select>
 
                 <select
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
                   value={typeFilter}
-                  onChange={(event) =>
-                    handleTypeChange(event.target.value)
+                  onChange={(e) =>
+                    handleTypeChange(e.target.value)
                   }
+                  className="h-10 rounded-md border bg-background px-3 text-sm"
                 >
                   <option>All Employment Types</option>
                   <option>Full-time</option>
@@ -279,10 +367,6 @@ export default function MyJobPostsPage() {
           </Card>
 
           <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Job Posts</CardTitle>
-            </CardHeader>
-
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -301,7 +385,7 @@ export default function MyJobPostsPage() {
                       </th>
 
                       <th className="px-6 py-3 font-medium">
-                        Employment Type
+                        Type
                       </th>
 
                       <th className="px-6 py-3 font-medium">
@@ -361,7 +445,7 @@ export default function MyJobPostsPage() {
 
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-1">
-                              <Link to="/job-applicants">
+                              <Link to={`/job-applicants?jobId=${job.id}`}>
                                 <Button
                                   variant="ghost"
                                   size="sm"
