@@ -78,7 +78,7 @@ class ApplicationController extends Controller
     }
 
     /**
-     * List applicants for an employer's job post.
+     * List applicants for an employer's job post with real status counts.
      */
     public function jobApplicants(Request $request, JobPost $jobPost): JsonResponse
     {
@@ -106,8 +106,25 @@ class ApplicationController extends Controller
 
         $applications = $query->latest()->paginate($request->integer('per_page', 15));
 
+        $data = ApplicationResource::collection($applications)->response()->getData(true);
+
+        // Real scenario status breakdown counts for this job post
+        $rawCounts = Application::where('job_post_id', $jobPost->id)
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        $data['counts'] = [
+            'all' => Application::where('job_post_id', $jobPost->id)->count(),
+            'submitted' => (int) ($rawCounts[ApplicationStatus::SUBMITTED->value] ?? 0),
+            'under_review' => (int) ($rawCounts[ApplicationStatus::UNDER_REVIEW->value] ?? 0),
+            'shortlisted' => (int) ($rawCounts[ApplicationStatus::SHORTLISTED->value] ?? 0),
+            'rejected' => (int) ($rawCounts[ApplicationStatus::REJECTED->value] ?? 0),
+            'hired' => (int) ($rawCounts[ApplicationStatus::HIRED->value] ?? 0),
+        ];
+
         return $this->success(
-            ApplicationResource::collection($applications)->response()->getData(true),
+            $data,
             'Applicants retrieved successfully'
         );
     }

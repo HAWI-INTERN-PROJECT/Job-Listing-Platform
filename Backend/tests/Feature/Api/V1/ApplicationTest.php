@@ -40,7 +40,8 @@ class ApplicationTest extends TestCase
             ->getJson("/api/v1/employer/jobs/{$jobPost->id}/applicants");
 
         $response->assertOk()
-            ->assertJsonCount(3, 'data.data');
+            ->assertJsonCount(3, 'data.data')
+            ->assertJsonPath('data.counts.all', 3);
     }
 
     public function test_employer_can_filter_applicants_by_status_and_search(): void
@@ -69,7 +70,13 @@ class ApplicationTest extends TestCase
 
         $statusResponse->assertOk()
             ->assertJsonCount(1, 'data.data')
-            ->assertJsonPath('data.data.0.status', 'hired');
+            ->assertJsonPath('data.data.0.status', 'hired')
+            ->assertJsonPath('data.counts.all', 2)
+            ->assertJsonPath('data.counts.submitted', 1)
+            ->assertJsonPath('data.counts.hired', 1)
+            ->assertJsonPath('data.counts.under_review', 0)
+            ->assertJsonPath('data.counts.shortlisted', 0)
+            ->assertJsonPath('data.counts.rejected', 0);
 
         // Filter by search 'John'
         $searchResponse = $this->actingAs($employerUser, 'sanctum')

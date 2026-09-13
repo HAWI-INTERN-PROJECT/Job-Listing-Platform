@@ -8,6 +8,11 @@ import {
   Calendar,
   Briefcase,
   AlertCircle,
+  Inbox,
+  Clock,
+  Star,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,6 +27,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import api from '@/lib/api'
+
+export type ApplicationStatusType =
+  | 'submitted'
+  | 'under_review'
+  | 'shortlisted'
+  | 'rejected'
+  | 'hired'
 
 interface ApplicantUser {
   id: number
@@ -48,33 +60,57 @@ interface ApplicationDetails {
   job_post?: JobPostInfo
   cv_path: string | null
   cover_letter: string | null
-  status: 'submitted' | 'under_review' | 'shortlisted' | 'rejected' | 'hired'
+  status: ApplicationStatusType
   status_label: string
   created_at: string
 }
 
-function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const styles: Record<string, string> = {
-    submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
-    under_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
-    shortlisted: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
-    rejected: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-    hired: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
+const STATUS_CONFIG: Record<
+  ApplicationStatusType,
+  { label: string; badgeClass: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  submitted: {
+    label: 'Submitted',
+    badgeClass: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+    icon: Inbox,
+  },
+  under_review: {
+    label: 'Under review',
+    badgeClass: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+    icon: Clock,
+  },
+  shortlisted: {
+    label: 'Shortlisted',
+    badgeClass: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+    icon: Star,
+  },
+  rejected: {
+    label: 'Rejected',
+    badgeClass: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800',
+    icon: XCircle,
+  },
+  hired: {
+    label: 'Hired',
+    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+    icon: CheckCircle2,
+  },
+}
+
+function StatusBadge({ status, label }: { status: ApplicationStatusType; label?: string }) {
+  const config = STATUS_CONFIG[status] ?? {
+    label: status,
+    badgeClass: 'bg-muted text-muted-foreground border',
+    icon: Clock,
   }
 
-  const displayLabel =
-    label ||
-    (status === 'under_review'
-      ? 'Under Review'
-      : status.charAt(0).toUpperCase() + status.slice(1))
+  const IconComponent = config.icon
 
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-        styles[status] ?? 'bg-muted text-muted-foreground'
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${config.badgeClass}`}
     >
-      {displayLabel}
+      <IconComponent className="h-3.5 w-3.5" />
+      {label || config.label}
     </span>
   )
 }
@@ -87,7 +123,7 @@ export default function ApplicantDetailsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [selectedStatus, setSelectedStatus] = useState<string>('under_review')
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatusType>('under_review')
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [isDownloadingCv, setIsDownloadingCv] = useState(false)
 
@@ -159,18 +195,19 @@ export default function ApplicantDetailsPage() {
     }
   }
 
-  const handleUpdateStatus = async () => {
+  const handleUpdateStatus = async (statusToSet?: ApplicationStatusType) => {
     if (!application) return
+    const statusValue = statusToSet || selectedStatus
 
     try {
       setIsUpdatingStatus(true)
       const res = await api.put(`/employer/applications/${application.id}/status`, {
-        status: selectedStatus,
+        status: statusValue,
       })
       const updated: ApplicationDetails = res.data?.data || res.data
       setApplication(updated)
       setSelectedStatus(updated.status)
-      toast.success(`Application status updated to "${updated.status_label || selectedStatus}".`)
+      toast.success(`Application status updated to "${updated.status_label || statusValue}".`)
     } catch (err) {
       console.error('Failed to update status:', err)
       toast.error('Failed to update application status.')
@@ -250,6 +287,88 @@ export default function ApplicantDetailsPage() {
             </Card>
           ) : (
             <>
+              {/* Quick Status Bar */}
+              <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border bg-background p-3">
+                <span className="text-xs font-semibold text-muted-foreground mr-2">
+                  Change Status to:
+                </span>
+
+                <Button
+                  size="sm"
+                  variant={application.status === 'submitted' ? 'default' : 'outline'}
+                  className={
+                    application.status === 'submitted'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 border-blue-200'
+                  }
+                  disabled={isUpdatingStatus}
+                  onClick={() => handleUpdateStatus('submitted')}
+                >
+                  <Inbox className="mr-1.5 h-3.5 w-3.5" />
+                  Submitted
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant={application.status === 'under_review' ? 'default' : 'outline'}
+                  className={
+                    application.status === 'under_review'
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-200'
+                  }
+                  disabled={isUpdatingStatus}
+                  onClick={() => handleUpdateStatus('under_review')}
+                >
+                  <Clock className="mr-1.5 h-3.5 w-3.5" />
+                  Under review
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant={application.status === 'shortlisted' ? 'default' : 'outline'}
+                  className={
+                    application.status === 'shortlisted'
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/40 border-purple-200'
+                  }
+                  disabled={isUpdatingStatus}
+                  onClick={() => handleUpdateStatus('shortlisted')}
+                >
+                  <Star className="mr-1.5 h-3.5 w-3.5" />
+                  Shortlisted
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant={application.status === 'rejected' ? 'destructive' : 'outline'}
+                  className={
+                    application.status === 'rejected'
+                      ? ''
+                      : 'text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border-red-200'
+                  }
+                  disabled={isUpdatingStatus}
+                  onClick={() => handleUpdateStatus('rejected')}
+                >
+                  <XCircle className="mr-1.5 h-3.5 w-3.5" />
+                  Rejected
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant={application.status === 'hired' ? 'default' : 'outline'}
+                  className={
+                    application.status === 'hired'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border-emerald-200'
+                  }
+                  disabled={isUpdatingStatus}
+                  onClick={() => handleUpdateStatus('hired')}
+                >
+                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                  Hired
+                </Button>
+              </div>
+
               {/* Two Column Layout */}
               <div className="grid gap-5 lg:grid-cols-2">
                 {/* Applicant Profile */}
@@ -365,34 +484,34 @@ export default function ApplicantDetailsPage() {
                       </div>
                     </div>
 
-                    {/* Change Status Section */}
+                    {/* Change Status Section with all 5 real scenario statuses */}
                     <div className="border-t pt-5">
                       <label htmlFor="status-select" className="mb-2 block text-sm font-semibold">
                         Update Candidate Status
                       </label>
 
                       <p className="mb-3 text-xs text-muted-foreground">
-                        Select a decision for this applicant. The candidate will receive an immediate notification of this status change.
+                        Assign one of the 5 real-scenario hiring statuses. The candidate will receive an immediate notification upon update.
                       </p>
 
                       <select
                         id="status-select"
                         value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        onChange={(e) => setSelectedStatus(e.target.value as ApplicationStatusType)}
                         className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium"
                       >
-                        <option value="submitted">Submitted</option>
-                        <option value="under_review">Under Review</option>
-                        <option value="shortlisted">Shortlisted</option>
-                        <option value="hired">Hired (Offer Accepted / Candidate Selected)</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="submitted">• Submitted (New application received)</option>
+                        <option value="under_review">• Under review (Evaluating candidate profile & CV)</option>
+                        <option value="shortlisted">• Shortlisted (Selected for interview / next round)</option>
+                        <option value="rejected">• Rejected (Not selected for this role)</option>
+                        <option value="hired">• Hired (Final offer extended and candidate hired)</option>
                       </select>
 
                       <div className="mt-4 flex gap-2">
                         <Button
                           className="w-full"
                           disabled={isUpdatingStatus || selectedStatus === application.status}
-                          onClick={handleUpdateStatus}
+                          onClick={() => handleUpdateStatus(selectedStatus)}
                         >
                           {isUpdatingStatus ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -405,54 +524,60 @@ export default function ApplicantDetailsPage() {
                 </Card>
               </div>
 
-              {/* Timeline Card */}
+              {/* Hiring Pipeline Timeline Card */}
               <Card className="mt-5">
                 <CardHeader>
-                  <CardTitle className="text-base">Hiring Pipeline Progress</CardTitle>
+                  <CardTitle className="text-base">Real Scenario Hiring Pipeline</CardTitle>
                 </CardHeader>
 
                 <CardContent>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-sm">
-                    {/* Step 1: Applied */}
+                    {/* Stage 1: Submitted */}
                     <div className="flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                         ✓
                       </span>
-                      <span className="font-medium">Applied</span>
+                      <div>
+                        <p className="font-semibold text-blue-600 dark:text-blue-400">• Submitted</p>
+                        <p className="text-[11px] text-muted-foreground">Application received</p>
+                      </div>
                     </div>
 
                     <span className="hidden text-muted-foreground sm:block">→</span>
 
-                    {/* Step 2: Under Review */}
+                    {/* Stage 2: Under review */}
                     <div className="flex items-center gap-2">
                       <span
                         className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                           application.status !== 'submitted'
-                            ? 'bg-primary text-primary-foreground'
+                            ? 'bg-amber-600 text-white'
                             : 'border text-muted-foreground'
                         }`}
                       >
                         {application.status !== 'submitted' ? '✓' : '2'}
                       </span>
-                      <span
-                        className={
-                          application.status !== 'submitted'
-                            ? 'font-medium'
-                            : 'text-muted-foreground'
-                        }
-                      >
-                        Under Review
-                      </span>
+                      <div>
+                        <p
+                          className={
+                            application.status !== 'submitted'
+                              ? 'font-semibold text-amber-600 dark:text-amber-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          • Under review
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">Profile & CV screening</p>
+                      </div>
                     </div>
 
                     <span className="hidden text-muted-foreground sm:block">→</span>
 
-                    {/* Step 3: Shortlisted */}
+                    {/* Stage 3: Shortlisted */}
                     <div className="flex items-center gap-2">
                       <span
                         className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                           application.status === 'shortlisted' || application.status === 'hired'
-                            ? 'bg-primary text-primary-foreground'
+                            ? 'bg-purple-600 text-white'
                             : 'border text-muted-foreground'
                         }`}
                       >
@@ -460,41 +585,53 @@ export default function ApplicantDetailsPage() {
                           ? '✓'
                           : '3'}
                       </span>
-                      <span
-                        className={
-                          application.status === 'shortlisted' || application.status === 'hired'
-                            ? 'font-medium'
-                            : 'text-muted-foreground'
-                        }
-                      >
-                        Shortlisted
-                      </span>
+                      <div>
+                        <p
+                          className={
+                            application.status === 'shortlisted' || application.status === 'hired'
+                              ? 'font-semibold text-purple-600 dark:text-purple-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          • Shortlisted
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">Interview selection</p>
+                      </div>
                     </div>
 
                     <span className="hidden text-muted-foreground sm:block">→</span>
 
-                    {/* Step 4: Final Outcome (Hired / Rejected) */}
+                    {/* Stage 4: Decision (Hired / Rejected) */}
                     <div className="flex items-center gap-2">
                       {application.status === 'hired' ? (
                         <>
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
                             ✓
                           </span>
-                          <span className="font-semibold text-green-600">Hired</span>
+                          <div>
+                            <p className="font-bold text-emerald-600 dark:text-emerald-400">• Hired</p>
+                            <p className="text-[11px] text-emerald-600">Candidate selected</p>
+                          </div>
                         </>
                       ) : application.status === 'rejected' ? (
                         <>
                           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
                             ✕
                           </span>
-                          <span className="font-semibold text-red-600">Rejected</span>
+                          <div>
+                            <p className="font-bold text-red-600 dark:text-red-400">• Rejected</p>
+                            <p className="text-[11px] text-red-600">Application closed</p>
+                          </div>
                         </>
                       ) : (
                         <>
                           <span className="flex h-8 w-8 items-center justify-center rounded-full border text-xs text-muted-foreground">
                             4
                           </span>
-                          <span className="text-muted-foreground">Hired / Rejected</span>
+                          <div>
+                            <p className="text-muted-foreground font-medium">Final Decision</p>
+                            <p className="text-[11px] text-muted-foreground">• Hired or • Rejected</p>
+                          </div>
                         </>
                       )}
                     </div>

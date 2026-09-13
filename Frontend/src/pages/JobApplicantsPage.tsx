@@ -6,10 +6,12 @@ import {
   X,
   Loader2,
   FileText,
-  UserCheck,
-  UserX,
-  Clock,
   Briefcase,
+  Inbox,
+  Clock,
+  Star,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -25,6 +27,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import api from '@/lib/api'
+
+export type ApplicationStatusType =
+  | 'submitted'
+  | 'under_review'
+  | 'shortlisted'
+  | 'rejected'
+  | 'hired'
 
 interface ApplicantUser {
   id: number
@@ -50,9 +59,18 @@ interface ApplicationItem {
   job_post?: JobPostSummary
   cv_path: string | null
   cover_letter: string | null
-  status: 'submitted' | 'under_review' | 'shortlisted' | 'rejected' | 'hired'
+  status: ApplicationStatusType
   status_label: string
   created_at: string
+}
+
+interface StatusCounts {
+  all: number
+  submitted: number
+  under_review: number
+  shortlisted: number
+  rejected: number
+  hired: number
 }
 
 interface EmployerJob {
@@ -61,26 +79,66 @@ interface EmployerJob {
   status: string
 }
 
-function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const styles: Record<string, string> = {
-    submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
-    under_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
-    shortlisted: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
-    rejected: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-    hired: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
-  }
+export const REAL_STATUSES: {
+  id: ApplicationStatusType
+  label: string
+  color: string
+  bgLight: string
+  border: string
+}[] = [
+  {
+    id: 'submitted',
+    label: 'Submitted',
+    color: 'text-blue-700 dark:text-blue-300',
+    bgLight: 'bg-blue-100 dark:bg-blue-950/60',
+    border: 'border-blue-200 dark:border-blue-800',
+  },
+  {
+    id: 'under_review',
+    label: 'Under review',
+    color: 'text-amber-700 dark:text-amber-300',
+    bgLight: 'bg-amber-100 dark:bg-amber-950/60',
+    border: 'border-amber-200 dark:border-amber-800',
+  },
+  {
+    id: 'shortlisted',
+    label: 'Shortlisted',
+    color: 'text-purple-700 dark:text-purple-300',
+    bgLight: 'bg-purple-100 dark:bg-purple-950/60',
+    border: 'border-purple-200 dark:border-purple-800',
+  },
+  {
+    id: 'rejected',
+    label: 'Rejected',
+    color: 'text-red-700 dark:text-red-300',
+    bgLight: 'bg-red-100 dark:bg-red-950/60',
+    border: 'border-red-200 dark:border-red-800',
+  },
+  {
+    id: 'hired',
+    label: 'Hired',
+    color: 'text-emerald-700 dark:text-emerald-300',
+    bgLight: 'bg-emerald-100 dark:bg-emerald-950/60',
+    border: 'border-emerald-200 dark:border-emerald-800',
+  },
+]
+
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
+  const config = REAL_STATUSES.find((s) => s.id === status)
 
   const displayLabel =
     label ||
     (status === 'under_review'
-      ? 'Under Review'
+      ? 'Under review'
       : status.charAt(0).toUpperCase() + status.slice(1))
+
+  const colorClass = config
+    ? `${config.bgLight} ${config.color} ${config.border} border`
+    : 'bg-muted text-muted-foreground border'
 
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-medium ${
-        styles[status] ?? 'bg-muted text-muted-foreground'
-      }`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}
     >
       {displayLabel}
     </span>
@@ -100,10 +158,19 @@ export default function JobApplicantsPage() {
 
   const [applicants, setApplicants] = useState<ApplicationItem[]>([])
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(false)
-  const [isActionLoading, setIsActionLoading] = useState(false)
+  const [updatingApplicantId, setUpdatingApplicantId] = useState<number | null>(null)
+
+  const [counts, setCounts] = useState<StatusCounts>({
+    all: 0,
+    submitted: 0,
+    under_review: 0,
+    shortlisted: 0,
+    rejected: 0,
+    hired: 0,
+  })
 
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalApplicants, setTotalApplicants] = useState(0)
@@ -161,11 +228,16 @@ export default function JobApplicantsPage() {
         const res = await api.get(`/employer/jobs/${jobId}/applicants`, { params })
         const paginatedData = res.data?.data?.data ?? res.data?.data ?? []
         const meta = res.data?.data?.meta ?? res.data?.data ?? {}
+        const serverCounts: StatusCounts | undefined = res.data?.data?.counts
 
         setApplicants(paginatedData)
         setCurrentPage(meta.current_page || 1)
         setTotalPages(meta.last_page || 1)
         setTotalApplicants(meta.total || paginatedData.length)
+
+        if (serverCounts) {
+          setCounts(serverCounts)
+        }
       } catch (err) {
         console.error('Failed to load applicants:', err)
         toast.error('Failed to load applicants for this job post.')
@@ -218,26 +290,32 @@ export default function JobApplicantsPage() {
 
   const handleUpdateStatus = async (
     applicantId: number,
-    status: 'submitted' | 'under_review' | 'shortlisted' | 'rejected' | 'hired',
+    newStatus: ApplicationStatusType,
   ) => {
     try {
-      setIsActionLoading(true)
+      setUpdatingApplicantId(applicantId)
       const res = await api.put(`/employer/applications/${applicantId}/status`, {
-        status,
+        status: newStatus,
       })
       const updated: ApplicationItem = res.data?.data || res.data
 
-      toast.success(`Application status updated to "${updated.status_label || status}".`)
+      toast.success(`Application status updated to "${updated.status_label || newStatus}".`)
 
+      // Update in local state
       setApplicants((prev) =>
         prev.map((app) => (app.id === applicantId ? { ...app, ...updated } : app)),
       )
       setOpenMenu(null)
+
+      // Refresh data and status counts
+      if (selectedJobId) {
+        fetchApplicants(selectedJobId, currentPage, statusFilter, search)
+      }
     } catch (err) {
       console.error('Failed to update status:', err)
       toast.error('Failed to update application status.')
     } finally {
-      setIsActionLoading(false)
+      setUpdatingApplicantId(null)
     }
   }
 
@@ -254,12 +332,6 @@ export default function JobApplicantsPage() {
 
   const selectedJob = jobs.find((j) => j.id === selectedJobId)
 
-  // Status counts from current view or calculations
-  const submittedCount = applicants.filter((a) => a.status === 'submitted').length
-  const underReviewCount = applicants.filter((a) => a.status === 'under_review').length
-  const hiredCount = applicants.filter((a) => a.status === 'hired').length
-  const rejectedCount = applicants.filter((a) => a.status === 'rejected').length
-
   return (
     <div className="min-h-screen bg-muted/40 md:flex">
       <EmployerSidebar />
@@ -272,7 +344,7 @@ export default function JobApplicantsPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Job Applicants</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Review and manage applications received for your posted jobs, download CVs, and update statuses.
+                Review candidates across all hiring stages: Submitted, Under review, Shortlisted, Rejected, and Hired.
               </p>
             </div>
             <Link to="/my-job-posts">
@@ -287,7 +359,7 @@ export default function JobApplicantsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label htmlFor="job-selector" className="text-sm font-medium sm:w-28">
+                <label htmlFor="job-selector" className="text-sm font-medium sm:w-32">
                   Select Job Post:
                 </label>
 
@@ -308,7 +380,7 @@ export default function JobApplicantsPage() {
                     id="job-selector"
                     value={selectedJobId ?? ''}
                     onChange={(e) => handleSelectedJobChange(Number(e.target.value))}
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm sm:max-w-md"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium sm:max-w-md"
                   >
                     {jobs.map((job) => (
                       <option key={job.id} value={job.id}>
@@ -321,49 +393,144 @@ export default function JobApplicantsPage() {
             </CardContent>
           </Card>
 
-          {/* Summary Cards */}
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Card>
+          {/* Real Scenario Status Cards */}
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {/* All Applicants */}
+            <Card
+              className={`cursor-pointer transition hover:border-primary ${
+                statusFilter === 'all' ? 'border-primary ring-1 ring-primary' : ''
+              }`}
+              onClick={() => {
+                setStatusFilter('all')
+                setCurrentPage(1)
+              }}
+            >
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground font-medium">Total Applicants</p>
-                <p className="mt-1 text-2xl font-bold">{totalApplicants}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground">All</p>
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="mt-2 text-2xl font-bold">{counts.all}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Total received</p>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Submitted */}
+            <Card
+              className={`cursor-pointer transition hover:border-blue-500 ${
+                statusFilter === 'submitted' ? 'border-blue-500 ring-1 ring-blue-500' : ''
+              }`}
+              onClick={() => {
+                setStatusFilter('submitted')
+                setCurrentPage(1)
+              }}
+            >
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground font-medium">Submitted</p>
-                <p className="mt-1 text-2xl font-bold text-blue-600">{submittedCount}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Submitted</p>
+                  <Inbox className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <p className="mt-2 text-2xl font-bold text-blue-700 dark:text-blue-300">
+                  {counts.submitted}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">New applications</p>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Under review */}
+            <Card
+              className={`cursor-pointer transition hover:border-amber-500 ${
+                statusFilter === 'under_review' ? 'border-amber-500 ring-1 ring-amber-500' : ''
+              }`}
+              onClick={() => {
+                setStatusFilter('under_review')
+                setCurrentPage(1)
+              }}
+            >
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground font-medium">Under Review</p>
-                <p className="mt-1 text-2xl font-bold text-yellow-600">{underReviewCount}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Under review</p>
+                  <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="mt-2 text-2xl font-bold text-amber-700 dark:text-amber-300">
+                  {counts.under_review}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Screening candidates</p>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Shortlisted */}
+            <Card
+              className={`cursor-pointer transition hover:border-purple-500 ${
+                statusFilter === 'shortlisted' ? 'border-purple-500 ring-1 ring-purple-500' : ''
+              }`}
+              onClick={() => {
+                setStatusFilter('shortlisted')
+                setCurrentPage(1)
+              }}
+            >
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground font-medium">Hired</p>
-                <p className="mt-1 text-2xl font-bold text-green-600">{hiredCount}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">Shortlisted</p>
+                  <Star className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <p className="mt-2 text-2xl font-bold text-purple-700 dark:text-purple-300">
+                  {counts.shortlisted}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Selected for interview</p>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Rejected */}
+            <Card
+              className={`cursor-pointer transition hover:border-red-500 ${
+                statusFilter === 'rejected' ? 'border-red-500 ring-1 ring-red-500' : ''
+              }`}
+              onClick={() => {
+                setStatusFilter('rejected')
+                setCurrentPage(1)
+              }}
+            >
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground font-medium">Rejected</p>
-                <p className="mt-1 text-2xl font-bold text-red-600">{rejectedCount}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-red-600 dark:text-red-400">Rejected</p>
+                  <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+                <p className="mt-2 text-2xl font-bold text-red-700 dark:text-red-300">
+                  {counts.rejected}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Not selected</p>
+              </CardContent>
+            </Card>
+
+            {/* Hired */}
+            <Card
+              className={`cursor-pointer transition hover:border-emerald-500 ${
+                statusFilter === 'hired' ? 'border-emerald-500 ring-1 ring-emerald-500' : ''
+              }`}
+              onClick={() => {
+                setStatusFilter('hired')
+                setCurrentPage(1)
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Hired</p>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <p className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                  {counts.hired}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Offer accepted</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Search & Filter Bar */}
+          {/* Search & Filter Toolbar */}
           <Card className="mt-5">
             <CardContent className="p-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="relative">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={search}
@@ -372,36 +539,39 @@ export default function JobApplicantsPage() {
                       setCurrentPage(1)
                     }}
                     className="pl-9"
-                    placeholder="Search candidate name or email"
+                    placeholder="Search candidate by name, email, or username..."
                   />
                 </div>
 
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value)
-                    setCurrentPage(1)
-                  }}
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="submitted">Submitted</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="shortlisted">Shortlisted</option>
-                  <option value="hired">Hired</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={clearFilters}
-                    className="w-full"
+                <div className="flex items-center gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value)
+                      setCurrentPage(1)
+                    }}
+                    className="h-10 rounded-md border bg-background px-3 text-sm font-medium"
                   >
-                    <X className="mr-2 h-4 w-4" />
-                    Reset Filters
-                  </Button>
+                    <option value="all">All Statuses ({counts.all})</option>
+                    <option value="submitted">• Submitted ({counts.submitted})</option>
+                    <option value="under_review">• Under review ({counts.under_review})</option>
+                    <option value="shortlisted">• Shortlisted ({counts.shortlisted})</option>
+                    <option value="rejected">• Rejected ({counts.rejected})</option>
+                    <option value="hired">• Hired ({counts.hired})</option>
+                  </select>
+
+                  {(search || statusFilter !== 'all') && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                      title="Clear filters"
+                    >
+                      <X className="mr-1 h-4 w-4" />
+                      Clear
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -409,10 +579,15 @@ export default function JobApplicantsPage() {
 
           {/* Applicants Table */}
           <Card className="mt-5">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>
-                Applicants for: <span className="text-primary">{selectedJob?.title ?? 'Selected Job'}</span>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base font-semibold">
+                Applicants for:{' '}
+                <span className="text-primary">{selectedJob?.title ?? 'Selected Job'}</span>
               </CardTitle>
+
+              <span className="text-xs text-muted-foreground font-normal">
+                {totalApplicants} {totalApplicants === 1 ? 'applicant' : 'applicants'} found
+              </span>
             </CardHeader>
 
             <CardContent className="p-0">
@@ -423,10 +598,10 @@ export default function JobApplicantsPage() {
                       <th className="px-6 py-3 font-medium">Applicant</th>
                       <th className="px-6 py-3 font-medium">Email</th>
                       <th className="px-6 py-3 font-medium">Applied Date</th>
-                      <th className="px-6 py-3 font-medium">CV / Resume</th>
-                      <th className="px-6 py-3 font-medium">Status</th>
-                      <th className="px-6 py-3 font-medium">Quick Status Action</th>
-                      <th className="px-6 py-3 font-medium text-right">More</th>
+                      <th className="px-6 py-3 font-medium">Curriculum Vitae</th>
+                      <th className="px-6 py-3 font-medium">Current Status</th>
+                      <th className="px-6 py-3 font-medium">Update Status</th>
+                      <th className="px-6 py-3 font-medium text-right">Actions</th>
                     </tr>
                   </thead>
 
@@ -442,13 +617,18 @@ export default function JobApplicantsPage() {
                       applicants.map((applicant) => (
                         <tr key={applicant.id} className="border-b last:border-0 hover:bg-muted/20">
                           {/* Applicant Name */}
-                          <td className="px-6 py-4 font-medium">
+                          <td className="px-6 py-4">
                             <Link
                               to={`/applicant-details?id=${applicant.id}`}
                               className="text-primary hover:underline font-semibold"
                             >
-                              {applicant.applicant?.name || 'Applicant #' + applicant.id}
+                              {applicant.applicant?.name || `Applicant #${applicant.id}`}
                             </Link>
+                            {applicant.applicant?.username && (
+                              <p className="text-xs text-muted-foreground">
+                                @{applicant.applicant.username}
+                              </p>
+                            )}
                           </td>
 
                           {/* Email */}
@@ -456,14 +636,14 @@ export default function JobApplicantsPage() {
                             {applicant.applicant?.email || 'N/A'}
                           </td>
 
-                          {/* Date */}
+                          {/* Applied Date */}
                           <td className="px-6 py-4 text-muted-foreground">
                             {applicant.created_at
                               ? new Date(applicant.created_at).toLocaleDateString()
                               : 'N/A'}
                           </td>
 
-                          {/* Download CV */}
+                          {/* CV Download */}
                           <td className="px-6 py-4">
                             <Button
                               variant="outline"
@@ -476,49 +656,38 @@ export default function JobApplicantsPage() {
                             </Button>
                           </td>
 
-                          {/* Status Badge */}
+                          {/* Current Status Badge */}
                           <td className="px-6 py-4">
                             <StatusBadge status={applicant.status} label={applicant.status_label} />
                           </td>
 
-                          {/* Quick Actions (Hire / Reject) */}
+                          {/* Inline Real Status Selector */}
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant={applicant.status === 'hired' ? 'default' : 'outline'}
-                                className={
-                                  applicant.status === 'hired'
-                                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                                    : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 border-green-200'
+                            <div className="flex items-center gap-1.5">
+                              {updatingApplicantId === applicant.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              ) : null}
+                              <select
+                                value={applicant.status}
+                                disabled={updatingApplicantId === applicant.id}
+                                onChange={(e) =>
+                                  handleUpdateStatus(
+                                    applicant.id,
+                                    e.target.value as ApplicationStatusType,
+                                  )
                                 }
-                                disabled={isActionLoading || applicant.status === 'hired'}
-                                onClick={() => handleUpdateStatus(applicant.id, 'hired')}
-                                title="Hire applicant"
+                                className="h-9 rounded-md border bg-background px-2.5 py-1 text-xs font-medium cursor-pointer focus:ring-2 focus:ring-primary"
                               >
-                                <UserCheck className="mr-1 h-3.5 w-3.5" />
-                                {applicant.status === 'hired' ? 'Hired' : 'Hire'}
-                              </Button>
-
-                              <Button
-                                size="sm"
-                                variant={applicant.status === 'rejected' ? 'destructive' : 'outline'}
-                                className={
-                                  applicant.status === 'rejected'
-                                    ? ''
-                                    : 'text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 border-red-200'
-                                }
-                                disabled={isActionLoading || applicant.status === 'rejected'}
-                                onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
-                                title="Reject applicant"
-                              >
-                                <UserX className="mr-1 h-3.5 w-3.5" />
-                                {applicant.status === 'rejected' ? 'Rejected' : 'Reject'}
-                              </Button>
+                                <option value="submitted">• Submitted</option>
+                                <option value="under_review">• Under review</option>
+                                <option value="shortlisted">• Shortlisted</option>
+                                <option value="rejected">• Rejected</option>
+                                <option value="hired">• Hired</option>
+                              </select>
                             </div>
                           </td>
 
-                          {/* More dropdown */}
+                          {/* Actions Dropdown */}
                           <td className="relative px-6 py-4 text-right">
                             <Button
                               type="button"
@@ -532,50 +701,74 @@ export default function JobApplicantsPage() {
                             </Button>
 
                             {openMenu === applicant.id && (
-                              <div className="absolute right-6 top-14 z-20 w-48 rounded-md border bg-background p-1 shadow-lg text-left">
+                              <div className="absolute right-6 top-14 z-20 w-52 rounded-md border bg-background p-1.5 shadow-lg text-left">
                                 <button
                                   type="button"
                                   onClick={() => handleViewProfile(applicant.id)}
-                                  className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+                                  className="w-full rounded px-3 py-2 text-left text-xs font-medium hover:bg-muted flex items-center gap-2"
                                 >
-                                  <FileText className="h-4 w-4" />
-                                  View Full Details
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  View Candidate Profile
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadCV(applicant)}
+                                  className="w-full rounded px-3 py-2 text-left text-xs font-medium hover:bg-muted flex items-center gap-2"
+                                >
+                                  <Download className="h-4 w-4 text-muted-foreground" />
+                                  Download Resume
+                                </button>
+
+                                <div className="my-1 border-t" />
+
+                                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Change Status
+                                </p>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(applicant.id, 'submitted')}
+                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-blue-600"
+                                >
+                                  <Inbox className="h-3.5 w-3.5" />
+                                  • Submitted
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateStatus(applicant.id, 'under_review')}
-                                  className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-amber-600"
                                 >
-                                  <Clock className="h-4 w-4" />
-                                  Mark Under Review
+                                  <Clock className="h-3.5 w-3.5" />
+                                  • Under review
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateStatus(applicant.id, 'shortlisted')}
-                                  className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-indigo-600"
+                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-purple-600"
                                 >
-                                  <UserCheck className="h-4 w-4" />
-                                  Shortlist
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(applicant.id, 'hired')}
-                                  className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-green-600"
-                                >
-                                  <UserCheck className="h-4 w-4" />
-                                  Hire Applicant
+                                  <Star className="h-3.5 w-3.5" />
+                                  • Shortlisted
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
-                                  className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-red-600"
+                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-red-600"
                                 >
-                                  <UserX className="h-4 w-4" />
-                                  Reject Applicant
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  • Rejected
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(applicant.id, 'hired')}
+                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-emerald-600 font-semibold"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  • Hired
                                 </button>
                               </div>
                             )}
