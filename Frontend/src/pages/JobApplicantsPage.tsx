@@ -12,20 +12,15 @@ import {
   Star,
   CheckCircle2,
   XCircle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import api from '@/lib/api'
 
 export type ApplicationStatusType =
@@ -79,7 +74,7 @@ interface EmployerJob {
   status: string
 }
 
-export const REAL_STATUSES: {
+const REAL_STATUSES: {
   id: ApplicationStatusType
   label: string
   color: string
@@ -89,41 +84,41 @@ export const REAL_STATUSES: {
   {
     id: 'submitted',
     label: 'Submitted',
-    color: 'text-blue-700 dark:text-blue-300',
-    bgLight: 'bg-blue-100 dark:bg-blue-950/60',
-    border: 'border-blue-200 dark:border-blue-800',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgLight: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
   },
   {
     id: 'under_review',
     label: 'Under review',
-    color: 'text-amber-700 dark:text-amber-300',
-    bgLight: 'bg-amber-100 dark:bg-amber-950/60',
-    border: 'border-amber-200 dark:border-amber-800',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgLight: 'bg-amber-500/10',
+    border: 'border-amber-500/20',
   },
   {
     id: 'shortlisted',
     label: 'Shortlisted',
-    color: 'text-purple-700 dark:text-purple-300',
-    bgLight: 'bg-purple-100 dark:bg-purple-950/60',
-    border: 'border-purple-200 dark:border-purple-800',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgLight: 'bg-purple-500/10',
+    border: 'border-purple-500/20',
   },
   {
     id: 'rejected',
     label: 'Rejected',
-    color: 'text-red-700 dark:text-red-300',
-    bgLight: 'bg-red-100 dark:bg-red-950/60',
-    border: 'border-red-200 dark:border-red-800',
+    color: 'text-rose-600 dark:text-rose-400',
+    bgLight: 'bg-rose-500/10',
+    border: 'border-rose-500/20',
   },
   {
     id: 'hired',
     label: 'Hired',
-    color: 'text-emerald-700 dark:text-emerald-300',
-    bgLight: 'bg-emerald-100 dark:bg-emerald-950/60',
-    border: 'border-emerald-200 dark:border-emerald-800',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bgLight: 'bg-emerald-500/10',
+    border: 'border-emerald-500/20',
   },
 ]
 
-export function StatusBadge({ status, label }: { status: string; label?: string }) {
+function StatusBadge({ status, label }: { status: string; label?: string }) {
   const config = REAL_STATUSES.find((s) => s.id === status)
 
   const displayLabel =
@@ -134,11 +129,11 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
 
   const colorClass = config
     ? `${config.bgLight} ${config.color} ${config.border} border`
-    : 'bg-muted text-muted-foreground border'
+    : 'bg-muted text-muted-foreground border border-border'
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colorClass}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${colorClass}`}
     >
       {displayLabel}
     </span>
@@ -273,7 +268,7 @@ export default function JobApplicantsPage() {
       const link = document.createElement('a')
       link.href = url
       const name = applicant.applicant?.name
-        ? applicant.applicant.name.toLowerCase().replace(/\s+/g, '-')
+        ? applicant.applicant.name.toLowerCase().replace(/\\s+/g, '-')
         : 'applicant'
       link.download = `${name}-cv-${applicant.id}.pdf`
       document.body.appendChild(link)
@@ -333,500 +328,462 @@ export default function JobApplicantsPage() {
   const selectedJob = jobs.find((j) => j.id === selectedJobId)
 
   return (
-    <div className="min-h-screen bg-muted/40 md:flex">
+    <div className="h-screen flex overflow-hidden bg-background">
       <EmployerSidebar />
 
-      <div className="min-w-0 flex-1">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title="Job Applicants" />
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Job Applicants</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Review candidates across all hiring stages: Submitted, Under review, Shortlisted, Rejected, and Hired.
-              </p>
+        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {/* Notion Document Header */}
+          <div className="border-b border-border/60 pb-5 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+                👥
+              </span>
+              <span>Hiring Funnel / Candidate Review</span>
             </div>
-            <Link to="/my-job-posts">
-              <Button variant="outline" size="sm">
-                <Briefcase className="mr-2 h-4 w-4" />
-                All Job Posts
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Job Applicants
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Review candidates across all hiring stages: Submitted, Under review, Shortlisted, Rejected, and Hired.
+                </p>
+              </div>
+
+              <Link to="/my-job-posts">
+                <Button variant="outline" size="sm" className="rounded-lg h-8 px-3 text-xs self-start sm:self-auto">
+                  <Briefcase className="mr-1.5 h-3.5 w-3.5" />
+                  All Job Posts
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Job Post Selector */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label htmlFor="job-selector" className="text-sm font-medium sm:w-32">
-                  Select Job Post:
-                </label>
+          <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-xs">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label htmlFor="job-selector" className="text-xs font-semibold text-muted-foreground sm:w-32">
+                Active Listing:
+              </label>
 
-                {isLoadingJobs ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading your jobs...
-                  </div>
-                ) : jobs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    You have not posted any jobs yet.{' '}
-                    <Link to="/create-job" className="text-primary underline">
-                      Post a new job
-                    </Link>
-                  </p>
-                ) : (
-                  <select
-                    id="job-selector"
-                    value={selectedJobId ?? ''}
-                    onChange={(e) => handleSelectedJobChange(Number(e.target.value))}
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm font-medium sm:max-w-md"
-                  >
-                    {jobs.map((job) => (
-                      <option key={job.id} value={job.id}>
-                        {job.title} ({job.status})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              {isLoadingJobs ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Loading job listings...
+                </div>
+              ) : jobs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  You have not posted any jobs yet.{' '}
+                  <Link to="/create-job" className="text-foreground font-medium underline">
+                    Post a new job
+                  </Link>
+                </p>
+              ) : (
+                <select
+                  id="job-selector"
+                  value={selectedJobId ?? ''}
+                  onChange={(e) => handleSelectedJobChange(Number(e.target.value))}
+                  className="rounded-lg border border-border/80 bg-muted/30 px-3 py-1.5 text-xs font-medium text-foreground outline-none sm:max-w-md"
+                >
+                  {jobs.map((job) => (
+                    <option key={job.id} value={job.id}>
+                      {job.title} ({job.status})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
 
-          {/* Real Scenario Status Cards */}
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {/* Funnel Stage Metric Cards */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {/* All Applicants */}
-            <Card
-              className={`cursor-pointer transition hover:border-primary ${
-                statusFilter === 'all' ? 'border-primary ring-1 ring-primary' : ''
+            <div
+              className={`rounded-xl border p-3.5 shadow-xs cursor-pointer transition-all ${
+                statusFilter === 'all'
+                  ? 'border-foreground bg-card ring-1 ring-foreground/20'
+                  : 'border-border/70 bg-card hover:border-foreground/20'
               }`}
               onClick={() => {
                 setStatusFilter('all')
                 setCurrentPage(1)
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground">All</p>
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <p className="mt-2 text-2xl font-bold">{counts.all}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Total received</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">All</span>
+                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">{counts.all}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Total received</p>
+            </div>
 
             {/* Submitted */}
-            <Card
-              className={`cursor-pointer transition hover:border-blue-500 ${
-                statusFilter === 'submitted' ? 'border-blue-500 ring-1 ring-blue-500' : ''
+            <div
+              className={`rounded-xl border p-3.5 shadow-xs cursor-pointer transition-all ${
+                statusFilter === 'submitted'
+                  ? 'border-blue-500 bg-card ring-1 ring-blue-500/20'
+                  : 'border-border/70 bg-card hover:border-blue-500/40'
               }`}
               onClick={() => {
                 setStatusFilter('submitted')
                 setCurrentPage(1)
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Submitted</p>
-                  <Inbox className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <p className="mt-2 text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {counts.submitted}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">New applications</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">Submitted</span>
+                <Inbox className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{counts.submitted}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">New applications</p>
+            </div>
 
             {/* Under review */}
-            <Card
-              className={`cursor-pointer transition hover:border-amber-500 ${
-                statusFilter === 'under_review' ? 'border-amber-500 ring-1 ring-amber-500' : ''
+            <div
+              className={`rounded-xl border p-3.5 shadow-xs cursor-pointer transition-all ${
+                statusFilter === 'under_review'
+                  ? 'border-amber-500 bg-card ring-1 ring-amber-500/20'
+                  : 'border-border/70 bg-card hover:border-amber-500/40'
               }`}
               onClick={() => {
                 setStatusFilter('under_review')
                 setCurrentPage(1)
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Under review</p>
-                  <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <p className="mt-2 text-2xl font-bold text-amber-700 dark:text-amber-300">
-                  {counts.under_review}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Screening candidates</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Under review</span>
+                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{counts.under_review}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Screening candidates</p>
+            </div>
 
             {/* Shortlisted */}
-            <Card
-              className={`cursor-pointer transition hover:border-purple-500 ${
-                statusFilter === 'shortlisted' ? 'border-purple-500 ring-1 ring-purple-500' : ''
+            <div
+              className={`rounded-xl border p-3.5 shadow-xs cursor-pointer transition-all ${
+                statusFilter === 'shortlisted'
+                  ? 'border-purple-500 bg-card ring-1 ring-purple-500/20'
+                  : 'border-border/70 bg-card hover:border-purple-500/40'
               }`}
               onClick={() => {
                 setStatusFilter('shortlisted')
                 setCurrentPage(1)
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">Shortlisted</p>
-                  <Star className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                <p className="mt-2 text-2xl font-bold text-purple-700 dark:text-purple-300">
-                  {counts.shortlisted}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Selected for interview</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">Shortlisted</span>
+                <Star className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-purple-600 dark:text-purple-400">{counts.shortlisted}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Interview stage</p>
+            </div>
 
             {/* Rejected */}
-            <Card
-              className={`cursor-pointer transition hover:border-red-500 ${
-                statusFilter === 'rejected' ? 'border-red-500 ring-1 ring-red-500' : ''
+            <div
+              className={`rounded-xl border p-3.5 shadow-xs cursor-pointer transition-all ${
+                statusFilter === 'rejected'
+                  ? 'border-rose-500 bg-card ring-1 ring-rose-500/20'
+                  : 'border-border/70 bg-card hover:border-rose-500/40'
               }`}
               onClick={() => {
                 setStatusFilter('rejected')
                 setCurrentPage(1)
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-red-600 dark:text-red-400">Rejected</p>
-                  <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                </div>
-                <p className="mt-2 text-2xl font-bold text-red-700 dark:text-red-300">
-                  {counts.rejected}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Not selected</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">Rejected</span>
+                <XCircle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+              </div>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">{counts.rejected}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Not selected</p>
+            </div>
 
             {/* Hired */}
-            <Card
-              className={`cursor-pointer transition hover:border-emerald-500 ${
-                statusFilter === 'hired' ? 'border-emerald-500 ring-1 ring-emerald-500' : ''
+            <div
+              className={`rounded-xl border p-3.5 shadow-xs cursor-pointer transition-all ${
+                statusFilter === 'hired'
+                  ? 'border-emerald-500 bg-card ring-1 ring-emerald-500/20'
+                  : 'border-border/70 bg-card hover:border-emerald-500/40'
               }`}
               onClick={() => {
                 setStatusFilter('hired')
                 setCurrentPage(1)
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Hired</p>
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <p className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                  {counts.hired}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Offer accepted</p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">Hired</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{counts.hired}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Offer accepted</p>
+            </div>
           </div>
 
-          {/* Search & Filter Toolbar */}
-          <Card className="mt-5">
-            <CardContent className="p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value)
-                      setCurrentPage(1)
-                    }}
-                    className="pl-9"
-                    placeholder="Search candidate by name, email, or username..."
-                  />
-                </div>
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full rounded-lg border border-border/80 bg-muted/30 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+                placeholder="Search candidate name, email, or username..."
+              />
+            </div>
 
-                <div className="flex items-center gap-2">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => {
-                      setStatusFilter(e.target.value)
-                      setCurrentPage(1)
-                    }}
-                    className="h-10 rounded-md border bg-background px-3 text-sm font-medium"
-                  >
-                    <option value="all">All Statuses ({counts.all})</option>
-                    <option value="submitted">• Submitted ({counts.submitted})</option>
-                    <option value="under_review">• Under review ({counts.under_review})</option>
-                    <option value="shortlisted">• Shortlisted ({counts.shortlisted})</option>
-                    <option value="rejected">• Rejected ({counts.rejected})</option>
-                    <option value="hired">• Hired ({counts.hired})</option>
-                  </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="rounded-lg border border-border/80 bg-muted/30 px-2.5 py-1.5 text-xs text-foreground outline-none"
+              >
+                <option value="all">All Statuses ({counts.all})</option>
+                <option value="submitted">Submitted ({counts.submitted})</option>
+                <option value="under_review">Under review ({counts.under_review})</option>
+                <option value="shortlisted">Shortlisted ({counts.shortlisted})</option>
+                <option value="rejected">Rejected ({counts.rejected})</option>
+                <option value="hired">Hired ({counts.hired})</option>
+              </select>
 
-                  {(search || statusFilter !== 'all') && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={clearFilters}
-                      title="Clear filters"
-                    >
-                      <X className="mr-1 h-4 w-4" />
-                      Clear
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              {(search || statusFilter !== 'all') && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="rounded-lg h-7 px-2 text-xs"
+                >
+                  <X className="mr-1 h-3 w-3" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
 
           {/* Applicants Table */}
-          <Card className="mt-5">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base font-semibold">
-                Applicants for:{' '}
-                <span className="text-primary">{selectedJob?.title ?? 'Selected Job'}</span>
-              </CardTitle>
-
-              <span className="text-xs text-muted-foreground font-normal">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <div className="p-4 border-b border-border/60 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
+                Applicants for: <span className="font-bold">{selectedJob?.title ?? 'Selected Job'}</span>
+              </h3>
+              <span className="text-xs text-muted-foreground">
                 {totalApplicants} {totalApplicants === 1 ? 'applicant' : 'applicants'} found
               </span>
-            </CardHeader>
+            </div>
 
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/30 text-left">
-                      <th className="px-6 py-3 font-medium">Applicant</th>
-                      <th className="px-6 py-3 font-medium">Email</th>
-                      <th className="px-6 py-3 font-medium">Applied Date</th>
-                      <th className="px-6 py-3 font-medium">Curriculum Vitae</th>
-                      <th className="px-6 py-3 font-medium">Current Status</th>
-                      <th className="px-6 py-3 font-medium">Update Status</th>
-                      <th className="px-6 py-3 font-medium text-right">Actions</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                    <th className="px-5 py-3">Applicant</th>
+                    <th className="px-5 py-3">Email</th>
+                    <th className="px-5 py-3">Applied Date</th>
+                    <th className="px-5 py-3">Curriculum Vitae</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Update Stage</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-border/50">
+                  {isLoadingApplicants ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin mb-2 text-muted-foreground" />
+                        Loading applicants...
+                      </td>
                     </tr>
-                  </thead>
-
-                  <tbody>
-                    {isLoadingApplicants ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin mb-2 text-primary" />
-                          Loading applicants...
+                  ) : applicants.length > 0 ? (
+                    applicants.map((applicant) => (
+                      <tr key={applicant.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <Link
+                            to={`/applicant-details?id=${applicant.id}`}
+                            className="font-semibold text-foreground hover:underline"
+                          >
+                            {applicant.applicant?.name || `Applicant #${applicant.id}`}
+                          </Link>
+                          {applicant.applicant?.username && (
+                            <p className="text-[10px] text-muted-foreground">
+                              @{applicant.applicant.username}
+                            </p>
+                          )}
                         </td>
-                      </tr>
-                    ) : applicants.length > 0 ? (
-                      applicants.map((applicant) => (
-                        <tr key={applicant.id} className="border-b last:border-0 hover:bg-muted/20">
-                          {/* Applicant Name */}
-                          <td className="px-6 py-4">
-                            <Link
-                              to={`/applicant-details?id=${applicant.id}`}
-                              className="text-primary hover:underline font-semibold"
-                            >
-                              {applicant.applicant?.name || `Applicant #${applicant.id}`}
-                            </Link>
-                            {applicant.applicant?.username && (
-                              <p className="text-xs text-muted-foreground">
-                                @{applicant.applicant.username}
-                              </p>
-                            )}
-                          </td>
 
-                          {/* Email */}
-                          <td className="px-6 py-4 text-muted-foreground">
-                            {applicant.applicant?.email || 'N/A'}
-                          </td>
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {applicant.applicant?.email || 'N/A'}
+                        </td>
 
-                          {/* Applied Date */}
-                          <td className="px-6 py-4 text-muted-foreground">
-                            {applicant.created_at
-                              ? new Date(applicant.created_at).toLocaleDateString()
-                              : 'N/A'}
-                          </td>
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {applicant.created_at
+                            ? new Date(applicant.created_at).toLocaleDateString()
+                            : 'N/A'}
+                        </td>
 
-                          {/* CV Download */}
-                          <td className="px-6 py-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownloadCV(applicant)}
-                              className="flex items-center gap-1.5"
-                            >
-                              <Download className="h-4 w-4" />
-                              <span>Download CV</span>
-                            </Button>
-                          </td>
+                        <td className="px-5 py-3.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadCV(applicant)}
+                            className="h-7 px-2 text-xs rounded-lg"
+                          >
+                            <Download className="mr-1 h-3.5 w-3.5" />
+                            Download CV
+                          </Button>
+                        </td>
 
-                          {/* Current Status Badge */}
-                          <td className="px-6 py-4">
-                            <StatusBadge status={applicant.status} label={applicant.status_label} />
-                          </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={applicant.status} label={applicant.status_label} />
+                        </td>
 
-                          {/* Inline Real Status Selector */}
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1.5">
-                              {updatingApplicantId === applicant.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                              ) : null}
-                              <select
-                                value={applicant.status}
-                                disabled={updatingApplicantId === applicant.id}
-                                onChange={(e) =>
-                                  handleUpdateStatus(
-                                    applicant.id,
-                                    e.target.value as ApplicationStatusType,
-                                  )
-                                }
-                                className="h-9 rounded-md border bg-background px-2.5 py-1 text-xs font-medium cursor-pointer focus:ring-2 focus:ring-primary"
-                              >
-                                <option value="submitted">• Submitted</option>
-                                <option value="under_review">• Under review</option>
-                                <option value="shortlisted">• Shortlisted</option>
-                                <option value="rejected">• Rejected</option>
-                                <option value="hired">• Hired</option>
-                              </select>
-                            </div>
-                          </td>
-
-                          {/* Actions Dropdown */}
-                          <td className="relative px-6 py-4 text-right">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                setOpenMenu(openMenu === applicant.id ? null : applicant.id)
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-1.5">
+                            {updatingApplicantId === applicant.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            ) : null}
+                            <select
+                              value={applicant.status}
+                              disabled={updatingApplicantId === applicant.id}
+                              onChange={(e) =>
+                                handleUpdateStatus(
+                                  applicant.id,
+                                  e.target.value as ApplicationStatusType,
+                                )
                               }
+                              className="rounded-lg border border-border/80 bg-muted/30 px-2 py-1 text-xs font-medium text-foreground outline-none"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                              <option value="submitted">Submitted</option>
+                              <option value="under_review">Under review</option>
+                              <option value="shortlisted">Shortlisted</option>
+                              <option value="rejected">Rejected</option>
+                              <option value="hired">Hired</option>
+                            </select>
+                          </div>
+                        </td>
 
-                            {openMenu === applicant.id && (
-                              <div className="absolute right-6 top-14 z-20 w-52 rounded-md border bg-background p-1.5 shadow-lg text-left">
-                                <button
-                                  type="button"
-                                  onClick={() => handleViewProfile(applicant.id)}
-                                  className="w-full rounded px-3 py-2 text-left text-xs font-medium hover:bg-muted flex items-center gap-2"
-                                >
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  View Candidate Profile
-                                </button>
+                        <td className="relative px-5 py-3.5 text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                              setOpenMenu(openMenu === applicant.id ? null : applicant.id)
+                            }
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </Button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadCV(applicant)}
-                                  className="w-full rounded px-3 py-2 text-left text-xs font-medium hover:bg-muted flex items-center gap-2"
-                                >
-                                  <Download className="h-4 w-4 text-muted-foreground" />
-                                  Download Resume
-                                </button>
+                          {openMenu === applicant.id && (
+                            <div className="absolute right-5 top-11 z-30 w-48 rounded-xl border border-border/80 bg-popover text-popover-foreground p-1.5 shadow-xl text-left backdrop-blur-xs">
+                              <button
+                                type="button"
+                                onClick={() => handleViewProfile(applicant.id)}
+                                className="w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium hover:bg-muted flex items-center gap-2 text-foreground transition-colors"
+                              >
+                                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                View Profile
+                              </button>
 
-                                <div className="my-1 border-t" />
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadCV(applicant)}
+                                className="w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium hover:bg-muted flex items-center gap-2 text-foreground transition-colors"
+                              >
+                                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                Download CV
+                              </button>
 
-                                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                  Change Status
-                                </p>
+                              <div className="my-1 border-t border-border/60" />
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(applicant.id, 'submitted')}
-                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-blue-600"
-                                >
-                                  <Inbox className="h-3.5 w-3.5" />
-                                  • Submitted
-                                </button>
+                              <p className="px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Set Status
+                              </p>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(applicant.id, 'under_review')}
-                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-amber-600"
-                                >
-                                  <Clock className="h-3.5 w-3.5" />
-                                  • Under review
-                                </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(applicant.id, 'shortlisted')}
+                                className="w-full rounded-lg px-2.5 py-1 text-left text-xs hover:bg-muted flex items-center gap-1.5 text-purple-600 dark:text-purple-400"
+                              >
+                                <Star className="h-3 w-3" />
+                                Shortlisted
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(applicant.id, 'shortlisted')}
-                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-purple-600"
-                                >
-                                  <Star className="h-3.5 w-3.5" />
-                                  • Shortlisted
-                                </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(applicant.id, 'hired')}
+                                className="w-full rounded-lg px-2.5 py-1 text-left text-xs hover:bg-muted flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Hired
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
-                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-red-600"
-                                >
-                                  <XCircle className="h-3.5 w-3.5" />
-                                  • Rejected
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(applicant.id, 'hired')}
-                                  className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2 text-emerald-600 font-semibold"
-                                >
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  • Hired
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                          No applicants found for this job post matching your filters.
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(applicant.id, 'rejected')}
+                                className="w-full rounded-lg px-2.5 py-1 text-left text-xs hover:bg-muted flex items-center gap-1.5 text-rose-600 dark:text-rose-400"
+                              >
+                                <XCircle className="h-3 w-3" />
+                                Rejected
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                        No applicants found for this job post matching your filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex flex-col gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages} ({totalApplicants} total applicants)
-                  </p>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col gap-2.5 border-t border-border/60 px-5 py-3 sm:flex-row sm:items-center sm:justify-between text-xs">
+                <p className="text-muted-foreground">
+                  Page <span className="font-semibold text-foreground">{currentPage}</span> of{' '}
+                  <span className="font-semibold text-foreground">{totalPages}</span> ({totalApplicants} total applicants)
+                </p>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs rounded-lg"
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+                    Previous
+                  </Button>
 
-                    {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                      >
-                        {page}
-                      </Button>
-                    ))}
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs rounded-lg"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

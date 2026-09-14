@@ -45,8 +45,8 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
   const isEmployee = user?.role === 'employee'
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 flex-shrink-0 sticky top-0 z-30">
-      <h1 className="text-xl font-semibold">{title}</h1>
+    <header className="flex h-16 items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex-shrink-0 sticky top-0 z-30">
+      <h1 className="text-base font-semibold text-foreground tracking-tight">{title}</h1>
 
       <div className="flex items-center gap-3">
         <LanguageSwitcher />
@@ -82,8 +82,8 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
           </button>
 
           {open && (
-            <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border bg-background shadow-lg z-50 py-1">
-              <div className="px-3 py-2 border-b">
+            <div className="absolute right-0 top-full mt-1.5 w-52 rounded-xl border border-border/80 bg-popover text-popover-foreground shadow-xl z-50 py-1.5 backdrop-blur-xs">
+              <div className="px-3.5 py-2 border-b border-border/60">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
@@ -94,7 +94,7 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
                     setOpen(false)
                     navigate('/my-profile')
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-foreground text-left transition-colors"
                 >
                   <User className="h-4 w-4 text-muted-foreground" />
                   My Profile
@@ -106,16 +106,16 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
                   setOpen(false)
                   navigate('/settings')
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-foreground text-left transition-colors"
               >
                 <Settings className="h-4 w-4 text-muted-foreground" />
                 Settings
               </button>
 
-              <div className="border-t mt-1 pt-1">
+              <div className="border-t border-border/60 mt-1 pt-1">
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-red-600 text-left"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-rose-600 dark:text-rose-400 text-left transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   Logout
