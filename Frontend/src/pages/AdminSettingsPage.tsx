@@ -1,30 +1,89 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Globe,
   ShieldCheck,
   Save,
   Server,
   RefreshCw,
+  RotateCcw,
+  CheckCircle2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
-export default function AdminSettingsPage() {
-  const [platformName, setPlatformName] = useState('HireStream')
-  const [supportEmail, setSupportEmail] = useState('admin@hirestream.io')
-  const [requireJobApproval, setRequireJobApproval] = useState(true)
-  const [requireEmployerVerification, setRequireEmployerVerification] = useState(true)
-  const [notifyOnNewJob, setNotifyOnNewJob] = useState(true)
-  const [autoExpireDays, setAutoExpireDays] = useState('30')
-  const [isSaving, setIsSaving] = useState(false)
+const SETTINGS_STORAGE_KEY = 'hirestream_admin_platform_settings'
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault()
+interface PlatformSettings {
+  platformName: string
+  supportEmail: string
+  requireJobApproval: boolean
+  requireEmployerVerification: boolean
+  notifyOnNewJob: boolean
+  autoExpireDays: string
+}
+
+const DEFAULT_SETTINGS: PlatformSettings = {
+  platformName: 'HireStream',
+  supportEmail: 'admin@hirestream.io',
+  requireJobApproval: true,
+  requireEmployerVerification: true,
+  notifyOnNewJob: true,
+  autoExpireDays: '30',
+}
+
+export default function AdminSettingsPage() {
+  const [settings, setSettings] = useState<PlatformSettings>(() => {
+    try {
+      const stored = localStorage.getItem(SETTINGS_STORAGE_KEY)
+      if (stored) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
+      }
+    } catch (err) {
+      console.error('Failed to parse stored settings:', err)
+    }
+    return DEFAULT_SETTINGS
+  })
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SETTINGS_STORAGE_KEY)
+      if (stored) {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) })
+      }
+    } catch {
+      // Ignore fallback
+    }
+  }, [])
+
+  const handleSave = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setIsSaving(true)
-    setTimeout(() => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+      setTimeout(() => {
+        setIsSaving(false)
+        setIsSaved(true)
+        toast.success('Platform settings saved and persisted successfully!')
+        setTimeout(() => setIsSaved(false), 3000)
+      }, 300)
+    } catch (err) {
       setIsSaving(false)
-      toast.success('Platform settings saved successfully!')
-    }, 600)
+      console.error('Failed to save settings:', err)
+      toast.error('Failed to persist settings.')
+    }
+  }
+
+  const handleResetDefaults = () => {
+    try {
+      localStorage.removeItem(SETTINGS_STORAGE_KEY)
+      setSettings(DEFAULT_SETTINGS)
+      toast.info('Settings restored to platform defaults.')
+    } catch (err) {
+      console.error('Failed to reset settings:', err)
+    }
   }
 
   return (
@@ -43,18 +102,36 @@ export default function AdminSettingsPage() {
               Platform Settings
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Platform-wide moderation workflows, notification preferences, and system parameters.
+              Platform-wide moderation workflows, notification preferences, and system lifecycle parameters.
             </p>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            size="sm"
-            className="rounded-lg h-8 px-3.5 text-xs font-medium self-start sm:self-auto bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90"
-          >
-            {isSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-            Save changes
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetDefaults}
+              className="rounded-lg h-8 px-3 text-xs"
+            >
+              <RotateCcw className="h-3 w-3 mr-1.5" />
+              Reset Defaults
+            </Button>
+            <Button
+              onClick={() => handleSave()}
+              disabled={isSaving}
+              size="sm"
+              className="rounded-lg h-8 px-3.5 text-xs font-medium bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90"
+            >
+              {isSaving ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" />
+              ) : isSaved ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mr-1.5" />
+              ) : (
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save changes'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -73,8 +150,10 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
-                value={platformName}
-                onChange={(e) => setPlatformName(e.target.value)}
+                value={settings.platformName}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, platformName: e.target.value }))
+                }
                 className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
@@ -85,8 +164,10 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="email"
-                value={supportEmail}
-                onChange={(e) => setSupportEmail(e.target.value)}
+                value={settings.supportEmail}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, supportEmail: e.target.value }))
+                }
                 className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
@@ -112,8 +193,13 @@ export default function AdminSettingsPage() {
               </div>
               <input
                 type="checkbox"
-                checked={requireJobApproval}
-                onChange={(e) => setRequireJobApproval(e.target.checked)}
+                checked={settings.requireJobApproval}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    requireJobApproval: e.target.checked,
+                  }))
+                }
                 className="mt-1 h-4 w-4 rounded border-border accent-neutral-900 dark:accent-white"
               />
             </label>
@@ -129,8 +215,13 @@ export default function AdminSettingsPage() {
               </div>
               <input
                 type="checkbox"
-                checked={requireEmployerVerification}
-                onChange={(e) => setRequireEmployerVerification(e.target.checked)}
+                checked={settings.requireEmployerVerification}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    requireEmployerVerification: e.target.checked,
+                  }))
+                }
                 className="mt-1 h-4 w-4 rounded border-border accent-neutral-900 dark:accent-white"
               />
             </label>
@@ -146,8 +237,13 @@ export default function AdminSettingsPage() {
               </div>
               <input
                 type="checkbox"
-                checked={notifyOnNewJob}
-                onChange={(e) => setNotifyOnNewJob(e.target.checked)}
+                checked={settings.notifyOnNewJob}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    notifyOnNewJob: e.target.checked,
+                  }))
+                }
                 className="mt-1 h-4 w-4 rounded border-border accent-neutral-900 dark:accent-white"
               />
             </label>
@@ -166,8 +262,10 @@ export default function AdminSettingsPage() {
               Job Listing Expiration Period (Days)
             </label>
             <select
-              value={autoExpireDays}
-              onChange={(e) => setAutoExpireDays(e.target.value)}
+              value={settings.autoExpireDays}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, autoExpireDays: e.target.value }))
+              }
               className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="15">15 Days</option>
