@@ -12,6 +12,7 @@ import {
   Trash2,
   Clock,
   Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { employerNotificationService } from '@/services/employerNotificationService'
@@ -181,8 +182,8 @@ export default function EmployerNotificationDropdown() {
               onClick={() => setFilterUnread(false)}
               className={`px-2.5 py-1 rounded-md transition-colors ${
                 !filterUnread
-                  ? 'bg-foreground text-background font-medium'
-                  : 'text-muted-foreground hover:bg-muted'
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               All
@@ -191,11 +192,11 @@ export default function EmployerNotificationDropdown() {
               onClick={() => setFilterUnread(true)}
               className={`px-2.5 py-1 rounded-md transition-colors ${
                 filterUnread
-                  ? 'bg-foreground text-background font-medium'
-                  : 'text-muted-foreground hover:bg-muted'
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Unread only
+              Unread
             </button>
           </div>
 
@@ -243,6 +244,15 @@ export default function EmployerNotificationDropdown() {
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                       {item.data.message}
                     </p>
+                    {item.data.type === 'job_post_rejected' && item.data.rejection_reason && (
+                      <div className="mt-2 p-2 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-[11px] leading-relaxed flex items-start gap-1.5">
+                        <AlertCircle size={13} className="flex-shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                        <div>
+                          <span className="font-semibold">Reason: </span>
+                          <span>{item.data.rejection_reason}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 mt-1.5 text-[11px] text-muted-foreground">
                       <Clock size={12} />
                       <span>{item.created_at_human ?? new Date(item.created_at).toLocaleString()}</span>
@@ -286,7 +296,7 @@ export default function EmployerNotificationDropdown() {
                 }}
                 className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
               >
-                View my job posts →
+                View my job posts & feedback →
               </button>
             </div>
           )}

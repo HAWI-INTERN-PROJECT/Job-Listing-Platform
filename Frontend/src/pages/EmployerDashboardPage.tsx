@@ -24,6 +24,7 @@ interface JobItem {
   job_type_label?: string
   status: string
   status_label?: string
+  rejection_reason?: string | null
   applications_count: number
   created_at: string
 }
@@ -63,7 +64,6 @@ export default function EmployerDashboardPage() {
   // 1. Fetch Employer Profile for live verification status
   const {
     data: profileData,
-    
   } = useQuery({
     queryKey: ['employer-profile'],
     queryFn: async () => {
@@ -110,7 +110,10 @@ export default function EmployerDashboardPage() {
   const activeJobs = jobsList.filter(
     (j) => j.status?.toLowerCase() === 'approved' || j.status?.toLowerCase() === 'published'
   ).length
-  const pendingJobs = jobsList.filter((j) => j.status?.toLowerCase() === 'pending').length
+  const pendingJobs = jobsList.filter(
+    (j) => j.status?.toLowerCase() === 'pending' || j.status?.toLowerCase() === 'pending_approval'
+  ).length
+  const rejectedJobs = jobsList.filter((j) => j.status?.toLowerCase() === 'rejected')
   const closedJobs = jobsList.filter((j) => j.status?.toLowerCase() === 'closed').length
   const totalApplications = jobsList.reduce(
     (sum, j) => sum + (Number(j.applications_count) || 0),
@@ -136,6 +139,7 @@ export default function EmployerDashboardPage() {
       case 'hired':
         return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
       case 'pending':
+      case 'pending_approval':
       case 'under_review':
       case 'under review':
         return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
@@ -224,6 +228,32 @@ export default function EmployerDashboardPage() {
             </div>
           )}
 
+          {/* Rejected Jobs Alert Banner */}
+          {rejectedJobs.length > 0 && (
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-800 dark:text-rose-300">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold">
+                    {rejectedJobs.length} Job Listing{rejectedJobs.length > 1 ? 's' : ''} Rejected with Admin Feedback
+                  </p>
+                  <p className="text-xs text-rose-700/90 dark:text-rose-400/90 mt-0.5">
+                    The admin reviewed and rejected your post with a confirmation message explaining the reason. Review feedback to update and resubmit.
+                  </p>
+                </div>
+              </div>
+              <Link to="/my-job-posts">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-rose-500/30 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 h-7 whitespace-nowrap self-end sm:self-auto"
+                >
+                  View Feedback & Resubmit
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Real Statistics Metrics */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
@@ -267,15 +297,33 @@ export default function EmployerDashboardPage() {
 
             <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Closed Jobs</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {rejectedJobs.length > 0 ? 'Rejected Listings' : 'Closed Jobs'}
+                </span>
                 <div className="p-2 rounded-lg bg-muted text-foreground">
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  {rejectedJobs.length > 0 ? (
+                    <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                  ) : (
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </div>
               </div>
-              <p className="text-2xl font-bold tracking-tight text-foreground">
-                {isLoadingJobs ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : closedJobs}
+              <p
+                className={`text-2xl font-bold tracking-tight ${
+                  rejectedJobs.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'
+                }`}
+              >
+                {isLoadingJobs ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : rejectedJobs.length > 0 ? (
+                  rejectedJobs.length
+                ) : (
+                  closedJobs
+                )}
               </p>
-              <p className="text-[11px] text-muted-foreground">Archived or filled</p>
+              <p className="text-[11px] text-muted-foreground">
+                {rejectedJobs.length > 0 ? 'Requires attention' : 'Archived or filled'}
+              </p>
             </div>
           </div>
 
@@ -335,8 +383,13 @@ export default function EmployerDashboardPage() {
                   ) : (
                     recentJobs.map((job) => (
                       <tr key={job.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-5 py-3.5 font-medium text-foreground">
-                          {job.title}
+                        <td className="px-5 py-3.5">
+                          <div className="font-medium text-foreground">{job.title}</div>
+                          {job.status?.toLowerCase() === 'rejected' && job.rejection_reason && (
+                            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 line-clamp-1 italic">
+                              Reason: &ldquo;{job.rejection_reason}&rdquo;
+                            </p>
+                          )}
                         </td>
 
                         <td className="px-5 py-3.5 text-muted-foreground">
@@ -352,9 +405,19 @@ export default function EmployerDashboardPage() {
                         </td>
 
                         <td className="px-5 py-3.5">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize ${statusClass(job.status)}`}>
-                            {job.status_label || job.status}
-                          </span>
+                          <div className="flex flex-col gap-0.5 items-start">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize ${statusClass(job.status)}`}>
+                              {job.status_label || job.status}
+                            </span>
+                            {job.status?.toLowerCase() === 'rejected' && (
+                              <Link
+                                to="/my-job-posts"
+                                className="text-[10px] text-rose-600 dark:text-rose-400 font-medium hover:underline"
+                              >
+                                View Reason &rarr;
+                              </Link>
+                            )}
+                          </div>
                         </td>
 
                         <td className="px-5 py-3.5 text-right">
@@ -365,7 +428,7 @@ export default function EmployerDashboardPage() {
                               </Button>
                             </Link>
 
-                            <Link to={`/jobs/${job.id}/edit`}>
+                            <Link to={`/edit-job?jobId=${job.id}`}>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Edit job">
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
