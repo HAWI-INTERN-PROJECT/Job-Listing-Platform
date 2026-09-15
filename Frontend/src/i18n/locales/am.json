@@ -71,7 +71,12 @@
     "myApplications": "ማመልከቻዎቼ",
     "myApplicationsDesc": "ማመልከቻዎችዎን ይከታተሉ",
     "cvResume": "ሲቪ / ሬዙሜ",
-    "cvResumeDesc": "ሲቪዎን ያስተዳድሩ"
+    "cvResumeDesc": "ሲቪዎን ያስተዳድሩ",
+    "quickActions": "ፈጣን እርምጃዎች",
+    "viewAll": "ሁሉንም ይመልከቱ",
+    "noApplicationsYet": "እስካሁን ምንም ማመልከቻ የለም",
+    "startApplying": "የስራ መደቦችን ይፈልጉ እና ሂደቱን እዚህ ይከታተሉ።",
+    "browseJobs": "ስራዎችን ያስሱ"
   },
   "profile": {
     "title": "መገለጫዬ",

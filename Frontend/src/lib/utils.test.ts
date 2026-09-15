@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cn } from './utils'
+import { cn, getStorageUrl } from './utils'
 
 describe('cn', () => {
   it('merges class names', () => {
@@ -26,5 +26,33 @@ describe('cn', () => {
   it('handles empty input', () => {
     const result = cn()
     expect(result).toBe('')
+  })
+})
+
+describe('getStorageUrl', () => {
+  it('returns empty string for null, undefined, or empty path', () => {
+    expect(getStorageUrl(null)).toBe('')
+    expect(getStorageUrl(undefined)).toBe('')
+    expect(getStorageUrl('')).toBe('')
+  })
+
+  it('returns absolute http/https URLs as-is', () => {
+    expect(getStorageUrl('https://example.com/logo.png')).toBe('https://example.com/logo.png')
+    expect(getStorageUrl('http://example.com/logo.png')).toBe('http://example.com/logo.png')
+  })
+
+  it('returns blob and data URLs as-is', () => {
+    expect(getStorageUrl('blob:http://localhost:5173/abc')).toBe('blob:http://localhost:5173/abc')
+    expect(getStorageUrl('data:image/png;base64,...')).toBe('data:image/png;base64,...')
+  })
+
+  it('prepends /storage/ to relative storage paths', () => {
+    expect(getStorageUrl('logos/my-logo.png')).toBe('/storage/logos/my-logo.png')
+    expect(getStorageUrl('/logos/my-logo.png')).toBe('/storage/logos/my-logo.png')
+  })
+
+  it('avoids duplicate /storage/ prefixes', () => {
+    expect(getStorageUrl('/storage/logos/my-logo.png')).toBe('/storage/logos/my-logo.png')
+    expect(getStorageUrl('storage/logos/my-logo.png')).toBe('/storage/logos/my-logo.png')
   })
 })

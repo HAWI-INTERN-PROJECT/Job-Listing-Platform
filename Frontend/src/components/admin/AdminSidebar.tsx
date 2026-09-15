@@ -1,23 +1,31 @@
 import {
-  LayoutDashboard, User, FileText, Search, Settings, LogOut,
-  ChevronLeft, ChevronRight, Menu, X, FileUp
+  LayoutDashboard,
+  Users,
+  BriefcaseBusiness,
+  FileText,
+  Building2,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
 } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
-  { label: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'My Profile',  icon: User,            path: '/my-profile' },
-  { label: 'Applications',icon: FileText,        path: '/my-applications' },
-  { label: 'CV/Resume',   icon: FileUp,          path: '/cv-resume' },
-  { label: 'Job Search',  icon: Search,          path: '/job-search' },
-  { label: 'Settings',    icon: Settings,        path: '/settings' },
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/jobs', label: 'Job Management', icon: BriefcaseBusiness, end: false },
+  { to: '/admin/users', label: 'Users', icon: Users, end: false },
+  { to: '/admin/applications', label: 'Applications', icon: FileText, end: false },
+  { to: '/admin/companies', label: 'Companies', icon: Building2, end: false },
+  { to: '/admin/settings', label: 'Settings', icon: Settings, end: false },
 ]
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuthStore()
   const [showConfirm, setShowConfirm] = useState(false)
@@ -36,51 +44,48 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
     }
   }
 
-  function go(path: string) {
-    navigate(path)
-    onNavigate?.()
-  }
-
   return (
     <>
       <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
         {!collapsed && (
           <div className="px-2.5 pt-2 pb-1.5 text-[11px] font-medium tracking-wider text-muted-foreground/80 uppercase">
-            Workspace
+            Administration
           </div>
         )}
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive =
-            location.pathname === item.path ||
-            (item.path === '/my-profile' && location.pathname === '/edit-profile') ||
-            (item.path === '/job-search' && location.pathname.startsWith('/jobs/'))
-
-          return (
-            <button
-              key={item.path}
-              onClick={() => go(item.path)}
-              title={collapsed ? item.label : undefined}
-              className={`group w-full flex items-center rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+        {navItems.map(({ to, label, icon: Icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            onClick={() => onNavigate?.()}
+            title={collapsed ? label : undefined}
+            className={({ isActive }) =>
+              `group w-full flex items-center rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
                 collapsed ? 'justify-center' : 'gap-2.5'
               } ${
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                   : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
-              }`}
-            >
-              <Icon
-                className={`h-4 w-4 flex-shrink-0 transition-colors ${
-                  isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 group-hover:text-sidebar-foreground'
-                }`}
-              />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </button>
-          )
-        })}
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <Icon
+                  className={`h-4 w-4 flex-shrink-0 transition-colors ${
+                    isActive
+                      ? 'text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 group-hover:text-sidebar-foreground'
+                  }`}
+                />
+                {!collapsed && <span className="truncate">{label}</span>}
+              </>
+            )}
+          </NavLink>
+        ))}
       </nav>
 
-      {/* Notion-style subtle footer */}
+      {/* Footer / Logout */}
       <div className="p-2 border-t border-sidebar-border/70">
         <button
           onClick={() => setShowConfirm(true)}
@@ -102,9 +107,9 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
                 <LogOut className="h-4 w-4" />
               </div>
               <div className="space-y-0.5">
-                <h2 className="font-semibold text-foreground text-sm">Sign out of HireStream</h2>
+                <h2 className="font-semibold text-foreground text-sm">Sign out of Admin Portal</h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Are you sure you want to end your current candidate session?
+                  Are you sure you want to end your administrative session?
                 </p>
               </div>
             </div>
@@ -135,7 +140,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   )
 }
 
-export default function EmployeeSidebar() {
+export default function AdminSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -147,7 +152,10 @@ export default function EmployeeSidebar() {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-bold text-xs">
             H
           </div>
-          <span className="font-semibold text-sm tracking-tight text-foreground">HireStream</span>
+          <div>
+            <span className="font-semibold text-sm tracking-tight text-foreground block leading-tight">HireStream</span>
+            <span className="text-[10px] text-muted-foreground font-medium block">Admin Console</span>
+          </div>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
@@ -173,7 +181,7 @@ export default function EmployeeSidebar() {
                 </div>
                 <div>
                   <span className="font-semibold text-sm tracking-tight text-sidebar-foreground leading-none">HireStream</span>
-                  <span className="block text-[10px] text-muted-foreground font-normal">Candidate</span>
+                  <span className="block text-[10px] text-muted-foreground font-normal">Admin Console</span>
                 </div>
               </div>
               <button
@@ -203,9 +211,14 @@ export default function EmployeeSidebar() {
             </div>
             {!collapsed && (
               <div className="truncate">
-                <span className="font-semibold text-sm tracking-tight text-sidebar-foreground block leading-tight">
-                  HireStream
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-sm tracking-tight text-sidebar-foreground leading-tight">
+                    HireStream
+                  </span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-muted text-muted-foreground font-semibold uppercase">
+                    Admin
+                  </span>
+                </div>
                 <span className="text-[10px] text-muted-foreground font-normal tracking-wide block">
                   Workspace
                 </span>
