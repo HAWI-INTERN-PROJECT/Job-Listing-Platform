@@ -11,6 +11,8 @@ use App\Http\Resources\V1\AuthResource;
 use App\Http\Resources\V1\UserResource;
 use App\Http\Traits\ApiResponse;
 use App\Models\User;
+use App\Models\Otp;
+use App\Services\OtpService;
 use App\Services\ActivityLogger;
 use Exception;
 use Illuminate\Auth\Events\PasswordReset;
@@ -19,7 +21,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -31,10 +32,10 @@ class AuthController extends Controller
      *
      * @unauthenticated
      *
-     * @param RegisterRequest $request
+     * @param  RegisterRequest  $request
      * @return JsonResponse
      */
-    public function register(RegisterRequest $request): AuthResource | JsonResponse
+    public function register(RegisterRequest $request): AuthResource|JsonResponse
     {
         try {
             return DB::transaction(function () use ($request) {
@@ -42,14 +43,17 @@ class AuthController extends Controller
                     'name' => $request->name,
                     'email' => $request->email,
                     'username' => $request->username,
+                    'role' => $request->role,
                     'password' => Hash::make($request->password),
                 ]);
 
-                $user->sendEmailVerificationNotification();
+                $token = $user->createAccessToken($request->boolean('remember_me'));
+
+                app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_REGISTER);
 
                 ActivityLogger::register($request);
 
-                return AuthResource::make($user);
+                return AuthResource::make($user, $token);
             });
         } catch (Exception $e) {
             return $this->error(
@@ -65,25 +69,24 @@ class AuthController extends Controller
      *
      * @unauthenticated
      *
-     * @param LoginRequest $request
+     * @param  LoginRequest  $request
      * @return JsonResponse
      */
-    public function login(LoginRequest $request): AuthResource | JsonResponse
+    public function login(LoginRequest $request): AuthResource|JsonResponse
     {
+        $user = $request->authenticate();
 
-        $request->authenticate();
-
-        $user = $request->user();
+        $token = $user->createAccessToken($request->boolean('remember_me'));
 
         ActivityLogger::login($request);
 
-        return AuthResource::make($user);
+        return AuthResource::make($user, $token);
     }
 
     /**
      * Logout User
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return JsonResponse
      */
     public function logout(Request $request): JsonResponse
@@ -97,31 +100,67 @@ class AuthController extends Controller
     }
 
     /**
-     * Change Password
+     * Change Password (Step 1) - validates current password, sends OTP
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return JsonResponse
      */
     public function changePassword(Request $request): JsonResponse
     {
-        // Validate request
+        $user = $request->user();
+
         $request->validate([
             'current_password' => ['required'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'confirmed', 'min:8', 'different:current_password'],
         ]);
 
-        // check if current password is correct
-        if (! Hash::check($request->current_password, $request->user()->password)) {
-
+        if (! Hash::check($request->current_password, $user->password)) {
             throw ValidationException::withMessages([
-                'current_password' => __('auth.failed')
+                'current_password' => __('auth.failed'),
             ]);
         }
 
-        // Update password
-        $user = User::find($request->user()->id);
-        $user->password = Hash::make($request->password);
+        // Stash the pending new password (hashed) until the OTP is confirmed
+        cache()->put(
+            "pending_password_change:{$user->id}",
+            Hash::make($request->password),
+            now()->addMinutes(10)
+        );
+
+        app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_CHANGE_PASSWORD);
+
+        return $this->success(null, __('passwords.otp_sent'));
+    }
+
+    /**
+     * Change Password (Step 2) - verifies OTP and applies the pending change
+     *
+     * @param  Request  $request
+     * @return JsonResponse
+     */
+    public function confirmChangePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $request->validate(['code' => ['required', 'string']]);
+
+        $cacheKey = "pending_password_change:{$user->id}";
+        $pendingHash = cache()->get($cacheKey);
+
+        if (! $pendingHash) {
+            return $this->error(__('passwords.no_pending_change'), 400);
+        }
+
+        if (! app(OtpService::class)->verify($user, Otp::PURPOSE_CHANGE_PASSWORD, $request->string('code')->value())) {
+            return $this->error(__('passwords.token'), 400);
+        }
+
+        $user->password = $pendingHash;
         $user->save();
+        $user->tokens()->delete();
+
+        cache()->forget($cacheKey);
+
 
         ActivityLogger::passwordChanged($request);
 
@@ -131,7 +170,7 @@ class AuthController extends Controller
     /**
      * Get User
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return UserResource
      */
     public function profile(Request $request): UserResource
@@ -144,32 +183,30 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function verifyEmail(int $id, string $hash): JsonResponse
+    public function verifyEmailOtp(Request $request): JsonResponse
     {
-        $user = User::findOrFail($id);
+        $user = $request->user();
 
-        // Validate email hash
-        if (! hash_equals(
-            (string) $hash,
-            sha1($user->getEmailForVerification())
-        )) {
-            return $this->forbidden(__('auth.invalid_verification_link'));
-        }
+        $request->validate(['code' => ['required', 'string']]);
 
         if ($user->hasVerifiedEmail()) {
             return $this->success(null, __('auth.email_already_verified'));
         }
 
+        if (! app(OtpService::class)->verify($user, Otp::PURPOSE_REGISTER, $request->string('code')->value())) {
+            return $this->forbidden(__('auth.invalid_verification_link'));
+        }
+
         $user->markEmailAsVerified();
         event(new Verified($user));
 
-        ActivityLogger::emailVerified();
+        ActivityLogger::emailVerified($user, request());
 
         return $this->success(null, __('auth.email_verified'));
     }
 
     /**
-     * Resend Verification Email
+     * Resend Verification OTP
      *
      * @return JsonResponse
      */
@@ -181,7 +218,7 @@ class AuthController extends Controller
             return $this->success(null, __('auth.email_already_verified'));
         }
 
-        $user->sendEmailVerificationNotification();
+        app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_REGISTER);
 
         return $this->success(null, __('auth.email_sent'));
     }
@@ -189,17 +226,17 @@ class AuthController extends Controller
     /**
      * Forgot Password
      *
-     * @param ForgotPasswordRequest $request
+     * @param  ForgotPasswordRequest  $request
      * @return JsonResponse
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         try {
-            $status = Password::sendResetLink(
-                $request->only('email')
-            );
+            $user = User::where('email', $request->email)->firstOrFail();
 
-            return $this->passwordResponse($status);
+            app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_PASSWORD_RESET);
+
+            return $this->success(null, __('passwords.sent'));
         } catch (Exception $e) {
             return $this->error(
                 __('passwords.unable_to_send_reset'),
@@ -212,29 +249,33 @@ class AuthController extends Controller
     /**
      * Reset Password
      *
-     * @param ResetPasswordRequest $request
+     * @param  ResetPasswordRequest  $request
      * @return JsonResponse
      */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         try {
-            $status = Password::reset(
-                $request->only('email', 'password', 'password_confirmation', 'token'),
-                function (User $user, string $password) {
-                    // Update password
-                    $user->forceFill([
-                        'password' => Hash::make($password),
-                    ])->save();
+            $user = User::where('email', $request->email)->first();
 
-                    $user->tokens()->delete();
+            if (! $user) {
+                return $this->error(__('passwords.user'), 404);
+            }
 
-                    event(new PasswordReset($user));
+            if (! app(OtpService::class)->verify($user, Otp::PURPOSE_PASSWORD_RESET, $request->string('code')->value())) {
+                return $this->error(__('passwords.token'), 400);
+            }
 
-                    ActivityLogger::passwordReset();
-                }
-            );
+            $user->forceFill([
+                'password' => Hash::make($request->password),
+            ])->save();
 
-            return $this->passwordResponse($status);
+            $user->tokens()->delete();
+
+            event(new PasswordReset($user));
+
+            ActivityLogger::passwordReset();
+
+            return $this->success(null, __('passwords.reset'));
         } catch (Exception $e) {
             return $this->error(
                 __('passwords.unable_to_reset_password'),
@@ -242,27 +283,5 @@ class AuthController extends Controller
                 config('app.debug') ? $e->getMessage() : null
             );
         }
-    }
-
-    /**
-     * @param  array<string, string>  $messages
-     */
-    protected function passwordResponse(string $status, array $messages = []): JsonResponse
-    {
-        $map = [
-            Password::RESET_LINK_SENT => ['message' => $messages['sent'] ?? __('passwords.sent'), 'code' => 200],
-            Password::PASSWORD_RESET => ['message' => $messages['reset'] ?? __('passwords.reset'), 'code' => 200],
-            Password::INVALID_USER => ['message' => $messages['user'] ?? __('passwords.user'), 'code' => 404],
-            Password::INVALID_TOKEN => ['message' => $messages['token'] ?? __('passwords.token'), 'code' => 400],
-            Password::RESET_THROTTLED => ['message' => $messages['throttled'] ?? __('passwords.throttled'), 'code' => 429],
-        ];
-
-        $response = $map[$status] ?? ['message' => $messages['default'] ?? __('passwords.unable_to_reset_password'), 'code' => 500];
-
-        if ($response['code'] >= 400) {
-            return $this->error($response['message'], $response['code']);
-        }
-
-        return $this->success(null, $response['message'], $response['code']);
     }
 }

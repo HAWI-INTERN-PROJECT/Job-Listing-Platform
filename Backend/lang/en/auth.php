@@ -21,7 +21,7 @@ return [
     'email_verified' => 'Your email address has been verified.',
     'logout' => 'You have been logged out of the application.',
     'user_not_found' => 'User not found.',
-    'invalid_verification_link' => 'Invalid verification link.',
+    'invalid_verification_link' => 'Invalid or expired verification code.',
     'register_error' => 'Unable to register. Please try again later.',
 
 ];

@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OtpCodeMail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -52,44 +53,54 @@ class PasswordResetTest extends TestCase
             ->assertJsonValidationErrors(['email']);
     }
 
-    public function test_user_can_reset_password_with_valid_token(): void
+    public function test_user_can_reset_password_with_valid_code(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create();
 
-        $token = Password::createToken($user);
+        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
+
+        $capturedCode = null;
+        Mail::assertSent(OtpCodeMail::class, function ($mail) use (&$capturedCode) {
+            $capturedCode = $mail->code;
+
+            return true;
+        });
 
         $response = $this->postJson('/api/v1/reset-password', [
             'email' => $user->email,
             'password' => 'new-password',
             'password_confirmation' => 'new-password',
-            'token' => $token,
+            'code' => $capturedCode,
         ]);
 
         $response->assertOk()
             ->assertJsonFragment(['message' => __('passwords.reset')]);
 
-        // Verify new password works
         $this->assertTrue(
             Hash::check('new-password', $user->fresh()->password)
         );
     }
 
-    public function test_reset_password_with_invalid_token(): void
+    public function test_reset_password_with_invalid_code(): void
     {
         $user = User::factory()->create();
+
+        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
 
         $response = $this->postJson('/api/v1/reset-password', [
             'email' => $user->email,
             'password' => 'new-password',
             'password_confirmation' => 'new-password',
-            'token' => 'invalid-token',
+            'code' => '000000',
         ]);
 
         $response->assertBadRequest()
             ->assertJsonFragment(['message' => __('passwords.token')]);
     }
 
-    public function test_reset_password_requires_token(): void
+    public function test_reset_password_requires_code(): void
     {
         $response = $this->postJson('/api/v1/reset-password', [
             'email' => 'test@example.com',
@@ -98,7 +109,7 @@ class PasswordResetTest extends TestCase
         ]);
 
         $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['token']);
+            ->assertJsonValidationErrors(['code']);
     }
 
     public function test_reset_password_requires_email(): void
@@ -106,7 +117,7 @@ class PasswordResetTest extends TestCase
         $response = $this->postJson('/api/v1/reset-password', [
             'password' => 'new-password',
             'password_confirmation' => 'new-password',
-            'token' => 'some-token',
+            'code' => '123456',
         ]);
 
         $response->assertUnprocessable()
@@ -117,7 +128,7 @@ class PasswordResetTest extends TestCase
     {
         $response = $this->postJson('/api/v1/reset-password', [
             'email' => 'test@example.com',
-            'token' => 'some-token',
+            'code' => '123456',
         ]);
 
         $response->assertUnprocessable()
@@ -126,18 +137,27 @@ class PasswordResetTest extends TestCase
 
     public function test_reset_password_revokes_all_tokens(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create();
         $user->createToken('existing-token');
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
 
-        $token = Password::createToken($user);
+        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
+
+        $capturedCode = null;
+        Mail::assertSent(OtpCodeMail::class, function ($mail) use (&$capturedCode) {
+            $capturedCode = $mail->code;
+
+            return true;
+        });
 
         $this->postJson('/api/v1/reset-password', [
             'email' => $user->email,
             'password' => 'new-password',
             'password_confirmation' => 'new-password',
-            'token' => $token,
+            'code' => $capturedCode,
         ]);
 
         $this->assertDatabaseCount('personal_access_tokens', 0);

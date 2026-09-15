@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Queue infrastructure migration (not the application's job posting table).
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
             $table->string('queue')->index();

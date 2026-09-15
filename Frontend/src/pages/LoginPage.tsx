@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
+import axios from 'axios'
+
 export default function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -28,10 +30,25 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data)
+      const user = await login(data)
       toast.success('Logged in successfully')
-      navigate('/dashboard')
+      if (user?.role === 'employer') {
+        navigate('/employer-dashboard')
+      } else if (user?.role === 'employee') {
+        navigate('/my-applications')
+      } else if (user?.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const serverData = error.response.data
+        if (serverData.message) {
+          toast.error(serverData.message)
+          return
+        }
+      }
       const message = error instanceof Error ? error.message : 'Login failed'
       toast.error(message)
     }
@@ -68,6 +85,11 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-sm text-primary underline-offset-4 hover:underline">
+                  {t('auth.forgotPassword', 'Forgot password?')}
+                </Link>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
