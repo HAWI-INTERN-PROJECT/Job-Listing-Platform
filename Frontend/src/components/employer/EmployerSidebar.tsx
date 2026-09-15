@@ -1,15 +1,26 @@
-import { LayoutDashboard, Building2, Briefcase, Users, Settings, LogOut, Menu, X } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Building2,
+  Briefcase,
+  Users,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+} from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
-  { label: 'Dashboard',       icon: LayoutDashboard, path: '/employer-dashboard' },
-  { label: 'Company Profile', icon: Building2,        path: '/company-profile' },
-  { label: 'My Job Posts',    icon: Briefcase,        path: '/my-job-posts' },
-  { label: 'Applicants',      icon: Users,            path: '/job-applicants' },
-  { label: 'Settings',        icon: Settings,         path: '/settings' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/employer-dashboard' },
+  { label: 'Company Profile', icon: Building2, path: '/company-profile' },
+  { label: 'My Job Posts', icon: Briefcase, path: '/my-job-posts' },
+  { label: 'Applicants', icon: Users, path: '/job-applicants' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
 ]
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
@@ -21,70 +32,107 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 
   async function handleLogout() {
     setIsLoggingOut(true)
-    try { await logout(); navigate('/login', { replace: true }) }
-    catch { navigate('/login', { replace: true }) }
-    finally { setIsLoggingOut(false); setShowConfirm(false) }
+    try {
+      await logout()
+      navigate('/login', { replace: true })
+    } catch {
+      navigate('/login', { replace: true })
+    } finally {
+      setIsLoggingOut(false)
+      setShowConfirm(false)
+    }
   }
 
-  function go(path: string) { navigate(path); onNavigate?.() }
+  function go(path: string) {
+    navigate(path)
+    onNavigate?.()
+  }
 
   return (
     <>
-      <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
+      <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
+        {!collapsed && (
+          <div className="px-2.5 pt-2 pb-1.5 text-[11px] font-medium tracking-wider text-muted-foreground/80 uppercase">
+            Workspace
+          </div>
+        )}
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = location.pathname === item.path
+          const isActive =
+            location.pathname === item.path ||
+            (item.path === '/my-job-posts' && (location.pathname === '/create-job' || location.pathname.startsWith('/edit-job'))) ||
+            (item.path === '/job-applicants' && location.pathname.startsWith('/applicant-details'))
+
           return (
             <button
               key={item.label}
               onClick={() => go(item.path)}
               title={collapsed ? item.label : undefined}
-              className={`w-full flex items-center rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                collapsed ? 'justify-center' : 'gap-3'
+              className={`group w-full flex items-center rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+                collapsed ? 'justify-center' : 'gap-2.5'
               } ${
                 isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-2xs'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                   : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
               }`}
             >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              {!collapsed && item.label}
+              <Icon
+                className={`h-4 w-4 flex-shrink-0 transition-colors ${
+                  isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 group-hover:text-sidebar-foreground'
+                }`}
+              />
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </button>
           )
         })}
       </nav>
 
+      {/* Footer / Logout */}
       <div className="p-2 border-t border-sidebar-border/70">
         <button
           onClick={() => setShowConfirm(true)}
           title={collapsed ? 'Logout' : undefined}
-          className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-rose-600 dark:hover:text-rose-400 transition-colors ${
-            collapsed ? 'justify-center' : 'gap-3'
+          className={`w-full flex items-center rounded-lg px-2.5 py-2 text-[13px] font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-rose-600 dark:hover:text-rose-400 transition-colors ${
+            collapsed ? 'justify-center' : 'gap-2.5'
           }`}
         >
           <LogOut className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && 'Logout'}
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
 
       {showConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-xl bg-card border border-border p-6 shadow-2xl space-y-4 text-foreground">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-rose-500/10 p-3 text-rose-600 dark:text-rose-400">
-                <LogOut className="h-5 w-5" />
+          <div className="w-full max-w-sm rounded-xl bg-card border border-border p-5 shadow-lg space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex-shrink-0">
+                <LogOut className="h-4 w-4" />
               </div>
-              <div>
-                <h2 className="font-semibold text-foreground text-sm">Sign Out</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Are you sure you want to sign out?</p>
+              <div className="space-y-0.5">
+                <h2 className="font-semibold text-foreground text-sm">Sign out of Employer Portal</h2>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to end your employer session?
+                </p>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
-              <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)} disabled={isLoggingOut} className="text-xs">
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg h-8 text-xs font-medium"
+                onClick={() => setShowConfirm(false)}
+                disabled={isLoggingOut}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="text-xs">
-                {isLoggingOut ? 'Signing out...' : 'Sign Out'}
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-lg h-8 text-xs font-medium"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? 'Signing out...' : 'Sign out'}
               </Button>
             </div>
           </div>
@@ -106,11 +154,9 @@ export default function EmployerSidebar() {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-bold text-xs">
             H
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-sm tracking-tight text-foreground">HireStream</span>
-            <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-              Employer
-            </span>
+          <div>
+            <span className="font-semibold text-sm tracking-tight text-foreground block leading-tight">HireStream</span>
+            <span className="text-[10px] text-muted-foreground font-medium block">Employer Portal</span>
           </div>
         </div>
         <button
@@ -135,16 +181,14 @@ export default function EmployerSidebar() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-bold text-xs">
                   H
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">HireStream</span>
-                  <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sidebar-accent text-sidebar-foreground">
-                    Employer
-                  </span>
+                <div>
+                  <span className="font-semibold text-sm tracking-tight text-sidebar-foreground leading-none">HireStream</span>
+                  <span className="block text-[10px] text-muted-foreground font-normal">Employer Portal</span>
                 </div>
               </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
                 aria-label="Close menu"
               >
                 <X className="h-4 w-4" />
@@ -155,27 +199,44 @@ export default function EmployerSidebar() {
         </div>
       )}
 
-      {/* Desktop sticky sidebar */}
-      <aside className={`hidden md:flex flex-col flex-shrink-0 border-r border-sidebar-border bg-sidebar-background sticky top-0 h-screen transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
-        <div className="flex h-16 items-center border-b border-sidebar-border/70 px-3 flex-shrink-0">
-          <button
-            onClick={() => setCollapsed((v) => !v)}
-            className="flex items-center gap-2.5 overflow-hidden rounded-md hover:opacity-80 transition-opacity w-full text-left"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-bold text-xs flex-shrink-0">
+      {/* Desktop sticky sidebar - Notion styled */}
+      <aside
+        className={`hidden md:flex flex-col flex-shrink-0 border-r border-sidebar-border bg-sidebar-background sticky top-0 h-screen transition-all duration-200 ${
+          collapsed ? 'w-16' : 'w-60'
+        }`}
+      >
+        {/* Workspace Brand Block */}
+        <div className="flex h-14 items-center justify-between border-b border-sidebar-border/70 px-3 flex-shrink-0">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-bold text-xs flex-shrink-0 shadow-xs">
               H
             </div>
             {!collapsed && (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">HireStream</span>
-                <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sidebar-accent text-sidebar-foreground flex-shrink-0">
-                  Employer
+              <div className="truncate">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-sm tracking-tight text-sidebar-foreground leading-tight">
+                    HireStream
+                  </span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-muted text-muted-foreground font-semibold uppercase">
+                    Employer
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground font-normal tracking-wide block">
+                  Workspace
                 </span>
               </div>
             )}
+          </div>
+          <button
+            onClick={() => setCollapsed((v) => !v)}
+            className="p-1 rounded-md text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
           </button>
         </div>
+
         <NavList collapsed={collapsed} />
       </aside>
     </>
