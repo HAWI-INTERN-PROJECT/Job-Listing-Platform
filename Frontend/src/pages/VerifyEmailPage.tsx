@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { MailCheck, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { OtpInput } from '@/components/ui/otp-input'
 import { ResendTimer } from '@/components/ui/resend-timer'
+import AuthLayout from '@/components/AuthLayout'
 import api from '@/lib/api'
 
 export default function VerifyEmailPage() {
@@ -49,32 +51,43 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 py-8 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t('otp.registerTitle')}</CardTitle>
-          <CardDescription>
+    <AuthLayout>
+      <Card className="border border-border/70 shadow-lg shadow-black/5 dark:shadow-none">
+        <CardHeader className="text-center pb-4">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary/10 text-sidebar-primary mb-2 shadow-2xs">
+            <MailCheck className="h-5 w-5" />
+          </div>
+          <CardTitle className="text-xl font-bold tracking-tight text-foreground">
+            {t('otp.registerTitle')}
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
             {t('otp.codeSentTo', { email: user?.email ?? '' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <OtpInput
-            value={code}
-            onChange={setCode}
-            onComplete={handleComplete}
-            disabled={verifyMutation.isPending}
-            error={error}
-          />
-          <ResendTimer onResend={handleResend} />
-          <button
-            type="button"
-            onClick={() => logout()}
-            className="text-sm text-muted-foreground hover:underline w-full text-center"
-          >
-            {t('auth.logout')}
-          </button>
+          <div className="space-y-3">
+            <OtpInput
+              value={code}
+              onChange={setCode}
+              onComplete={handleComplete}
+              disabled={verifyMutation.isPending}
+              error={error}
+            />
+            <ResendTimer onResend={handleResend} />
+          </div>
+
+          <div className="pt-2 border-t border-border/60">
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 w-full text-center transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>{t('auth.logout')}</span>
+            </button>
+          </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   )
 }

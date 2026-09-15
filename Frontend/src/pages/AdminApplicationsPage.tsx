@@ -227,48 +227,58 @@ export default function AdminApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Search */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Job Applications</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Track and manage candidate job applications across all platform listings ({totalApplications} total)
-          </p>
+      {/* Notion Document Header */}
+      <div className="border-b border-border/60 pb-5 space-y-1.5">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+            📄
+          </span>
+          <span>Job Applications / Platform Submissions</span>
         </div>
-
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search applicant, job, company..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border rounded-lg outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-            />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Job Applications
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Track and manage candidate job applications across all platform listings ({totalApplications} total).
+            </p>
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            Search
-          </button>
-        </form>
+
+          {/* Search Bar */}
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+              <input
+                type="text"
+                placeholder="Search applicant, job, company..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-card border border-border/80 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-3.5 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              Search
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-200">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border/60">
         {STATUS_TABS.map((tab) => {
           const isActive = statusFilter === tab.id
           return (
             <button
               key={tab.id}
               onClick={() => handleStatusTabChange(tab.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
                 isActive
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border'
+                  ? "bg-muted text-foreground font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -279,69 +289,69 @@ export default function AdminApplicationsPage() {
 
       {/* Error alert */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700">
-          <AlertCircle size={20} />
-          <span className="text-sm font-medium">{error}</span>
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3 text-rose-700 dark:text-rose-400 text-sm font-medium">
+          <AlertCircle size={18} className="flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* Applications Table */}
-      <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+      <div className="bg-card border border-border/70 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b bg-slate-50/70 text-slate-500 font-medium">
-                <th className="px-6 py-4">Applicant</th>
-                <th className="px-6 py-4">Applied Job</th>
-                <th className="px-6 py-4">Company</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Applied Date</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+              <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <th className="px-5 py-3">Applicant</th>
+                <th className="px-5 py-3">Applied Job</th>
+                <th className="px-5 py-3">Company</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Applied Date</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="animate-spin text-blue-600" size={24} />
-                      <p className="text-sm font-medium">Loading applications...</p>
+                      <Loader2 className="animate-spin text-muted-foreground" size={20} />
+                      <p className="text-xs font-medium">Loading applications...</p>
                     </div>
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    <p className="text-base font-semibold text-slate-700">No applications found</p>
-                    <p className="text-sm mt-1">Try selecting another filter tab or search term.</p>
+                  <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
+                    <p className="text-sm font-semibold text-foreground">No applications found</p>
+                    <p className="text-xs mt-1">Try selecting another filter tab or search term.</p>
                   </td>
                 </tr>
               ) : (
                 applications.map((app) => (
-                  <tr key={app.id} className="border-b last:border-0 hover:bg-slate-50/70 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-700 font-bold flex items-center justify-center border border-blue-200">
-                          {app.applicant?.name?.charAt(0).toUpperCase() || 'A'}
+                  <tr key={app.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-muted text-foreground font-bold text-xs flex items-center justify-center border border-border/60">
+                          {app.applicant?.name?.charAt(0).toUpperCase() || "A"}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">{app.applicant?.name || 'Unknown'}</p>
-                          <p className="text-xs text-slate-400">{app.applicant?.email}</p>
+                          <p className="font-semibold text-foreground">{app.applicant?.name || "Unknown"}</p>
+                          <p className="text-[10px] text-muted-foreground">{app.applicant?.email}</p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 font-medium text-slate-800">
-                      {app.job_post?.title || 'Job Listing'}
+                    <td className="px-5 py-3.5 font-medium text-foreground">
+                      {app.job_post?.title || "Job Listing"}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
-                      {app.job_post?.employer?.company_name || 'N/A'}
+                    <td className="px-5 py-3.5 text-muted-foreground">
+                      {app.job_post?.employer?.company_name || "N/A"}
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${getStatusBadge(
                           app.status
                         )}`}
                       >
@@ -349,35 +359,35 @@ export default function AdminApplicationsPage() {
                       </span>
                     </td>
 
-                    <td className="px-6 py-4 text-slate-500">{formatDate(app.created_at)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{formatDate(app.created_at)}</td>
 
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         {/* Download CV */}
                         <button
                           onClick={() => handleDownloadCv(app)}
                           title="Download CV"
-                          className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         >
-                          <Download size={16} />
+                          <Download size={15} />
                         </button>
 
                         {/* View Details */}
                         <button
                           onClick={() => setSelectedApp(app)}
                           title="View Application Details"
-                          className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         >
-                          <Eye size={16} />
+                          <Eye size={15} />
                         </button>
 
                         {/* Delete Application */}
                         <button
                           onClick={() => setDeletingApp(app)}
                           title="Delete Application Record"
-                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
@@ -390,27 +400,27 @@ export default function AdminApplicationsPage() {
 
         {/* Pagination Footer */}
         {lastPage > 1 && (
-          <div className="px-6 py-4 border-t flex items-center justify-between bg-slate-50/50">
-            <p className="text-xs text-slate-500">
-              Page <span className="font-semibold text-slate-700">{currentPage}</span> of{' '}
-              <span className="font-semibold text-slate-700">{lastPage}</span>
+          <div className="px-5 py-3 border-t border-border/60 flex items-center justify-between bg-muted/20">
+            <p className="text-xs text-muted-foreground">
+              Page <span className="font-semibold text-foreground">{currentPage}</span> of{" "}
+              <span className="font-semibold text-foreground">{lastPage}</span>
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1 || isLoading}
-                className="p-2 border rounded-lg text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 border border-border/70 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
               </button>
 
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, lastPage))}
                 disabled={currentPage === lastPage || isLoading}
-                className="p-2 border rounded-lg text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 border border-border/70 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
@@ -419,59 +429,59 @@ export default function AdminApplicationsPage() {
 
       {/* Application Review Modal */}
       {selectedApp && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl border border-slate-100 p-6 space-y-6">
-            <div className="flex items-start justify-between border-b pb-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border p-6 space-y-5 text-foreground">
+            <div className="flex items-start justify-between border-b border-border/60 pb-4">
               <div>
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border mb-2 ${getStatusBadge(selectedApp.status)}`}>
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${getStatusBadge(selectedApp.status)}`}>
                   {selectedApp.status_label || selectedApp.status}
                 </span>
-                <h3 className="text-xl font-bold text-slate-900">Application Review</h3>
-                <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
-                  Applied for <span className="font-semibold text-slate-800">{selectedApp.job_post?.title}</span> at{' '}
-                  <span className="font-semibold text-blue-600">{selectedApp.job_post?.employer?.company_name || 'N/A'}</span>
+                <h3 className="text-lg font-bold text-foreground">Application Review</h3>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                  Applied for <span className="font-semibold text-foreground">{selectedApp.job_post?.title}</span> at{" "}
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{selectedApp.job_post?.employer?.company_name || "N/A"}</span>
                 </p>
               </div>
 
               <button
                 onClick={() => setSelectedApp(null)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                className="p-1 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Applicant Summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl text-sm border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 p-4 rounded-xl text-xs border border-border/60">
               <div>
-                <span className="text-slate-400 text-xs block">Applicant Name</span>
-                <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
-                  <UserIcon size={14} className="text-blue-600" />
+                <span className="text-[10px] text-muted-foreground uppercase font-medium block">Applicant Name</span>
+                <span className="font-semibold text-foreground flex items-center gap-1.5 mt-0.5">
+                  <UserIcon size={13} className="text-blue-600 dark:text-blue-400" />
                   {selectedApp.applicant?.name}
                 </span>
               </div>
 
               <div>
-                <span className="text-slate-400 text-xs block">Email Address</span>
-                <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
-                  <Mail size={14} className="text-blue-600" />
+                <span className="text-[10px] text-muted-foreground uppercase font-medium block">Email Address</span>
+                <span className="font-semibold text-foreground flex items-center gap-1.5 mt-0.5">
+                  <Mail size={13} className="text-blue-600 dark:text-blue-400" />
                   {selectedApp.applicant?.email}
                 </span>
               </div>
 
               <div>
-                <span className="text-slate-400 text-xs block">Applied Date</span>
-                <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
-                  <Calendar size={14} className="text-blue-600" />
+                <span className="text-[10px] text-muted-foreground uppercase font-medium block">Applied Date</span>
+                <span className="font-semibold text-foreground flex items-center gap-1.5 mt-0.5">
+                  <Calendar size={13} className="text-blue-600 dark:text-blue-400" />
                   {formatDate(selectedApp.created_at)}
                 </span>
               </div>
 
               <div>
-                <span className="text-slate-400 text-xs block">Curriculum Vitae</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-medium block">Curriculum Vitae</span>
                 <button
                   onClick={() => handleDownloadCv(selectedApp)}
-                  className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 mt-0.5"
                 >
                   <Download size={13} /> Download CV Document
                 </button>
@@ -480,24 +490,24 @@ export default function AdminApplicationsPage() {
 
             {/* Cover Letter */}
             <div>
-              <h4 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                <FileText size={16} className="text-blue-600" /> Cover Letter
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                <FileText size={14} className="text-blue-600 dark:text-blue-400" /> Cover Letter
               </h4>
-              <div className="p-4 bg-slate-50 rounded-xl border text-sm text-slate-700 whitespace-pre-line leading-relaxed min-h-[100px]">
-                {selectedApp.cover_letter || 'No cover letter submitted.'}
+              <div className="p-3.5 bg-muted/30 rounded-xl border border-border/60 text-xs text-foreground whitespace-pre-line leading-relaxed min-h-[90px]">
+                {selectedApp.cover_letter || "No cover letter submitted."}
               </div>
             </div>
 
             {/* Status Modification Actions */}
             <div>
-              <h4 className="font-semibold text-slate-900 mb-3">Update Application Status</h4>
-              <div className="flex flex-wrap gap-2">
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2.5">Update Application Status</h4>
+              <div className="flex flex-wrap gap-1.5">
                 {[
-                  { id: 'submitted', label: 'Submitted', color: 'hover:bg-blue-50 text-blue-700' },
-                  { id: 'under_review', label: 'Under Review', color: 'hover:bg-amber-50 text-amber-700' },
-                  { id: 'shortlisted', label: 'Shortlist Candidate', color: 'hover:bg-purple-50 text-purple-700' },
-                  { id: 'hired', label: 'Hire Candidate', color: 'hover:bg-emerald-50 text-emerald-700' },
-                  { id: 'rejected', label: 'Reject Candidate', color: 'hover:bg-red-50 text-red-700' },
+                  { id: "submitted", label: "Submitted" },
+                  { id: "under_review", label: "Under Review" },
+                  { id: "shortlisted", label: "Shortlist Candidate" },
+                  { id: "hired", label: "Hire Candidate" },
+                  { id: "rejected", label: "Reject Candidate" },
                 ].map((st) => {
                   const isCurrent = selectedApp.status === st.id
                   return (
@@ -505,13 +515,13 @@ export default function AdminApplicationsPage() {
                       key={st.id}
                       onClick={() => handleUpdateStatus(selectedApp.id, st.id)}
                       disabled={isActionLoading || isCurrent}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1.5 ${
                         isCurrent
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : `bg-white ${st.color} border-slate-200`
+                          ? "bg-muted text-foreground font-semibold border-border shadow-2xs"
+                          : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border/70"
                       }`}
                     >
-                      {isCurrent && <CheckCircle size={12} />}
+                      {isCurrent && <CheckCircle size={12} className="text-emerald-600 dark:text-emerald-400" />}
                       {st.label}
                     </button>
                   )
@@ -519,18 +529,18 @@ export default function AdminApplicationsPage() {
               </div>
             </div>
 
-            {/* Modal Actions Footer */}
-            <div className="pt-4 border-t flex items-center justify-between">
+            {/* Modal Actions */}
+            <div className="pt-4 border-t border-border/60 flex items-center justify-between">
               <button
                 onClick={() => setDeletingApp(selectedApp)}
-                className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors flex items-center gap-1.5"
               >
-                <Trash2 size={16} /> Delete Application
+                <Trash2 size={14} /> Delete Record
               </button>
 
               <button
                 onClick={() => setSelectedApp(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 rounded-lg transition-colors"
               >
                 Close
               </button>
@@ -539,28 +549,26 @@ export default function AdminApplicationsPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Application Modal */}
       {deletingApp && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-red-600">Delete Application Record</h3>
-              <button onClick={() => setDeletingApp(null)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-xl max-w-md w-full p-6 shadow-2xl border border-border space-y-4 text-foreground">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <h3 className="text-sm font-bold text-rose-600 dark:text-rose-400">Delete Application</h3>
+              <button onClick={() => setDeletingApp(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={16} />
               </button>
             </div>
 
-            <p className="text-sm text-slate-600">
-              Are you sure you want to delete the application submitted by{' '}
-              <strong>"{deletingApp.applicant?.name}"</strong> for{' '}
-              <strong>"{deletingApp.job_post?.title}"</strong>? This action cannot be undone.
+            <p className="text-xs text-muted-foreground">
+              Are you sure you want to permanently delete this application record? This action cannot be undone.
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
               <button
                 type="button"
                 onClick={() => setDeletingApp(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -568,9 +576,9 @@ export default function AdminApplicationsPage() {
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={isActionLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors flex items-center gap-1.5"
               >
-                {isActionLoading && <Loader2 size={16} className="animate-spin" />}
+                {isActionLoading && <Loader2 size={14} className="animate-spin" />}
                 Confirm Delete
               </button>
             </div>

@@ -1,3 +1,4 @@
+/* oxlint-disable react/only-export-components */
 import { createContext, useContext, useState } from 'react'
 
 interface SidebarContextValue {
