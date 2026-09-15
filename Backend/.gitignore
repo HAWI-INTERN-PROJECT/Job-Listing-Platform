@@ -31,3 +31,7 @@ frankenphp-worker.php
 .env.testing
 .env.backup
 .env.production
+
+# Docker files (local development)
+Dockerfile
+.dockerignore
