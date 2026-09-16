@@ -422,11 +422,6 @@ export default function EmployerDashboardPage() {
                       <tr key={job.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-5 py-3.5">
                           <div className="font-medium text-foreground">{job.title}</div>
-                          {job.status?.toLowerCase() === 'rejected' && job.rejection_reason && (
-                            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 line-clamp-1 italic">
-                              Reason: &ldquo;{job.rejection_reason}&rdquo;
-                            </p>
-                          )}
                         </td>
 
                         <td className="px-5 py-3.5 text-muted-foreground">
