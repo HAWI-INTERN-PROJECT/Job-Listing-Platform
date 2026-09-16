@@ -195,7 +195,7 @@ function MiniCalendar({ scheduledDate }: { scheduledDate: Date }) {
               key={`day-${dayNum}`}
               className={`py-1.5 rounded-md font-medium transition-all ${
                 isInterview
-                  ? 'bg-purple-600 text-white font-bold ring-2 ring-purple-400 ring-offset-1 dark:ring-offset-background'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold ring-2 ring-neutral-900 dark:ring-white ring-offset-1 dark:ring-offset-background shadow-xs'
                   : isToday
                   ? 'border border-primary text-primary font-semibold'
                   : 'text-foreground hover:bg-muted/60'
@@ -209,7 +209,7 @@ function MiniCalendar({ scheduledDate }: { scheduledDate: Date }) {
 
       <div className="flex items-center justify-center gap-4 mt-3 pt-2.5 border-t border-border/60 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+          <span className="w-2.5 h-2.5 rounded-full bg-neutral-900 dark:bg-white" />
           Interview Date
         </span>
         <span className="flex items-center gap-1.5">
@@ -265,8 +265,8 @@ export const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
         <div className="flex items-start justify-between px-6 py-5 border-b border-border/70 bg-muted/20">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/20">
-                <CalendarIcon className="w-3.5 h-3.5 text-purple-500" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700">
+                <CalendarIcon className="w-3.5 h-3.5 text-neutral-900 dark:text-neutral-100" />
                 Interview Confirmed
               </span>
               <span className="text-xs text-muted-foreground uppercase font-mono">
@@ -308,9 +308,9 @@ export const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
         {/* Content Body */}
         <div className="overflow-y-auto p-6 space-y-6">
           {/* Live Countdown Display */}
-          <div className="bg-gradient-to-br from-purple-500/10 via-background to-blue-500/5 border border-purple-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-neutral-100/80 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
-              <div className="text-xs font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wider">
+              <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
                 Time Until Interview
               </div>
               <p className="text-xs text-muted-foreground">
@@ -343,7 +343,7 @@ export const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
 
                 <div className="bg-muted/40 border border-border/60 rounded-xl p-3.5 space-y-3">
                   <div className="flex items-start gap-3">
-                    <CalendarIcon className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <CalendarIcon className="w-4 h-4 text-foreground mt-0.5" />
                     <div>
                       <div className="text-xs font-semibold text-foreground">{formattedDate}</div>
                       <div className="text-xs text-muted-foreground">
@@ -396,7 +396,7 @@ export const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
                     href={interview.meeting_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98]"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 font-semibold text-sm shadow-sm transition-all active:scale-[0.98]"
                   >
                     <Video className="w-4 h-4" />
                     Join Video Call
@@ -431,7 +431,7 @@ export const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
           {interview.notes && (
             <div className="bg-muted/30 border border-border/70 rounded-xl p-4 space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <Info className="w-4 h-4 text-purple-600" />
+                <Info className="w-4 h-4 text-foreground" />
                 Notes & Preparation Instructions
               </div>
               <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed pl-5">

@@ -147,7 +147,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
             // Application status management & applicant review
             Route::get('applications/{application}', [ApplicationController::class, 'showApplicant'])->name('api.v1.employer.applications.show');
-            Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
+            Route::match(['put', 'patch'], 'applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
             Route::get('applications/{application}/cv', [ApplicationController::class, 'downloadCv'])->name('api.v1.employer.applications.cv');
 
             // Interview scheduling for shortlisted candidates

@@ -17,6 +17,8 @@ use App\Notifications\V1\Employee\ApplicationStatusChangedNotification;
 use App\Notifications\V1\Employer\NewApplicationReceivedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -162,17 +164,41 @@ class ApplicationController extends Controller
         $statusValue = $request->validated('status');
         $newStatus = ApplicationStatus::from($statusValue);
 
-        $application->update([
-            'status' => $newStatus,
-        ]);
+        try {
+            DB::transaction(function () use ($application, $newStatus): void {
+                $application->update([
+                    'status' => $newStatus,
+                ]);
 
-        $applicantUser = $application->user;
-        if ($applicantUser) {
-            $applicantUser->notify(new ApplicationStatusChangedNotification($application, $application->jobPost, $newStatus));
+                // Gracefully update scheduled interview if application is rejected or hired
+                if ($application->interview) {
+                    if ($newStatus === ApplicationStatus::REJECTED) {
+                        $application->interview->update(['status' => 'cancelled']);
+                    } elseif ($newStatus === ApplicationStatus::HIRED) {
+                        $application->interview->update(['status' => 'completed']);
+                    }
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to update application status: ' . $e->getMessage(), [
+                'application_id' => $application->id,
+                'status' => $statusValue,
+            ]);
+
+            return $this->error('Failed to update application status: ' . $e->getMessage(), 500);
+        }
+
+        try {
+            $applicantUser = $application->user;
+            if ($applicantUser) {
+                $applicantUser->notify(new ApplicationStatusChangedNotification($application, $application->jobPost, $newStatus));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to dispatch application status notification: ' . $e->getMessage());
         }
 
         return $this->success(
-            new ApplicationResource($application->load(['user', 'jobPost.employer', 'interview'])),
+            new ApplicationResource($application->fresh(['user', 'jobPost.employer', 'interview'])),
             'Application status updated successfully'
         );
     }

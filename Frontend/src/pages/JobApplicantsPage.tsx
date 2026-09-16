@@ -249,15 +249,23 @@ export default function JobApplicantsPage() {
 
     try {
       setIsUpdating(true)
-      await api.patch(`/employer/applications/${updatingApp.id}/status`, {
+      const res = await api.put(`/employer/applications/${updatingApp.id}/status`, {
         status: newStatus,
       })
 
+      const updatedPayload = res.data?.data || res.data
       toast.success(`Application status updated to ${statusConfig[newStatus]?.label || newStatus}!`)
 
       setApplicants((prev) =>
         prev.map((app) =>
-          app.id === updatingApp.id ? { ...app, status: newStatus } : app,
+          app.id === updatingApp.id
+            ? {
+                ...app,
+                status: newStatus,
+                status_label: statusConfig[newStatus]?.label || newStatus,
+                interview: updatedPayload.interview !== undefined ? updatedPayload.interview : app.interview,
+              }
+            : app,
         ),
       )
 
@@ -265,9 +273,27 @@ export default function JobApplicantsPage() {
         fetchApplicants(selectedJobId, currentPage, statusFilter, search)
       }
       setUpdatingApp(null)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err)
-      toast.error(err.response?.data?.message || 'Failed to update application status.')
+      const errorObj = err as {
+        response?: {
+          data?: {
+            message?: string
+            error?: string
+            errors?: Record<string, string[]>
+          }
+        }
+        message?: string
+      }
+      const data = errorObj.response?.data
+      let message = data?.message || data?.error || errorObj.message
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0]
+        if (firstKey && data.errors[firstKey]?.[0]) {
+          message = data.errors[firstKey][0]
+        }
+      }
+      toast.error(message || 'Failed to update application status. Please check and retry.')
     } finally {
       setIsUpdating(false)
     }
@@ -454,10 +480,10 @@ export default function JobApplicantsPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setViewingInterviewApp(app)}
-                                  className="h-7 px-2 text-xs border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 bg-purple-500/5"
+                                  className="h-7 px-2 text-xs border-border text-foreground hover:bg-muted bg-background shadow-2xs font-medium"
                                   title="View Interview Details"
                                 >
-                                  <Calendar className="h-3.5 w-3.5 mr-1 text-purple-600" />
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-foreground" />
                                   Interview
                                 </Button>
                               ) : (
@@ -465,10 +491,10 @@ export default function JobApplicantsPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setSchedulingApp(app)}
-                                  className="h-7 px-2 text-xs border-dashed border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                                  className="h-7 px-2 text-xs border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
                                   title="Schedule Candidate Interview"
                                 >
-                                  <Calendar className="h-3.5 w-3.5 mr-1" />
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                                   Schedule
                                 </Button>
                               )}
@@ -593,6 +619,27 @@ export default function JobApplicantsPage() {
               <p className="text-muted-foreground">
                 Candidate: <strong className="text-foreground">{updatingApp.user?.name || updatingApp.applicant?.name || 'Applicant'}</strong>
               </p>
+
+              {updatingApp.interview && (
+                <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Active Interview Scheduled</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {new Date(updatingApp.interview.scheduled_at).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}{' '}
+                    ({updatingApp.interview.duration_minutes} mins).
+                    {newStatus === 'rejected' && ' Changing status to Rejected will cancel this scheduled interview.'}
+                    {newStatus === 'hired' && ' Changing status to Hired will mark this interview completed.'}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="font-medium text-foreground">Select New Stage:</label>

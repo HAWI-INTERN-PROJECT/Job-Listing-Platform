@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Clock, Radio } from 'lucide-react'
+import { Clock } from 'lucide-react'
 
 interface InterviewCountdownProps {
   scheduledAt: string
@@ -81,9 +81,9 @@ export const InterviewCountdown: React.FC<InterviewCountdownProps> = ({
   if (timeLeft.isLive) {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-pulse ${className}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border border-neutral-800 dark:border-neutral-200 shadow-xs ${className}`}
       >
-        <Radio className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
         <span>Interview In Progress Now</span>
       </span>
     )
@@ -133,7 +133,7 @@ export const InterviewCountdown: React.FC<InterviewCountdownProps> = ({
         </div>
         <span className="font-mono font-bold text-muted-foreground/60">:</span>
         <div className="flex flex-col items-center bg-background/90 dark:bg-muted/80 border border-border rounded-lg px-2.5 py-1.5 min-w-[50px] shadow-sm">
-          <span className="text-base font-bold text-purple-600 dark:text-purple-400 font-mono leading-none">
+          <span className="text-base font-bold text-foreground font-mono leading-none">
             {String(timeLeft.seconds).padStart(2, '0')}
           </span>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">
@@ -148,7 +148,7 @@ export const InterviewCountdown: React.FC<InterviewCountdownProps> = ({
   if (variant === 'compact') {
     return (
       <span className={`inline-flex items-center gap-1 font-mono text-xs ${className}`}>
-        <Clock className="w-3 h-3 text-purple-500" />
+        <Clock className="w-3 h-3 text-muted-foreground" />
         {timeLeft.days > 0 ? `${timeLeft.days}d ` : ''}
         {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:
         {String(timeLeft.seconds).padStart(2, '0')}
@@ -163,10 +163,10 @@ export const InterviewCountdown: React.FC<InterviewCountdownProps> = ({
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
         isUrgent
           ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30'
-          : 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'
+          : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700'
       } ${className}`}
     >
-      <Clock className={`w-3.5 h-3.5 ${isUrgent ? 'animate-pulse text-amber-500' : 'text-purple-500'}`} />
+      <Clock className={`w-3.5 h-3.5 ${isUrgent ? 'animate-pulse text-amber-500' : 'text-muted-foreground'}`} />
       <span>
         {isUrgent ? 'Starting in ' : 'In '}
         {timeLeft.days > 0 ? `${timeLeft.days}d ` : ''}

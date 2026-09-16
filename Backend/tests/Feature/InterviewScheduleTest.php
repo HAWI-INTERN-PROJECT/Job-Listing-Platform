@@ -248,4 +248,46 @@ class InterviewScheduleTest extends TestCase
         $indexResponse->assertOk()
             ->assertJsonPath('data.data.0.interview.title', 'Initial Call');
     }
+
+    public function test_employer_can_update_applicant_status_while_interview_is_scheduled(): void
+    {
+        $employerUser = User::factory()->create(['role' => 'employer']);
+        $employer = Employer::factory()->create(['user_id' => $employerUser->id]);
+        $jobPost = JobPost::factory()->create(['employer_id' => $employer->id]);
+
+        $candidate = User::factory()->create(['role' => 'employee']);
+        $application = Application::factory()->create([
+            'job_post_id' => $jobPost->id,
+            'user_id' => $candidate->id,
+            'status' => ApplicationStatus::SHORTLISTED,
+        ]);
+
+        $interview = Interview::factory()->create([
+            'application_id' => $application->id,
+            'employer_id' => $employer->id,
+            'user_id' => $application->user_id,
+            'job_post_id' => $jobPost->id,
+            'status' => 'scheduled',
+        ]);
+
+        // Test PATCH update to hired
+        $response = $this->actingAs($employerUser, 'sanctum')
+            ->patchJson("/api/v1/employer/applications/{$application->id}/status", [
+                'status' => 'hired',
+            ]);
+
+        $response->assertOk();
+        $this->assertEquals(ApplicationStatus::HIRED, $application->fresh()->status);
+        $this->assertEquals('completed', $interview->fresh()->status);
+
+        // Test PUT update to rejected
+        $response2 = $this->actingAs($employerUser, 'sanctum')
+            ->putJson("/api/v1/employer/applications/{$application->id}/status", [
+                'status' => 'rejected',
+            ]);
+
+        $response2->assertOk();
+        $this->assertEquals(ApplicationStatus::REJECTED, $application->fresh()->status);
+        $this->assertEquals('cancelled', $interview->fresh()->status);
+    }
 }

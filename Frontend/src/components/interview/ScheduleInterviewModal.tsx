@@ -140,7 +140,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/70 bg-muted/20">
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-purple-600" />
+              <Calendar className="w-5 h-5 text-foreground" />
               {existingInterview ? 'Reschedule Interview' : 'Schedule Candidate Interview'}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -175,7 +175,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Technical Round 1, System Design, Final Chat"
               required
-              className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600"
             />
           </div>
 
@@ -188,8 +188,8 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                 onClick={() => setType('video')}
                 className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
                   type === 'video'
-                    ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold shadow-sm'
-                    : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900 font-semibold shadow-xs'
+                    : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
                 <Video className="w-3.5 h-3.5" />
@@ -200,8 +200,8 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                 onClick={() => setType('in_person')}
                 className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
                   type === 'in_person'
-                    ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold shadow-sm'
-                    : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900 font-semibold shadow-xs'
+                    : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
                 <MapPin className="w-3.5 h-3.5" />
@@ -212,8 +212,8 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                 onClick={() => setType('phone')}
                 className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
                   type === 'phone'
-                    ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold shadow-sm'
-                    : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900 font-semibold shadow-xs'
+                    : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
                 <Phone className="w-3.5 h-3.5" />
@@ -226,7 +226,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                <Calendar className="w-3.5 h-3.5 text-foreground" />
                 Date & Start Time
               </label>
               <input
@@ -235,19 +235,19 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/30 font-mono"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600 font-mono"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-purple-600" />
+                <Clock className="w-3.5 h-3.5 text-foreground" />
                 Duration
               </label>
               <select
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600"
               >
                 <option value={15}>15 minutes (Quick chat)</option>
                 <option value={30}>30 minutes</option>
@@ -270,7 +270,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                 value={meetingLink}
                 onChange={(e) => setMeetingLink(e.target.value)}
                 placeholder="https://meet.google.com/xyz-abcd-efg"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600"
               />
             </div>
           )}
@@ -286,7 +286,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Headquarters, 4th Floor, Conference Room B"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600"
               />
             </div>
           )}
@@ -301,12 +301,12 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Provide agenda, interviewers names, links to review, or required equipment..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/30 resize-none"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600 resize-none"
             />
           </div>
 
-          <div className="p-3 bg-purple-500/5 border border-purple-500/15 rounded-xl flex items-start gap-2.5 text-xs text-muted-foreground">
-            <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+          <div className="p-3 bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl flex items-start gap-2.5 text-xs text-muted-foreground">
+            <CheckCircle2 className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
             <span>
               The candidate will automatically receive a real-time notification with countdown
               timer and calendar integration once confirmed.
@@ -326,7 +326,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-sm transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 rounded-lg shadow-xs transition-all disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {existingInterview ? 'Update Schedule' : 'Confirm & Schedule'}

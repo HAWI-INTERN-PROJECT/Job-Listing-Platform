@@ -220,6 +220,13 @@ export default function ApplicantDetailsPage() {
     if (!application) return
     const statusValue = statusToSet || selectedStatus
 
+    if (application.interview && statusValue === 'rejected') {
+      const confirmed = window.confirm(
+        'This candidate has an active scheduled interview. Marking them as Rejected will automatically cancel the interview schedule. Do you wish to continue?'
+      )
+      if (!confirmed) return
+    }
+
     try {
       setIsUpdatingStatus(true)
       const res = await api.put(`/employer/applications/${application.id}/status`, {
@@ -229,9 +236,27 @@ export default function ApplicantDetailsPage() {
       setApplication(updated)
       setSelectedStatus(updated.status)
       toast.success(`Application status updated to "${updated.status_label || statusValue}".`)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err)
-      toast.error('Failed to update application status.')
+      const errorObj = err as {
+        response?: {
+          data?: {
+            message?: string
+            error?: string
+            errors?: Record<string, string[]>
+          }
+        }
+        message?: string
+      }
+      const data = errorObj.response?.data
+      let message = data?.message || data?.error || errorObj.message
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0]
+        if (firstKey && data.errors[firstKey]?.[0]) {
+          message = data.errors[firstKey][0]
+        }
+      }
+      toast.error(message || 'Failed to update application status. Please try again.')
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -464,10 +489,10 @@ export default function ApplicantDetailsPage() {
                   </div>
 
                   {/* Interview Schedule Section */}
-                  <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-3">
+                  <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-purple-600" />
+                        <Calendar className="w-4 h-4 text-foreground" />
                         <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
                           Interview Schedule
                         </h4>
@@ -526,7 +551,7 @@ export default function ApplicantDetailsPage() {
                             onClick={() => setIsDetailsModalOpen(true)}
                             className="h-7 px-2.5 text-xs"
                           >
-                            <Calendar className="mr-1 h-3.5 w-3.5 text-purple-600" />
+                            <Calendar className="mr-1 h-3.5 w-3.5 text-foreground" />
                             Calendar & Details
                           </Button>
                           <Button
@@ -556,7 +581,7 @@ export default function ApplicantDetailsPage() {
                         <Button
                           size="sm"
                           onClick={() => setIsScheduleModalOpen(true)}
-                          className="h-7 px-3 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-2xs"
+                          className="h-7 px-3 text-xs bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 rounded-lg shadow-xs font-semibold"
                         >
                           <Calendar className="mr-1.5 h-3.5 w-3.5" />
                           Schedule Interview

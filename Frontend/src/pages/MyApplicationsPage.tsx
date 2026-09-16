@@ -287,9 +287,9 @@ export default function MyApplicationsPage() {
 
                     {/* Interview Callout Banner */}
                     {app.interview && (
-                      <div className="w-full mt-2 p-3 sm:p-3.5 rounded-xl border border-purple-500/25 bg-purple-500/5 dark:bg-purple-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                      <div className="w-full mt-2 p-3 sm:p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                         <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                          <div className="p-2 rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400 shrink-0">
+                          <div className="p-2 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-foreground shrink-0">
                             <Calendar className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
@@ -327,7 +327,7 @@ export default function MyApplicationsPage() {
                               href={app.interview.meeting_link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-2xs transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold shadow-2xs transition-colors"
                             >
                               <Video className="w-3.5 h-3.5" />
                               Join Meeting
@@ -338,7 +338,7 @@ export default function MyApplicationsPage() {
                             onClick={() => setSelectedInterviewApp(app)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
                           >
-                            <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                            <Calendar className="w-3.5 h-3.5 text-foreground" />
                             Details & Calendar
                           </button>
                         </div>
