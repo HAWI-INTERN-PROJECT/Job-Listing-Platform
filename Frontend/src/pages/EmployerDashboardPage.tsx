@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   Briefcase,
   Users,
@@ -8,6 +9,7 @@ import {
   TrendingUp,
   Loader2,
   AlertCircle,
+  X,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -15,6 +17,7 @@ import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 interface JobItem {
   id: number
@@ -156,6 +159,28 @@ export default function EmployerDashboardPage() {
   }
 
   const approvalStatus = profileData?.approval_status?.toLowerCase() ?? 'approved'
+  const [showApprovedBanner, setShowApprovedBanner] = useState(true)
+
+  useEffect(() => {
+    if (approvalStatus === 'approved') {
+      setShowApprovedBanner(true)
+      const timer = setTimeout(() => {
+        setShowApprovedBanner(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    } else {
+      setShowApprovedBanner(false)
+    }
+  }, [approvalStatus])
+
+  usePageRefresh(() => {
+    if (approvalStatus === 'approved') {
+      setShowApprovedBanner(true)
+      setTimeout(() => {
+        setShowApprovedBanner(false)
+      }, 3000)
+    }
+  })
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
@@ -197,15 +222,27 @@ export default function EmployerDashboardPage() {
 
           {/* Real Company Approval Banner */}
           {approvalStatus === 'approved' ? (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 flex items-start gap-3 text-emerald-800 dark:text-emerald-300">
-              <CheckCircle className="mt-0.5 h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold">Employer Account Approved</p>
-                <p className="text-xs text-emerald-700/90 dark:text-emerald-400/90 mt-0.5">
-                  Your company is verified and approved to publish active job posts across the platform.
-                </p>
+            showApprovedBanner ? (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 flex items-start justify-between gap-3 text-emerald-800 dark:text-emerald-300 transition-all duration-300 animate-in fade-in">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="mt-0.5 h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold">Employer Account Approved</p>
+                    <p className="text-xs text-emerald-700/90 dark:text-emerald-400/90 mt-0.5">
+                      Your company is verified and approved to publish active job posts across the platform.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowApprovedBanner(false)}
+                  className="text-emerald-700/60 hover:text-emerald-900 dark:text-emerald-400/60 dark:hover:text-emerald-200 p-0.5 rounded-md hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                  aria-label="Dismiss banner"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-            </div>
+            ) : null
           ) : approvalStatus === 'pending' ? (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 flex items-start gap-3 text-amber-800 dark:text-amber-300">
               <Clock className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
