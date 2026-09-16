@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
+use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
 use App\Http\Middleware\EnsureRole;
@@ -169,6 +170,16 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             // Job Applications
             Route::prefix('applications')->name('api.v1.employee.applications.')->group(function (): void {
                 Route::get('/', [ApplicationController::class, 'index'])->name('index');
+            });
+
+            // Employee Notifications Workflow
+            Route::prefix('notifications')->name('api.v1.employee.notifications.')->group(function (): void {
+                Route::get('/', [EmployeeNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [EmployeeNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [EmployeeNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [EmployeeNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [EmployeeNotificationController::class, 'destroy'])->name('destroy');
             });
         });
 
