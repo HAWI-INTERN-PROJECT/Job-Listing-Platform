@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
+use App\Http\Controllers\Api\V1\InterviewController;
+use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
 use App\Http\Middleware\EnsureRole;
@@ -148,6 +150,11 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
             Route::get('applications/{application}/cv', [ApplicationController::class, 'downloadCv'])->name('api.v1.employer.applications.cv');
 
+            // Interview scheduling for shortlisted candidates
+            Route::post('applications/{application}/interview', [InterviewController::class, 'schedule'])->name('api.v1.employer.applications.interview.schedule');
+            Route::get('applications/{application}/interview', [InterviewController::class, 'show'])->name('api.v1.employer.applications.interview.show');
+            Route::delete('applications/{application}/interview', [InterviewController::class, 'cancel'])->name('api.v1.employer.applications.interview.cancel');
+
             // Employer Notifications Workflow
             Route::prefix('notifications')->name('api.v1.employer.notifications.')->group(function (): void {
                 Route::get('/', [EmployerNotificationController::class, 'index'])->name('index');
@@ -169,6 +176,16 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             // Job Applications
             Route::prefix('applications')->name('api.v1.employee.applications.')->group(function (): void {
                 Route::get('/', [ApplicationController::class, 'index'])->name('index');
+                Route::get('{application}/interview', [InterviewController::class, 'show'])->name('interview.show');
+            });
+
+            // Saved Jobs
+            Route::prefix('saved-jobs')->name('api.v1.employee.saved-jobs.')->group(function (): void {
+                Route::get('/', [SavedJobController::class, 'index'])->name('index');
+                Route::get('ids', [SavedJobController::class, 'savedJobIds'])->name('ids');
+                Route::post('{jobPost}', [SavedJobController::class, 'store'])->name('store');
+                Route::delete('{jobPost}', [SavedJobController::class, 'destroy'])->name('destroy');
+                Route::post('{jobPost}/toggle', [SavedJobController::class, 'toggle'])->name('toggle');
             });
         });
 

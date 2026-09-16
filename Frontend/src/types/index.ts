@@ -94,3 +94,26 @@ export interface EmployerNotification {
   created_at: string
   created_at_human?: string
 }
+
+export type InterviewType = 'video' | 'in_person' | 'phone'
+export type InterviewStatus = 'scheduled' | 'rescheduled' | 'completed' | 'cancelled'
+
+export interface InterviewItem {
+  id: number
+  application_id: number
+  employer_id: number
+  user_id: number
+  job_post_id: number
+  title: string
+  type: InterviewType
+  scheduled_at: string
+  scheduled_at_formatted?: string
+  duration_minutes: number
+  timezone?: string
+  meeting_link?: string | null
+  location?: string | null
+  notes?: string | null
+  status: InterviewStatus
+  created_at?: string
+  updated_at?: string
+}

@@ -11,7 +11,11 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from 'lucide-react'
+import { ScheduleInterviewModal } from '@/components/interview/ScheduleInterviewModal'
+import { InterviewDetailsModal } from '@/components/interview/InterviewDetailsModal'
+import type { InterviewItem } from '@/types'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
@@ -46,6 +50,7 @@ export interface ApplicationItem {
     id: number
     title: string
   }
+  interview?: InterviewItem | null
 }
 
 export interface EmployerJob {
@@ -118,6 +123,8 @@ export default function JobApplicantsPage() {
 
   // Modal for quick status change
   const [updatingApp, setUpdatingApp] = useState<ApplicationItem | null>(null)
+  const [schedulingApp, setSchedulingApp] = useState<ApplicationItem | null>(null)
+  const [viewingInterviewApp, setViewingInterviewApp] = useState<ApplicationItem | null>(null)
   const [newStatus, setNewStatus] = useState<ApplicationStatusType>('submitted')
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -442,6 +449,30 @@ export default function JobApplicantsPage() {
                                 CV
                               </Button>
 
+                              {app.interview ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setViewingInterviewApp(app)}
+                                  className="h-7 px-2 text-xs border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 bg-purple-500/5"
+                                  title="View Interview Details"
+                                >
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-purple-600" />
+                                  Interview
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSchedulingApp(app)}
+                                  className="h-7 px-2 text-xs border-dashed border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                                  title="Schedule Candidate Interview"
+                                >
+                                  <Calendar className="h-3.5 w-3.5 mr-1" />
+                                  Schedule
+                                </Button>
+                              )}
+
                               <Link to={`/applicant-details?id=${app.id}`}>
                                 <Button
                                   variant="ghost"
@@ -510,6 +541,39 @@ export default function JobApplicantsPage() {
           )}
         </main>
       </div>
+
+      {/* Interview Scheduling Modal */}
+      {schedulingApp && (
+        <ScheduleInterviewModal
+          isOpen={!!schedulingApp}
+          onClose={() => setSchedulingApp(null)}
+          applicationId={schedulingApp.id}
+          candidateName={schedulingApp.user?.name || schedulingApp.applicant?.name}
+          jobTitle={schedulingApp.job_post?.title || selectedJob?.title}
+          existingInterview={schedulingApp.interview}
+          onSuccess={(interview) => {
+            setApplicants((prev) =>
+              prev.map((item) =>
+                item.id === schedulingApp.id
+                  ? { ...item, status: 'shortlisted', status_label: 'Shortlisted', interview }
+                  : item
+              )
+            )
+            toast.success('Interview scheduled successfully! Candidate notified.')
+          }}
+        />
+      )}
+
+      {/* Interview Details Modal */}
+      {viewingInterviewApp?.interview && (
+        <InterviewDetailsModal
+          isOpen={!!viewingInterviewApp}
+          onClose={() => setViewingInterviewApp(null)}
+          interview={viewingInterviewApp.interview}
+          companyName={selectedJob?.title}
+          jobTitle={viewingInterviewApp.job_post?.title || selectedJob?.title}
+        />
+      )}
 
       {/* Stage Change Modal */}
       {updatingApp && (

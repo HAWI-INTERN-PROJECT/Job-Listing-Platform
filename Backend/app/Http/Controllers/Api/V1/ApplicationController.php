@@ -66,7 +66,7 @@ class ApplicationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $applications = Application::with(['jobPost.employer'])
+        $applications = Application::with(['jobPost.employer', 'interview'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(15);
@@ -89,7 +89,7 @@ class ApplicationController extends Controller
             return $this->forbidden('You can only view applicants for your own job posts.');
         }
 
-        $query = Application::with(['user', 'jobPost.employer'])
+        $query = Application::with(['user', 'jobPost.employer', 'interview'])
             ->where('job_post_id', $jobPost->id);
 
         if ($status = $request->input('status')) {
@@ -142,7 +142,7 @@ class ApplicationController extends Controller
         }
 
         return $this->success(
-            new ApplicationResource($application->load(['user', 'jobPost.employer'])),
+            new ApplicationResource($application->load(['user', 'jobPost.employer', 'interview'])),
             'Application details retrieved successfully'
         );
     }
@@ -172,7 +172,7 @@ class ApplicationController extends Controller
         }
 
         return $this->success(
-            new ApplicationResource($application->load(['user', 'jobPost.employer'])),
+            new ApplicationResource($application->load(['user', 'jobPost.employer', 'interview'])),
             'Application status updated successfully'
         );
     }
