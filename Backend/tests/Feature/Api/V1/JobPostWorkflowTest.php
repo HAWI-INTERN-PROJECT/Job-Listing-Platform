@@ -303,6 +303,50 @@ class JobPostWorkflowTest extends TestCase
             ->assertJsonPath('data.data.0.title', 'DevOps Cloud Engineer');
     }
 
+
+    public function test_multi_keyword_search_matches_across_title_and_skills(): void
+    {
+        $catDesign = Category::create(['name' => 'Design', 'slug' => 'design']);
+
+        $job1 = JobPost::factory()->published()->create([
+            'title' => 'Senior Frontend Developer',
+            'description' => 'Working with React and TailwindCSS',
+            'requirements' => ['React', 'TypeScript', 'Redux'],
+            'category_id' => $this->category->id,
+        ]);
+
+        $job2 = JobPost::factory()->published()->create([
+            'title' => 'Product Designer',
+            'description' => 'Figma UI design',
+            'requirements' => ['Figma', 'Prototyping'],
+            'category_id' => $catDesign->id,
+        ]);
+
+        // Search 'React Senior' (different word order than 'Senior Frontend Developer')
+        $res1 = $this->getJson('/api/v1/jobs?search=React+Senior');
+        $res1->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job1->id);
+
+        // Search by skill keyword 'TypeScript'
+        $res2 = $this->getJson('/api/v1/jobs?search=TypeScript');
+        $res2->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job1->id);
+
+        // Filter by category_id
+        $res3 = $this->getJson('/api/v1/jobs?category_id=' . $catDesign->id);
+        $res3->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job2->id);
+
+        // Filter by category slug
+        $res4 = $this->getJson('/api/v1/jobs?category=design');
+        $res4->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job2->id);
+    }
+
     public function test_admin_can_list_all_job_posts_with_status_filter(): void
     {
         JobPost::factory()->published()->create([
