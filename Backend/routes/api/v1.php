@@ -12,6 +12,9 @@ use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
+use App\Http\Controllers\Api\V1\EmployeeFeedController;
+use App\Http\Controllers\Api\V1\EmployeeNotificationController;
+use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
 use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\SavedJobController;
@@ -172,6 +175,26 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'success' => true,
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');
+
+            // Profile Management & Setup Status
+            Route::get('profile', [EmployeeProfileController::class, 'show'])->name('api.v1.employee.profile');
+            Route::match(['put', 'patch', 'post'], 'profile', [EmployeeProfileController::class, 'update'])->name('api.v1.employee.profile.update');
+
+            // Algorithmic Job Match Feed
+            Route::prefix('feed')->name('api.v1.employee.feed.')->group(function (): void {
+                Route::get('/', [EmployeeFeedController::class, 'index'])->name('index');
+                Route::post('{jobPost}/dismiss', [EmployeeFeedController::class, 'dismiss'])->name('dismiss');
+            });
+
+            // Notifications & Realtime SSE Stream
+            Route::prefix('notifications')->name('api.v1.employee.notifications.')->group(function (): void {
+                Route::get('/', [EmployeeNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [EmployeeNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [EmployeeNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [EmployeeNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [EmployeeNotificationController::class, 'destroy'])->name('destroy');
+            });
 
             // Job Applications
             Route::prefix('applications')->name('api.v1.employee.applications.')->group(function (): void {

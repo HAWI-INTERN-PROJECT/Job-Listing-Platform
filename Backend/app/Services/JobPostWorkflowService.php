@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\JobStatus;
+use App\Jobs\AnalyzeJobPostMatchesJob;
 use App\Models\JobPost;
 use App\Notifications\V1\Employer\JobPostApprovedNotification;
 use App\Notifications\V1\Employer\JobPostRejectedNotification;
@@ -57,6 +58,9 @@ class JobPostWorkflowService
         if ($employerUser) {
             $employerUser->notify(new JobPostApprovedNotification($job));
         }
+
+        // Immediately trigger background task to analyze job matches for candidate profiles
+        AnalyzeJobPostMatchesJob::dispatch($job);
 
         return $job;
     }

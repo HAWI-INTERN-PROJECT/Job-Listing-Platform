@@ -5,7 +5,9 @@ import { useAuthStore } from '@/stores/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { RefreshButton } from '@/components/RefreshButton'
 import EmployerNotificationDropdown from '@/components/employer/EmployerNotificationDropdown'
+import EmployeeNotificationDropdown from '@/components/employee/EmployeeNotificationDropdown'
 import { useEmployerRealtimeNotifications } from '@/hooks/useEmployerRealtimeNotifications'
+import { useEmployeeRealtimeNotifications } from '@/hooks/useEmployeeRealtimeNotifications'
 
 interface EmployerHeaderProps {
   title: string
@@ -24,8 +26,9 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Stream real-time employer notifications and trigger popups
+  // Stream real-time employer and employee notifications
   useEmployerRealtimeNotifications()
+  useEmployeeRealtimeNotifications()
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -53,6 +56,8 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
         <ThemeToggle />
         {isEmployer ? (
           <EmployerNotificationDropdown />
+        ) : isEmployee ? (
+          <EmployeeNotificationDropdown />
         ) : (
           <button
             type="button"
