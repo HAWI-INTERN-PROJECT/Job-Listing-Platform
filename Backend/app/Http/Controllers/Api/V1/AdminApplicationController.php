@@ -108,7 +108,7 @@ class AdminApplicationController extends Controller
         }
 
         $mimeType = Storage::disk('local')->mimeType($application->cv_path) ?: 'application/pdf';
-        $applicantName = $application->user?->name ?? 'Applicant';
+        $applicantName = $application->user->name ?? 'Applicant';
         $downloadFilename = 'CV-'.str_replace(' ', '_', $applicantName).'.pdf';
 
         return response()->streamDownload(function () use ($application): void {
