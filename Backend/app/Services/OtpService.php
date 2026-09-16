@@ -39,9 +39,9 @@ class OtpService
         ]);
 
         try {
-            Mail::to($user->email)->send(new OtpCodeMail($plainCode, self::EXPIRY_MINUTES));
+            Mail::to($user->email)->queue(new OtpCodeMail($plainCode, self::EXPIRY_MINUTES));
         } catch (\Throwable $e) {
-            Log::error('OtpService::generateAndSend - failed to send OTP email', [
+            Log::error('OtpService::generateAndSend - failed to queue OTP email', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'exception' => $e->getMessage(),
