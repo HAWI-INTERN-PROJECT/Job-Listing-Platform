@@ -61,26 +61,27 @@ class AnalyzeJobPostMatchesJob implements ShouldQueue
                 $result = $matchingService->calculateMatch($this->jobPost, $profile);
 
                 if ($result['is_match']) {
-                    $match = JobMatch::updateOrCreate(
-                        [
+                    $match = JobMatch::where('user_id', $employee->id)
+                        ->where('job_post_id', $this->jobPost->id)
+                        ->first();
+
+                    $isNewMatch = ($match === null);
+
+                    if ($isNewMatch) {
+                        JobMatch::create([
                             'user_id' => $employee->id,
                             'job_post_id' => $this->jobPost->id,
-                        ],
-                        [
                             'match_score' => $result['score'],
                             'match_reasons' => $result['reasons'],
                             'is_dismissed' => false,
-                        ]
-                    );
+                        ]);
 
-                    // Check if already notified for this job match to avoid spam
-                    $alreadyNotified = $employee->notifications()
-                        ->where('type', JobMatchNotification::class)
-                        ->whereJsonContains('data->job_post_id', $this->jobPost->id)
-                        ->exists();
-
-                    if (! $alreadyNotified) {
                         $employee->notify(new JobMatchNotification($this->jobPost, $result['score'], $result['reasons']));
+                    } else {
+                        $match->update([
+                            'match_score' => $result['score'],
+                            'match_reasons' => $result['reasons'],
+                        ]);
                     }
                 }
             } catch (\Throwable $e) {
