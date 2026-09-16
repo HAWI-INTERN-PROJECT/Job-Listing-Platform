@@ -119,3 +119,32 @@ export interface EmployeeNotification {
   created_at: string
   created_at_human?: string
 }
+
+export interface SavedJobItem {
+  id: number
+  user_id: number
+  job_post_id: number
+  created_at: string
+  created_at_human?: string
+  job_post?: {
+    id: number
+    title: string
+    slug: string
+    description: string
+    category_id?: number
+    category?: { id: number; name: string; slug: string } | null
+    requirements?: string[] | null
+    responsibilities?: string[] | null
+    job_type?: string
+    job_type_label: string
+    experience_level?: string
+    experience_level_label: string
+    salary_min: number | null
+    salary_max: number | null
+    salary_currency: string
+    location: string | null
+    is_remote: boolean
+    employer?: { company_name: string; logo?: string | null } | null
+    published_at?: string | null
+  }
+}

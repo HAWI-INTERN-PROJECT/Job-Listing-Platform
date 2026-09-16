@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
 use App\Http\Controllers\Api\V1\EmployeeNotificationController;
+use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
 use App\Http\Middleware\EnsureRole;
@@ -180,6 +181,15 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::patch('{id}/read', [EmployeeNotificationController::class, 'markAsRead'])->name('read');
                 Route::post('mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
                 Route::delete('{id}', [EmployeeNotificationController::class, 'destroy'])->name('destroy');
+            });
+
+            // Saved Jobs Workflow
+            Route::prefix('saved-jobs')->name('api.v1.employee.saved-jobs.')->group(function (): void {
+                Route::get('/', [SavedJobController::class, 'index'])->name('index');
+                Route::get('ids', [SavedJobController::class, 'savedJobIds'])->name('ids');
+                Route::post('{jobPost}', [SavedJobController::class, 'store'])->name('store');
+                Route::delete('{jobPost}', [SavedJobController::class, 'destroy'])->name('destroy');
+                Route::post('{jobPost}/toggle', [SavedJobController::class, 'toggle'])->name('toggle');
             });
         });
 

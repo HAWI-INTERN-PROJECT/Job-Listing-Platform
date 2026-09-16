@@ -152,6 +152,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<SavedJob, $this>
+     */
+    public function savedJobs(): HasMany
+    {
+        return $this->hasMany(SavedJob::class);
+    }
+
+    /**
      * Create a personal access token with custom expiration.
      */
     public function createAccessToken(bool $rememberMe = false): NewAccessToken
