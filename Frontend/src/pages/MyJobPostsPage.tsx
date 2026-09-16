@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Briefcase,
   ChevronLeft,
@@ -23,6 +23,7 @@ import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 export interface EmployerJob {
   id: number
@@ -105,7 +106,7 @@ export default function MyJobPostsPage() {
   const [selectedRejectionJob, setSelectedRejectionJob] = useState<EmployerJob | null>(null)
   const [resubmittingId, setResubmittingId] = useState<number | null>(null)
 
-  const fetchEmployerJobs = async () => {
+  const fetchEmployerJobs = useCallback(async () => {
     try {
       const res = await api.get('/employer/jobs')
       const data = res.data?.data?.data || res.data?.data
@@ -143,11 +144,14 @@ export default function MyJobPostsPage() {
     } catch {
       // Fallback to initialJobs if guest or offline
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchEmployerJobs()
-  }, [])
+  }, [fetchEmployerJobs])
+
+  // Wire into global refresh button
+  usePageRefresh(fetchEmployerJobs)
 
   const filteredJobs = jobs.filter((job) => {
     const search = searchTerm.toLowerCase()

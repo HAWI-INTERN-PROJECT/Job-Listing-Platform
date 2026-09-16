@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '@/lib/api'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 interface EmployerInfo {
   id: number
@@ -112,6 +113,11 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers(currentPage, activeFilter, searchQuery)
   }, [currentPage, activeFilter, searchQuery, fetchUsers])
+
+  // Wire into global refresh button
+  usePageRefresh(() => {
+    fetchUsers(currentPage, activeFilter, searchQuery)
+  })
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()

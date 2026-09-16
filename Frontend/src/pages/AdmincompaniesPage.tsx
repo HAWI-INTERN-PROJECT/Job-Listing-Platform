@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import api from '@/lib/api'
 import { getStorageUrl } from '@/lib/utils'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 type CompanyUser = {
   id: number
@@ -125,6 +126,11 @@ export default function AdminCompaniesPage() {
   useEffect(() => {
     fetchCompanies(search, 1)
   }, [search, statusFilter])
+
+  // Wire into global refresh button
+  usePageRefresh(() => {
+    fetchCompanies(search, currentPage)
+  })
 
   async function openCompanyDetail(companyId: number) {
     try {
