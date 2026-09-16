@@ -38,7 +38,7 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): AuthResource|JsonResponse
     {
         try {
-            return DB::transaction(function () use ($request) {
+            $created = DB::transaction(function () use ($request) {
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
@@ -49,12 +49,29 @@ class AuthController extends Controller
 
                 $token = $user->createAccessToken($request->boolean('remember_me'));
 
-                app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_REGISTER);
-
-                ActivityLogger::register($request);
-
-                return AuthResource::make($user, $token);
+                return ['user' => $user, 'token' => $token];
             });
+
+            $user = $created['user'];
+            $token = $created['token'];
+
+            try {
+                app(OtpService::class)->generateAndSend($user, Otp::PURPOSE_REGISTER);
+            } catch (\Throwable $e) {
+                \Log::error('AuthController::register - failed to send OTP', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
+
+            try {
+                ActivityLogger::register($request);
+            } catch (\Throwable $e) {
+                \Log::warning('AuthController::register - activity logger failed', ['exception' => $e->getMessage()]);
+            }
+
+            return AuthResource::make($user, $token);
         } catch (Exception $e) {
             return $this->error(
                 __('auth.register_error'),

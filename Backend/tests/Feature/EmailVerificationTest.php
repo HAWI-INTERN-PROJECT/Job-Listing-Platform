@@ -12,6 +12,11 @@ class EmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_smtp_mailer_uses_tls(): void
+    {
+        $this->assertSame('tls', config('mail.mailers.smtp.encryption'));
+    }
+
     public function test_user_can_verify_email(): void
     {
         \Illuminate\Support\Facades\Mail::fake();

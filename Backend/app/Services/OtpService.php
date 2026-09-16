@@ -7,6 +7,7 @@ use App\Models\Otp;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class OtpService
 {
@@ -37,7 +38,15 @@ class OtpService
             'expires_at' => now()->addMinutes(self::EXPIRY_MINUTES),
         ]);
 
-        Mail::to($user->email)->send(new OtpCodeMail($plainCode, self::EXPIRY_MINUTES));
+        try {
+            Mail::to($user->email)->send(new OtpCodeMail($plainCode, self::EXPIRY_MINUTES));
+        } catch (\Throwable $e) {
+            Log::error('OtpService::generateAndSend - failed to send OTP email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'exception' => $e->getMessage(),
+            ]);
+        }
 
         return $otp;
     }
