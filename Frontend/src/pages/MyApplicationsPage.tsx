@@ -11,7 +11,8 @@ type StatusLabel = 'Submitted' | 'Under Review' | 'Shortlisted' | 'Rejected' | '
 
 interface Application {
   id: number
-  status_label: StatusLabel
+  status?: string
+  status_label?: StatusLabel
   created_at: string
   job_post: {
     id: number; title: string; slug: string; job_type_label: string
@@ -28,11 +29,36 @@ const statusStyles: Record<StatusLabel, string> = {
   Hired: 'bg-purple-50 text-purple-600',
 }
 
+const statusMap: Record<string, StatusLabel> = {
+  submitted: 'Submitted',
+  under_review: 'Under Review',
+  shortlisted: 'Shortlisted',
+  rejected: 'Rejected',
+  hired: 'Hired',
+  Submitted: 'Submitted',
+  'Under Review': 'Under Review',
+  Shortlisted: 'Shortlisted',
+  Rejected: 'Rejected',
+  Hired: 'Hired',
+}
+
+function getStatusLabel(app: Application): StatusLabel {
+  if (app.status_label && app.status_label in statusStyles) {
+    return app.status_label
+  }
+  if (app.status && statusMap[app.status]) {
+    return statusMap[app.status]
+  }
+  return 'Submitted'
+}
+
 function formatSalary(app: Application['job_post']): string {
-  if (!app || (!app.salary_min && !app.salary_max)) return ''
-  if (app.salary_min && app.salary_max)
-    return `${app.salary_min.toLocaleString()} – ${app.salary_max.toLocaleString()} ${app.salary_currency}`
-  return `${(app.salary_min ?? app.salary_max)?.toLocaleString()} ${app.salary_currency}`
+  if (!app || (app.salary_min == null && app.salary_max == null)) return ''
+  const min = app.salary_min != null ? Number(app.salary_min).toLocaleString() : null
+  const max = app.salary_max != null ? Number(app.salary_max).toLocaleString() : null
+  if (min && max)
+    return `${min} – ${max} ${app.salary_currency}`
+  return `${min ?? max} ${app.salary_currency}`
 }
 
 export default function MyApplicationsPage() {
@@ -44,14 +70,19 @@ export default function MyApplicationsPage() {
     queryKey: ['applications'],
     queryFn: async () => {
       const res = await api.get('/employee/applications')
-      return (res.data.data ?? res.data) as Application[]
+      const raw = res.data?.data?.data ?? res.data?.data ?? res.data
+      return (Array.isArray(raw) ? raw : []) as Application[]
     },
   })
 
-  const applications = data ?? []
-  const filtered = activeTab === 'All' ? applications : applications.filter((a) => a.status_label === activeTab)
+  const applications = Array.isArray(data) ? data : []
+  const filtered = activeTab === 'All'
+    ? applications
+    : applications.filter((a) => getStatusLabel(a) === activeTab)
   const countFor = (val: StatusLabel | 'All') =>
-    val === 'All' ? applications.length : applications.filter((a) => a.status_label === val).length
+    val === 'All'
+      ? applications.length
+      : applications.filter((a) => getStatusLabel(a) === val).length
 
   const tabs: { label: string; value: StatusLabel | 'All' }[] = [
     { label: t('applications.all'), value: 'All' },
@@ -113,6 +144,7 @@ export default function MyApplicationsPage() {
               {filtered.map((app) => {
                 const job = app.job_post
                 const salary = formatSalary(job)
+                const statusLabel = getStatusLabel(app)
                 return (
                   <div key={app.id} className="flex items-center justify-between bg-background border rounded-lg px-5 py-4 gap-4 flex-wrap">
                     <div className="flex items-center gap-4">
@@ -132,8 +164,8 @@ export default function MyApplicationsPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-muted-foreground">{new Date(app.created_at).toLocaleDateString()}</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusStyles[app.status_label] ?? 'bg-muted text-muted-foreground'}`}>
-                        {app.status_label}
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusStyles[statusLabel] ?? 'bg-muted text-muted-foreground'}`}>
+                        {statusLabel}
                       </span>
                       <button onClick={() => job?.slug && navigate(`/jobs/${job.slug}`)} className="text-muted-foreground hover:text-foreground" title="View job">
                         <MoreVertical className="h-4 w-4" />
