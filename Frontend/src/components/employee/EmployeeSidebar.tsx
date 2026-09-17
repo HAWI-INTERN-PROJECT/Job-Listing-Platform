@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, User, FileText, Search, Settings, LogOut,
-  ChevronLeft, ChevronRight, Menu, X, FileUp
+  ChevronLeft, ChevronRight, Menu, X, FileUp, Bookmark
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard' },
   { label: 'My Profile',  icon: User,            path: '/my-profile' },
   { label: 'Applications',icon: FileText,        path: '/my-applications' },
+  { label: 'Saved Jobs',  icon: Bookmark,        path: '/saved-jobs' },
   { label: 'CV/Resume',   icon: FileUp,          path: '/cv-resume' },
   { label: 'Job Search',  icon: Search,          path: '/job-search' },
   { label: 'Settings',    icon: Settings,        path: '/settings' },

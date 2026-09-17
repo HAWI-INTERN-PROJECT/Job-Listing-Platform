@@ -1,34 +1,44 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bell, CheckCheck, Trash2, CheckCircle2, XCircle, Calendar, Sparkles, Clock, AlertCircle } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  Bell,
+  Check,
+  CheckCheck,
+  CheckCircle2,
+  XCircle,
+  Briefcase,
+  Trash2,
+  Clock,
+  Loader2,
+  Award,
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { employeeNotificationService, type EmployeeNotification } from '@/services/employeeNotificationService'
+import { employeeNotificationService } from '@/services/employeeNotificationService'
+import type { EmployeeNotification } from '@/types'
 
 export default function EmployeeNotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'unread'>('unread')
+  const [filterUnread, setFilterUnread] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Fetch unread count
+  // Poll unread count every 30 seconds as background fallback
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['employee-notifications-unread-count'],
     queryFn: () => employeeNotificationService.getUnreadCount(),
     refetchInterval: 30000,
   })
 
-  // Fetch paginated notifications
+  // Fetch notifications list
   const {
     data: notificationsData,
     isLoading,
-    isError,
-    refetch,
   } = useQuery({
-    queryKey: ['employee-notifications', activeTab],
-    queryFn: () => employeeNotificationService.getNotifications({ unread: activeTab === 'unread', per_page: 20 }),
-    enabled: isOpen,
+    queryKey: ['employee-notifications', filterUnread],
+    queryFn: () => employeeNotificationService.getNotifications({ unread: filterUnread || undefined, per_page: 15 }),
+    refetchInterval: isOpen ? 15000 : 30000,
   })
 
   // Mark single notification as read mutation
@@ -37,6 +47,9 @@ export default function EmployeeNotificationDropdown() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-notifications'] })
       queryClient.invalidateQueries({ queryKey: ['employee-notifications-unread-count'] })
+    },
+    onError: () => {
+      toast.error('Failed to mark notification as read')
     },
   })
 
@@ -84,72 +97,58 @@ export default function EmployeeNotificationDropdown() {
     }
   }, [isOpen])
 
-  const handleNotificationClick = (notification: EmployeeNotification) => {
-    if (!notification.is_read) {
-      markAsReadMutation.mutate(notification.id)
-    }
-
-    setIsOpen(false)
-
-    const targetUrl = notification.data.action_url
-    if (targetUrl) {
-      navigate(targetUrl)
-    }
-  }
-
   const notifications = notificationsData?.data ?? []
 
-  const getNotificationIcon = (type?: string, status?: string) => {
-    switch (type) {
-      case 'job_match':
-        return <Sparkles size={16} className="text-neutral-900 dark:text-white" />
-      case 'interview_scheduled':
-        return <Calendar size={16} className="text-neutral-900 dark:text-white" />
-      case 'application_status_changed':
-        if (status === 'hired' || status === 'shortlisted') {
-          return <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
-        }
-        if (status === 'rejected') {
-          return <XCircle size={16} className="text-rose-600 dark:text-rose-400" />
-        }
-        return <Clock size={16} className="text-neutral-600 dark:text-neutral-400" />
-      default:
-        return <AlertCircle size={16} className="text-neutral-600 dark:text-neutral-400" />
+  const handleNotificationClick = (item: EmployeeNotification) => {
+    if (!item.is_read) {
+      markAsReadMutation.mutate(item.id)
     }
+    setIsOpen(false)
+    const url = item.data?.action_url || '/my-applications'
+    navigate(url)
+  }
+
+  const getNotificationIcon = (item: EmployeeNotification) => {
+    const status = item.data?.status?.toLowerCase()
+
+    if (status === 'hired') {
+      return <Award size={18} className="text-emerald-600 dark:text-emerald-400" />
+    }
+    if (status === 'rejected') {
+      return <XCircle size={18} className="text-rose-600 dark:text-rose-400" />
+    }
+    if (status === 'shortlisted') {
+      return <CheckCircle2 size={18} className="text-blue-600 dark:text-blue-400" />
+    }
+    return <Briefcase size={18} className="text-indigo-600 dark:text-indigo-400" />
   }
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger button */}
+      {/* Bell Trigger Button */}
       <button
-        type="button"
-        onClick={() => {
-          setIsOpen(!isOpen)
-          if (!isOpen) {
-            refetch()
-          }
-        }}
-        className="relative rounded-full p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Notifications"
-        aria-expanded={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative rounded-full p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        aria-label="Employee Notifications"
+        title="Notifications"
       >
-        <Bell size={18} />
+        <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-1 text-[10px] font-bold">
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white leading-none shadow-sm animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Popover Dropdown */}
+      {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-background rounded-xl shadow-xl border border-border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border/80 px-4 py-3 bg-muted/40">
+          <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm text-foreground tracking-tight">Notifications</h3>
+              <h3 className="font-semibold text-foreground text-sm">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="rounded-full bg-neutral-900/10 dark:bg-white/10 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs px-2 py-0.5 rounded-full font-medium">
                   {unreadCount} new
                 </span>
               )}
@@ -157,125 +156,144 @@ export default function EmployeeNotificationDropdown() {
 
             {unreadCount > 0 && (
               <button
-                type="button"
                 onClick={() => markAllAsReadMutation.mutate()}
                 disabled={markAllAsReadMutation.isPending}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <CheckCheck size={14} />
-                <span>Mark all read</span>
+                Mark all read
               </button>
             )}
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex border-b border-border/60 bg-muted/20 px-4 pt-2">
+          {/* Filter Bar */}
+          <div className="flex border-b border-border px-4 py-2 bg-background text-xs gap-2">
             <button
-              type="button"
-              onClick={() => setActiveTab('unread')}
-              className={`pb-2 text-xs font-medium border-b-2 mr-4 transition-colors ${
-                activeTab === 'unread'
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Unread {unreadCount > 0 && `(${unreadCount})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`pb-2 text-xs font-medium border-b-2 transition-colors ${
-                activeTab === 'all'
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              onClick={() => setFilterUnread(false)}
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                !filterUnread
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               All
             </button>
+            <button
+              onClick={() => setFilterUnread(true)}
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                filterUnread
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Unread
+            </button>
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-border/60">
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-border">
             {isLoading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="flex gap-3 animate-pulse">
-                    <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-3/4 bg-muted rounded" />
-                      <div className="h-2.5 w-1/2 bg-muted rounded" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : isError ? (
-              <div className="p-6 text-center text-xs text-rose-500">
-                Failed to load notifications. Please try again.
+              <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+                <Loader2 size={24} className="animate-spin text-blue-600" />
+                <span className="text-xs">Loading notifications...</span>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center space-y-2">
-                <Bell size={24} className="mx-auto text-muted-foreground/50" />
-                <p className="text-xs text-muted-foreground font-medium">
-                  {activeTab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+              <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-1">
+                  <Bell size={20} />
+                </div>
+                <p className="text-sm font-medium text-foreground">No notifications</p>
+                <p className="text-xs text-muted-foreground">
+                  {filterUnread ? 'No unread notifications right now' : 'You are all caught up!'}
                 </p>
               </div>
             ) : (
-              notifications.map((notification) => {
-                const isUnread = !notification.is_read
-                const { type, status, title, message, match_score } = notification.data
+              notifications.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-4 flex gap-3 transition-colors hover:bg-muted/60 cursor-pointer relative group ${
+                    !item.is_read ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                  }`}
+                  onClick={() => handleNotificationClick(item)}
+                >
+                  {/* Icon Indicator */}
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {getNotificationIcon(item)}
+                  </div>
 
-                return (
-                  <div
-                    key={notification.id}
-                    className={`group relative flex items-start gap-3 p-3.5 transition-colors cursor-pointer ${
-                      isUnread ? 'bg-muted/30 hover:bg-muted/50' : 'hover:bg-muted/20'
-                    }`}
-                    onClick={() => handleNotificationClick(notification)}
-                  >
-                    <div className="mt-0.5 flex-shrink-0 p-1.5 rounded-md bg-muted border border-border/60">
-                      {getNotificationIcon(type, status)}
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pr-6">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-xs font-semibold ${!item.is_read ? 'text-foreground font-bold' : 'text-foreground/80'}`}>
+                        {item.data?.title ?? 'Application Status Updated'}
+                      </p>
+                      {!item.is_read && (
+                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full flex-shrink-0" />
+                      )}
                     </div>
-
-                    <div className="flex-1 min-w-0 pr-6 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className={`text-xs font-semibold leading-tight ${isUnread ? 'text-foreground font-bold' : 'text-foreground/90'}`}>
-                          {title || 'Update'}
-                        </p>
-                        {match_score && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold">
-                            {match_score}%
-                          </span>
-                        )}
-                        {isUnread && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 dark:bg-white flex-shrink-0" />
-                        )}
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                      {item.data?.message}
+                    </p>
+                    {item.data?.status && (
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${
+                          item.data.status.toLowerCase() === 'hired'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                            : item.data.status.toLowerCase() === 'rejected'
+                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20'
+                        }`}>
+                          {item.data.status_label || item.data.status}
+                        </span>
                       </div>
-
-                      <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                        {message}
-                      </p>
-
-                      <p className="text-[10px] text-muted-foreground/70">
-                        {notification.created_at_human}
-                      </p>
+                    )}
+                    <div className="flex items-center gap-1 mt-1.5 text-[11px] text-muted-foreground">
+                      <Clock size={12} />
+                      <span>{item.created_at_human ?? new Date(item.created_at).toLocaleString()}</span>
                     </div>
+                  </div>
 
-                    {/* Delete action button */}
+                  {/* Action buttons (hover or right aligned) */}
+                  <div className="absolute right-2 top-3 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {!item.is_read && (
+                      <button
+                        title="Mark as read"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          markAsReadMutation.mutate(item.id)
+                        }}
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                      >
+                        <Check size={14} />
+                      </button>
+                    )}
                     <button
-                      type="button"
+                      title="Delete notification"
                       onClick={(e) => {
                         e.stopPropagation()
-                        deleteMutation.mutate(notification.id)
+                        deleteMutation.mutate(item.id)
                       }}
-                      className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted text-muted-foreground hover:text-rose-500 transition-all"
-                      title="Delete notification"
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
-                )
-              })
+                </div>
+              ))
             )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-3 border-t border-border bg-muted/20 text-center">
+            <button
+              onClick={() => {
+                setIsOpen(false)
+                navigate('/my-applications')
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors cursor-pointer"
+            >
+              View My Applications &rarr;
+            </button>
           </div>
         </div>
       )}

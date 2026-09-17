@@ -47,10 +47,23 @@ class ApplicationStatusChangedNotification extends Notification
 
         $companyName = $this->jobPost->employer->company_name ?? 'The employer';
 
+        $title = match ($this->status) {
+            ApplicationStatus::HIRED => 'Congratulations! You are Hired',
+            ApplicationStatus::REJECTED => 'Application Status: Rejected',
+            ApplicationStatus::SHORTLISTED => 'Application Status: Shortlisted',
+            default => 'Application Status Updated',
+        };
+
+        $message = match ($this->status) {
+            ApplicationStatus::HIRED => "Congratulations! You have been hired for '{$this->jobPost->title}' at {$companyName}.",
+            ApplicationStatus::REJECTED => "Your application for '{$this->jobPost->title}' at {$companyName} has been rejected.",
+            default => "Your application for '{$this->jobPost->title}' at {$companyName} has been updated to {$statusLabel}.",
+        };
+
         return [
             'type' => 'application_status_changed',
-            'title' => 'Application Status Updated',
-            'message' => "Your application for '{$this->jobPost->title}' at {$companyName} has been updated to {$statusLabel}.",
+            'title' => $title,
+            'message' => $message,
             'application_id' => $this->application->id,
             'job_post_id' => $this->jobPost->id,
             'job_title' => $this->jobPost->title,

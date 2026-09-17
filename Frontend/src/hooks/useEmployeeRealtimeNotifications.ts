@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth'
-import type { EmployeeNotification } from '@/services/employeeNotificationService'
+import type { EmployeeNotification } from '@/types'
 
 export function useEmployeeRealtimeNotifications() {
   const { user, token, isAuthenticated } = useAuthStore()
@@ -69,27 +69,38 @@ export function useEmployeeRealtimeNotifications() {
                 if (typeof notification.unread_count === 'number') {
                   queryClient.setQueryData(['employee-notifications-unread-count'], notification.unread_count)
                 } else {
-                  queryClient.invalidateQueries({ queryKey: ['employee-notifications-unread-count'] })
+                  queryClient.setQueryData(['employee-notifications-unread-count'], (old: number | undefined) => (old ?? 0) + 1)
                 }
 
+                // Invalidate query caches for background consistency
                 queryClient.invalidateQueries({ queryKey: ['employee-notifications'] })
-                queryClient.invalidateQueries({ queryKey: ['employee-job-feed'] })
+                queryClient.invalidateQueries({ queryKey: ['employee-notifications-unread-count'] })
+                queryClient.invalidateQueries({ queryKey: ['applications'] })
 
-                // Display interactive toast
-                const { title, message, action_url } = notification.data
+                // Pop interactive toast notification
+                const title = notification.data?.title ?? 'Application Status Updated'
+                const message = notification.data?.message ?? 'Your application status has changed.'
+                const actionUrl = notification.data?.action_url || '/my-applications'
+                const status = notification.data?.status?.toLowerCase()
 
-                toast(title || 'New Notification', {
+                const toastOptions = {
                   description: message,
-                  action: action_url
-                    ? {
-                        label: 'View',
-                        onClick: () => navigate(action_url),
-                      }
-                    : undefined,
-                  duration: 6000,
-                })
+                  duration: 8000,
+                  action: {
+                    label: 'View Applications',
+                    onClick: () => navigate(actionUrl),
+                  },
+                }
+
+                if (status === 'hired') {
+                  toast.success(title, toastOptions)
+                } else if (status === 'rejected') {
+                  toast.error(title, toastOptions)
+                } else {
+                  toast.info(title, toastOptions)
+                }
               } catch (e) {
-                console.error('Failed to parse SSE notification payload:', e)
+                console.error('Failed to parse incoming notification:', e)
               }
             }
           }
@@ -99,10 +110,10 @@ export function useEmployeeRealtimeNotifications() {
         if (err instanceof Error && err.name === 'AbortError') {
           return
         }
+      } finally {
+        isConnectingRef.current = false
         if (isActive) {
-          setTimeout(() => {
-            if (isActive) connectToStream()
-          }, 6000)
+          setTimeout(connectToStream, 3000)
         }
       }
     }

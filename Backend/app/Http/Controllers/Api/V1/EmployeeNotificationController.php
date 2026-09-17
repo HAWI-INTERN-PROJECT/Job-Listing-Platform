@@ -101,23 +101,20 @@ class EmployeeNotificationController extends Controller
      */
     public function unreadCount(Request $request): JsonResponse
     {
-        $count = $request->user()->unreadNotifications()->count();
+        $unreadCount = $request->user()->unreadNotifications()->count();
 
-        return $this->success(
-            ['unread_count' => $count],
-            'Unread count retrieved successfully'
-        );
+        return $this->success([
+            'unread_count' => $unreadCount,
+        ], 'Unread notification count retrieved successfully');
     }
 
     /**
      * Mark a specific notification as read.
      */
-    public function markAsRead(string $id, Request $request): JsonResponse
+    public function markAsRead(Request $request, string $id): JsonResponse
     {
-        $user = $request->user();
-
         try {
-            $notification = $user->notifications()->findOrFail($id);
+            $notification = $request->user()->notifications()->where('id', $id)->firstOrFail();
             $notification->markAsRead();
 
             return $this->success(
@@ -125,7 +122,7 @@ class EmployeeNotificationController extends Controller
                 'Notification marked as read'
             );
         } catch (ModelNotFoundException) {
-            return $this->error('Notification not found', 404);
+            return $this->notFound('Notification not found');
         }
     }
 
@@ -140,19 +137,17 @@ class EmployeeNotificationController extends Controller
     }
 
     /**
-     * Delete a notification.
+     * Delete a specific notification.
      */
-    public function destroy(string $id, Request $request): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
-        $user = $request->user();
-
         try {
-            $notification = $user->notifications()->findOrFail($id);
+            $notification = $request->user()->notifications()->where('id', $id)->firstOrFail();
             $notification->delete();
 
-            return $this->success(null, 'Notification deleted successfully');
+            return $this->deleted('Notification deleted successfully');
         } catch (ModelNotFoundException) {
-            return $this->error('Notification not found', 404);
+            return $this->notFound('Notification not found');
         }
     }
 }
