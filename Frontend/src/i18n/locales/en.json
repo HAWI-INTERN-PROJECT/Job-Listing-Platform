@@ -71,7 +71,12 @@
     "myApplications": "My Applications",
     "myApplicationsDesc": "Track your applications",
     "cvResume": "CV / Resume",
-    "cvResumeDesc": "Manage your CV"
+    "cvResumeDesc": "Manage your CV",
+    "quickActions": "Quick Actions",
+    "viewAll": "View all",
+    "noApplicationsYet": "No applications yet",
+    "startApplying": "Find an open role and apply to track your progress here.",
+    "browseJobs": "Browse Jobs"
   },
   "profile": {
     "title": "My Profile",

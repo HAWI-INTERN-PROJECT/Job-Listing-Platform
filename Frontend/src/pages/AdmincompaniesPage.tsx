@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   AlertCircle,
   Building2,
@@ -17,6 +17,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import api from '@/lib/api'
+import { getStorageUrl } from '@/lib/utils'
 
 type CompanyUser = {
   id: number
@@ -28,6 +29,7 @@ type JobPostItem = {
   id: number
   title: string
   job_type: string
+  location: string | null
   status: string
   created_at: string
 }
@@ -60,6 +62,7 @@ type Stats = {
 
 export default function AdminCompaniesPage() {
   const [companies, setCompanies] = useState<EmployerCompany[]>([])
+  const [brokenLogos, setBrokenLogos] = useState<Record<number, boolean>>({})
   const [stats, setStats] = useState<Stats>({
     total_companies: 0,
     approved_companies: 0,
@@ -73,296 +76,340 @@ export default function AdminCompaniesPage() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   const [selectedCompany, setSelectedCompany] = useState<EmployerCompany | null>(null)
-  const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
 
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
-  useEffect(() => {
-    fetchCompanies()
-  }, [statusFilter])
-
-  async function fetchCompanies(searchTerm = search) {
+  const fetchCompanies = useCallback(async (searchTerm = search) => {
     try {
       setIsLoading(true)
       const params: Record<string, string> = {}
-      if (searchTerm) params.search = searchTerm
-      if (statusFilter && statusFilter !== 'all') params.status = statusFilter
+      if (searchTerm.trim()) params.search = searchTerm.trim()
+      if (statusFilter !== 'all') params.status = statusFilter
 
       const res = await api.get('/admin/companies', { params })
-
-      if (res.data.success) {
-        const payload = res.data.data
-        setCompanies(payload.companies?.data || payload.companies || [])
-        if (payload.stats) {
-          setStats(payload.stats)
+      if (res.data.success && res.data.data) {
+        setCompanies(res.data.data.companies || [])
+        if (res.data.data.stats) {
+          setStats(res.data.data.stats)
         }
       }
-    } catch (err: any) {
+    } catch {
       setErrorMessage('Failed to load companies list.')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [search, statusFilter])
 
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    fetchCompanies(search)
-  }
+  useEffect(() => {
+    fetchCompanies()
+  }, [fetchCompanies])
 
-  async function handleStatusUpdate(id: number, newStatus: 'approved' | 'rejected') {
+  async function openCompanyDetail(companyId: number) {
     try {
-      setActionLoadingId(id)
-      setMessage('')
-      setErrorMessage('')
-
-      const endpoint = newStatus === 'approved' ? `/admin/companies/${id}/approve` : `/admin/companies/${id}/reject`
-      const res = await api.post(endpoint)
-
-      if (res.data.success) {
-        setMessage(`Company profile ${newStatus} successfully.`)
-        fetchCompanies()
-
-        if (selectedCompany?.id === id) {
-          setSelectedCompany((prev) => (prev ? { ...prev, approval_status: newStatus } : null))
-        }
-
-        setTimeout(() => setMessage(''), 3000)
-      }
-    } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Failed to update status.')
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
-  async function handleDeleteCompany(id: number) {
-    try {
-      setActionLoadingId(id)
-      const res = await api.delete(`/admin/companies/${id}`)
-
-      if (res.data.success) {
-        setMessage('Company profile deleted successfully.')
-        setDeleteTargetId(null)
-        if (selectedCompany?.id === id) {
-          setSelectedCompany(null)
-        }
-        fetchCompanies()
-        setTimeout(() => setMessage(''), 3000)
-      }
-    } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Failed to delete company profile.')
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
-  async function handleViewDetails(company: EmployerCompany) {
-    try {
-      setSelectedCompany(company)
-      setIsDetailLoading(true)
-      const res = await api.get(`/admin/companies/${company.id}`)
-      if (res.data.success) {
+      setActionLoadingId(companyId)
+      const res = await api.get(`/admin/companies/${companyId}`)
+      if (res.data.success && res.data.data) {
         setSelectedCompany(res.data.data)
       }
-    } catch (err: any) {
-      console.error('Failed to load company detail', err)
+    } catch {
+      setErrorMessage('Failed to load company details.')
     } finally {
-      setIsDetailLoading(false)
+      setActionLoadingId(null)
+    }
+  }
+
+  async function handleStatusUpdate(companyId: number, status: 'approved' | 'rejected') {
+    try {
+      setActionLoadingId(companyId)
+      const res = await api.post(`/admin/companies/${companyId}/${status}`)
+      if (res.data.success) {
+        setMessage(`Company ${status} successfully.`)
+        await fetchCompanies()
+        if (selectedCompany?.id === companyId && res.data.data) {
+          setSelectedCompany(res.data.data)
+        }
+        window.setTimeout(() => setMessage(''), 3500)
+      }
+    } catch {
+      setErrorMessage(`Failed to update company status to ${status}.`)
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  async function handleDeleteCompany() {
+    if (!deleteTargetId) return
+    try {
+      setActionLoadingId(deleteTargetId)
+      const res = await api.delete(`/admin/companies/${deleteTargetId}`)
+      if (res.data.success) {
+        setMessage('Company removed permanently.')
+        setDeleteTargetId(null)
+        if (selectedCompany?.id === deleteTargetId) {
+          setSelectedCompany(null)
+        }
+        await fetchCompanies()
+        window.setTimeout(() => setMessage(''), 3500)
+      }
+    } catch {
+      setErrorMessage('Failed to delete company profile.')
+    } finally {
+      setActionLoadingId(null)
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header & Title */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Companies Management</h2>
-          <p className="text-sm text-slate-500">
-            Review, verify, and manage employer accounts registered on the platform.
-          </p>
+      {/* Notion Document Header */}
+      <div className="border-b border-border/60 pb-5 space-y-1.5">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+            C
+          </span>
+          <span>Workspace</span>
+          <span>/</span>
+          <span className="text-foreground">Companies Directory</span>
         </div>
-
-        <button
-          onClick={() => fetchCompanies()}
-          className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-        >
-          <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Metric Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">Total Companies</span>
-            <Building2 className="h-5 w-5 text-blue-600" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Registered Companies
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Review company identities, verify business registrations, and manage platform permissions.
+            </p>
           </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{stats.total_companies}</p>
-        </div>
-
-        <div className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">Approved Companies</span>
-            <CheckCircle className="h-5 w-5 text-emerald-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">{stats.approved_companies}</p>
-        </div>
-
-        <div className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">Pending Review</span>
-            <Clock className="h-5 w-5 text-amber-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-amber-600">{stats.pending_companies}</p>
-        </div>
-
-        <div className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">Total Jobs Posted</span>
-            <Building2 className="h-5 w-5 text-indigo-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{stats.total_jobs}</p>
+          <button
+            onClick={() => fetchCompanies()}
+            className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/50 transition-colors shadow-2xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
       </div>
 
-      {/* Alerts */}
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Total Entities</span>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{stats.total_companies}</div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Approved</span>
+            <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {stats.approved_companies}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Pending Review</span>
+            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
+            {stats.pending_companies}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Rejected</span>
+            <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">
+            {stats.rejected_companies}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-2xs col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Active Listings</span>
+            <Eye className="h-4 w-4 text-primary" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-primary">{stats.total_jobs}</div>
+        </div>
+      </div>
+
+      {/* Notifications */}
       {message && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <CheckCircle className="h-5 w-5" />
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs font-medium text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 flex-shrink-0" />
           {message}
         </div>
       )}
-
       {errorMessage && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertCircle className="h-5 w-5" />
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {errorMessage}
         </div>
       )}
 
-      {/* Search and Filters */}
-      <div className="flex flex-col gap-4 rounded-xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-          <Search size={18} className="absolute left-3 top-2.5 text-slate-400" />
+      {/* Controls Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card border border-border/70 rounded-xl p-3 shadow-2xs">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by company name, email, or industry..."
+            placeholder="Search companies by name, location, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm outline-none focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-border/70 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-        </form>
+        </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="text-xs px-3 py-1.5 rounded-lg border border-border/70 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="all">All Statuses</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
+            <option value="all">All Approval Statuses</option>
+            <option value="pending">Pending Approval</option>
+            <option value="approved">Approved & Active</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>
       </div>
 
       {/* Companies Table */}
-      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div className="rounded-xl border border-border/70 bg-card overflow-hidden shadow-2xs">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="ml-3 text-sm text-slate-500">Loading companies...</span>
+          <div className="flex items-center justify-center py-20 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <span className="text-xs">Loading companies...</span>
           </div>
         ) : companies.length === 0 ? (
-          <div className="py-12 text-center text-slate-500">
-            <Building2 className="mx-auto h-12 w-12 text-slate-300" />
-            <p className="mt-2 text-base font-medium">No companies found</p>
-            <p className="text-sm text-slate-400">Try clearing search filters.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+            <Building2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <h3 className="font-semibold text-sm text-foreground">No companies found</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mt-1">
+              No organization profiles match your search criteria. Try modifying your filter.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <th className="px-6 py-4">Company</th>
-                  <th className="px-6 py-4">Industry / Location</th>
-                  <th className="px-6 py-4">Jobs Posted</th>
-                  <th className="px-6 py-4">Verification Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted/50 border-b border-border/70 text-muted-foreground font-medium">
+                <tr>
+                  <th className="px-5 py-3">Company</th>
+                  <th className="px-5 py-3">Contact</th>
+                  <th className="px-5 py-3">Industry</th>
+                  <th className="px-5 py-3">Location</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Open Jobs</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border/50">
                 {companies.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-blue-50 font-bold text-blue-600">
-                          {c.logo ? (
+                  <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted font-bold text-xs text-foreground">
+                          {c.logo && !brokenLogos[c.id] ? (
                             <img
-                              src={c.logo.startsWith('http') ? c.logo : `/storage/${c.logo}`}
+                              src={getStorageUrl(c.logo)}
                               alt={c.company_name}
                               className="h-full w-full object-cover"
+                              onError={() => setBrokenLogos((prev) => ({ ...prev, [c.id]: true }))}
                             />
                           ) : (
                             c.company_name.charAt(0).toUpperCase()
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">{c.company_name}</p>
-                          <p className="text-xs text-slate-500">{c.email || c.user?.email || 'No email'}</p>
+                          <p className="font-semibold text-foreground">{c.company_name}</p>
+                          <p className="text-[11px] text-muted-foreground">{c.company_size || 'Size unspecified'}</p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-slate-900">{c.industry || 'Not specified'}</p>
-                      <p className="text-xs text-slate-500">{c.location || 'Location not set'}</p>
+                    <td className="px-5 py-3.5">
+                      <div className="space-y-0.5">
+                        {c.email ? (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Mail className="h-3 w-3" />
+                            <span>{c.email}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/60 italic">No email</span>
+                        )}
+                        {c.phone && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            <span>{c.phone}</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
 
-                    <td className="px-6 py-4 font-medium text-slate-700">
-                      {c.job_posts_count ?? 0} jobs
-                    </td>
+                    <td className="px-5 py-3.5 text-foreground">{c.industry || 'General'}</td>
 
-                    <td className="px-6 py-4">
-                      {c.approval_status === 'approved' ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                          <CheckCircle size={12} /> Approved
-                        </span>
-                      ) : c.approval_status === 'rejected' ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
-                          <XCircle size={12} /> Rejected
-                        </span>
+                    <td className="px-5 py-3.5">
+                      {c.location ? (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span>{c.location}</span>
+                        </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                          <Clock size={12} /> Pending Review
+                        <span className="text-muted-foreground/60 italic">Remote/Unset</span>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-3.5">
+                      {c.approval_status === 'approved' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle className="h-3 w-3" />
+                          Approved
+                        </span>
+                      )}
+                      {c.approval_status === 'pending' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                          <Clock className="h-3 w-3" />
+                          Pending
+                        </span>
+                      )}
+                      {c.approval_status === 'rejected' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
+                          <XCircle className="h-3 w-3" />
+                          Rejected
                         </span>
                       )}
                     </td>
 
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-5 py-3.5 font-medium text-foreground">
+                      {c.job_posts_count ?? 0} jobs
+                    </td>
+
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="inline-flex items-center gap-1.5">
                         <button
-                          onClick={() => handleViewDetails(c)}
-                          className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
-                          title="View Details"
+                          onClick={() => openCompanyDetail(c.id)}
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="View Company Dossier"
                         >
-                          <Eye size={18} />
+                          <Eye className="h-3.5 w-3.5" />
                         </button>
 
                         {c.approval_status !== 'approved' && (
                           <button
                             onClick={() => handleStatusUpdate(c.id, 'approved')}
                             disabled={actionLoadingId === c.id}
-                            className="rounded-lg px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            className="p-1.5 rounded-md hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 transition-colors"
                             title="Approve Company"
                           >
-                            Approve
+                            <CheckCircle className="h-3.5 w-3.5" />
                           </button>
                         )}
 
@@ -370,19 +417,19 @@ export default function AdminCompaniesPage() {
                           <button
                             onClick={() => handleStatusUpdate(c.id, 'rejected')}
                             disabled={actionLoadingId === c.id}
-                            className="rounded-lg px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100"
+                            className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
                             title="Reject Company"
                           >
-                            Reject
+                            <XCircle className="h-3.5 w-3.5" />
                           </button>
                         )}
 
                         <button
                           onClick={() => setDeleteTargetId(c.id)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                          title="Delete Company"
+                          className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
+                          title="Delete Company Record"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
@@ -396,162 +443,138 @@ export default function AdminCompaniesPage() {
 
       {/* Detail Modal */}
       {selectedCompany && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl space-y-6">
-            <div className="flex items-start justify-between border-b pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-2xl rounded-xl bg-card border border-border p-6 shadow-2xl space-y-5 text-foreground max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-border/60 pb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border bg-blue-50 text-xl font-bold text-blue-600">
-                  {selectedCompany.logo ? (
+                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-muted text-lg font-bold text-foreground">
+                  {selectedCompany.logo && !brokenLogos[selectedCompany.id] ? (
                     <img
-                      src={
-                        selectedCompany.logo.startsWith('http')
-                          ? selectedCompany.logo
-                          : `/storage/${selectedCompany.logo}`
-                      }
+                      src={getStorageUrl(selectedCompany.logo)}
                       alt={selectedCompany.company_name}
                       className="h-full w-full object-cover"
+                      onError={() => setBrokenLogos((prev) => ({ ...prev, [selectedCompany.id]: true }))}
                     />
                   ) : (
                     selectedCompany.company_name.charAt(0).toUpperCase()
                   )}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">{selectedCompany.company_name}</h3>
-                  <p className="text-sm text-slate-500">{selectedCompany.industry || 'Industry not set'}</p>
+                  <h3 className="text-base font-bold text-foreground">{selectedCompany.company_name}</h3>
+                  <p className="text-xs text-muted-foreground">{selectedCompany.industry || "Industry not set"}</p>
                 </div>
               </div>
-
               <button
                 onClick={() => setSelectedCompany(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="text-muted-foreground hover:text-foreground text-xs p-1 rounded-md"
               >
-                ✕
+                Close
               </button>
             </div>
 
-            {isDetailLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                <span className="ml-2 text-sm text-slate-500">Loading details...</span>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="space-y-1">
+                <span className="text-muted-foreground font-medium">Headquarters</span>
+                <p className="font-semibold">{selectedCompany.location || 'Not provided'}</p>
               </div>
-            ) : (
-              <div className="space-y-5 text-sm text-slate-700">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-slate-400" />
-                    <span>{selectedCompany.email || selectedCompany.user?.email || 'N/A'}</span>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-slate-400" />
-                    <span>{selectedCompany.phone || 'N/A'}</span>
-                  </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground font-medium">Company Scale</span>
+                <p className="font-semibold">{selectedCompany.company_size || 'Not provided'}</p>
+              </div>
 
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span>{selectedCompany.location || 'N/A'}</span>
-                  </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground font-medium">Official Contact</span>
+                <p className="font-semibold">{selectedCompany.email || 'None'}</p>
+              </div>
 
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-slate-400" />
-                    {selectedCompany.website ? (
-                      <a
-                        href={selectedCompany.website}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {selectedCompany.website}
-                      </a>
-                    ) : (
-                      'N/A'
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-slate-900">Account Owner</h4>
-                  <div className="mt-1 flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-slate-700">
-                    <User className="h-4 w-4 text-slate-500" />
-                    <span>{selectedCompany.user?.name || 'Owner User'}</span>
-                    <span className="text-slate-400">({selectedCompany.user?.email})</span>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-slate-900">About Organization</h4>
-                  <p className="mt-1 leading-relaxed text-slate-600">
-                    {selectedCompany.description || 'No description provided.'}
-                  </p>
-                </div>
-
-                {selectedCompany.job_posts && selectedCompany.job_posts.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Jobs Posted ({selectedCompany.job_posts.length})</h4>
-                    <ul className="mt-2 divide-y rounded-lg border max-h-40 overflow-y-auto">
-                      {selectedCompany.job_posts.map((j) => (
-                        <li key={j.id} className="flex items-center justify-between p-3 text-xs">
-                          <span className="font-medium text-slate-900">{j.title}</span>
-                          <span className="capitalize text-slate-500">{j.status.replace('_', ' ')}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-end gap-3 border-t pt-4">
-                  {selectedCompany.approval_status !== 'approved' && (
-                    <button
-                      onClick={() => handleStatusUpdate(selectedCompany.id, 'approved')}
-                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                    >
-                      Approve Profile
-                    </button>
-                  )}
-
-                  {selectedCompany.approval_status !== 'rejected' && (
-                    <button
-                      onClick={() => handleStatusUpdate(selectedCompany.id, 'rejected')}
-                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                    >
-                      Reject Profile
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setSelectedCompany(null)}
-                    className="rounded-lg border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              <div className="space-y-1">
+                <span className="text-muted-foreground font-medium">Official Website</span>
+                {selectedCompany.website ? (
+                  <a
+                    href={selectedCompany.website.startsWith('http') ? selectedCompany.website : `https://${selectedCompany.website}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-primary hover:underline font-semibold"
                   >
-                    Close
-                  </button>
-                </div>
+                    <Globe className="h-3 w-3" />
+                    Visit Website
+                  </a>
+                ) : (
+                  <p className="font-semibold">None</p>
+                )}
+              </div>
+            </div>
+
+            {selectedCompany.description && (
+              <div className="space-y-1 text-xs border-t border-border/50 pt-3">
+                <span className="text-muted-foreground font-medium">Company Dossier / Overview</span>
+                <p className="text-foreground/90 whitespace-pre-line leading-relaxed bg-muted/30 p-3 rounded-lg border border-border/50">
+                  {selectedCompany.description}
+                </p>
               </div>
             )}
+
+            {selectedCompany.user && (
+              <div className="text-xs border-t border-border/50 pt-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="font-medium text-foreground">Registered User: {selectedCompany.user.name}</span>
+                    <span className="text-muted-foreground block text-[11px]">{selectedCompany.user.email}</span>
+                  </div>
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  Joined: {new Date(selectedCompany.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+              {selectedCompany.approval_status !== 'approved' && (
+                <button
+                  onClick={() => handleStatusUpdate(selectedCompany.id, 'approved')}
+                  disabled={actionLoadingId === selectedCompany.id}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors shadow-2xs"
+                >
+                  Approve Company
+                </button>
+              )}
+              {selectedCompany.approval_status !== 'rejected' && (
+                <button
+                  onClick={() => handleStatusUpdate(selectedCompany.id, 'rejected')}
+                  disabled={actionLoadingId === selectedCompany.id}
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition-colors shadow-2xs"
+                >
+                  Reject Company
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteTargetId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Delete Company Profile?</h3>
-            <p className="text-sm text-slate-600">
-              Are you sure you want to delete this company profile? This action cannot be undone.
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-xl bg-card border border-border p-5 shadow-2xl space-y-4 text-foreground">
+            <h3 className="font-bold text-sm">Confirm Entity Deletion</h3>
+            <p className="text-xs text-muted-foreground">
+              Are you sure you want to permanently delete this organization record and its associated jobs? This action cannot be undone.
             </p>
-
-            <div className="flex justify-end gap-3 border-t pt-4">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setDeleteTargetId(null)}
-                className="rounded-lg border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted"
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteCompany(deleteTargetId)}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                onClick={handleDeleteCompany}
+                disabled={actionLoadingId === deleteTargetId}
+                className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700"
               >
-                Delete Profile
+                Confirm Delete
               </button>
             </div>
           </div>

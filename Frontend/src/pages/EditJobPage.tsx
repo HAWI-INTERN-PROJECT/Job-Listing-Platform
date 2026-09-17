@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, XCircle } from 'lucide-react'
+import {
+  CheckCircle,
+  XCircle,
+  Briefcase,
+  MapPin,
+  FileText,
+  Calendar,
+  AlertTriangle,
+  Save,
+} from 'lucide-react'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 
 type JobForm = {
   title: string
@@ -72,18 +74,14 @@ export default function EditJobPage() {
 
     if (isClosed) {
       setMessage('This job is closed and cannot be edited.')
-
       setTimeout(() => {
         setMessage('')
       }, 3000)
-
       return
     }
 
     setSavedJob(job)
-
     setMessage('Job changes saved successfully.')
-
     setTimeout(() => {
       setMessage('')
     }, 3000)
@@ -91,9 +89,7 @@ export default function EditJobPage() {
 
   function handleCancel() {
     setJob(savedJob)
-
     setMessage('Changes have been cancelled.')
-
     setTimeout(() => {
       navigate('/my-job-posts')
     }, 1000)
@@ -109,115 +105,110 @@ export default function EditJobPage() {
     }
 
     setIsClosed(true)
-
     setJob((currentJob) => ({
       ...currentJob,
       status: 'Closed',
     }))
-
     setSavedJob((currentJob) => ({
       ...currentJob,
       status: 'Closed',
     }))
-
     setMessage('Job has been closed successfully.')
-
     setTimeout(() => {
       setMessage('')
     }, 3000)
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 md:flex">
-      {/* Sidebar */}
+    <div className="h-screen flex overflow-hidden bg-background">
       <EmployerSidebar />
 
-      {/* Main area */}
-      <div className="min-w-0 flex-1">
-        {/* Header */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title="Edit Job" />
 
-        <main className="px-4 py-5 sm:px-6 lg:px-8">
-          {/* Page heading */}
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight">
-                Edit Job Post
-              </h2>
-
-              <p className="text-sm text-muted-foreground">
-                Update the details of your job posting.
-              </p>
+        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {/* Notion Document Header */}
+          <div className="border-b border-border/60 pb-5 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+                ✏️
+              </span>
+              <span>Job Postings / Edit Listing</span>
             </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Edit Job Post
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Update position details, requirements, compensation, or close this listing.
+                </p>
+              </div>
 
-            <span
-              className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${
-                isClosed
-                  ? 'bg-gray-100 text-gray-700'
-                  : 'bg-green-100 text-green-700'
-              }`}
-            >
-              {isClosed ? 'Closed' : 'Approved'}
-            </span>
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium self-start sm:self-auto ${
+                  isClosed
+                    ? 'bg-muted text-muted-foreground border border-border'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                }`}
+              >
+                {isClosed ? 'Closed' : 'Approved'}
+              </span>
+            </div>
           </div>
 
-          {/* Message */}
+          {/* Message Alert */}
           {message && (
             <div
-              className={`mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+              className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-medium ${
                 isClosed
-                  ? 'border-gray-200 bg-gray-50 text-gray-700'
-                  : 'border-green-200 bg-green-50 text-green-700'
+                  ? 'border-border bg-muted/40 text-muted-foreground'
+                  : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
               }`}
             >
               {isClosed ? (
-                <XCircle className="h-5 w-5" />
+                <XCircle className="h-4 w-4 flex-shrink-0" />
               ) : (
-                <CheckCircle className="h-5 w-5" />
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
               )}
-
               {message}
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSave}>
+          <form className="space-y-6" onSubmit={handleSave}>
             {/* Basic Information */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">
-                  Basic Information
-                </CardTitle>
-              </CardHeader>
+            <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-semibold text-foreground">Basic Information</h3>
+              </div>
 
-              <CardContent className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-4">
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="title">
-                    Job Title{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="title" className="text-xs font-medium text-muted-foreground">
+                    Job Title <span className="text-rose-500">*</span>
                   </Label>
-
-                  <Input
+                  <input
                     id="title"
                     name="title"
                     value={job.title}
                     onChange={handleChange}
                     disabled={isClosed}
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="category">
-                    Job Category{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="category" className="text-xs font-medium text-muted-foreground">
+                    Job Category <span className="text-rose-500">*</span>
                   </Label>
-
                   <select
                     id="category"
                     name="category"
                     value={job.category}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   >
                     <option>Technology</option>
                     <option>Design</option>
@@ -228,18 +219,16 @@ export default function EditJobPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="employmentType">
-                    Employment Type{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="employmentType" className="text-xs font-medium text-muted-foreground">
+                    Employment Type <span className="text-rose-500">*</span>
                   </Label>
-
                   <select
                     id="employmentType"
                     name="employmentType"
                     value={job.employmentType}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   >
                     <option>Full-time</option>
                     <option>Part-time</option>
@@ -248,13 +237,11 @@ export default function EditJobPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="positions">
-                    Available Positions{' '}
-                    <span className="text-destructive">*</span>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="positions" className="text-xs font-medium text-muted-foreground">
+                    Available Positions <span className="text-rose-500">*</span>
                   </Label>
-
-                  <Input
+                  <input
                     id="positions"
                     name="positions"
                     type="number"
@@ -262,195 +249,179 @@ export default function EditJobPage() {
                     value={job.positions}
                     onChange={handleChange}
                     disabled={isClosed}
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Location */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">
-                  Location
-                </CardTitle>
-              </CardHeader>
+            <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-sm font-semibold text-foreground">Location & Work Mode</h3>
+              </div>
 
-              <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="location">
-                    Location{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="location" className="text-xs font-medium text-muted-foreground">
+                    Location <span className="text-rose-500">*</span>
                   </Label>
-
-                  <Input
+                  <input
                     id="location"
                     name="location"
                     value={job.location}
                     onChange={handleChange}
                     disabled={isClosed}
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="workMode">
-                    Work Location
-                  </Label>
-
+                  <Label htmlFor="workMode" className="text-xs font-medium text-muted-foreground">Work Location</Label>
                   <select
                     id="workMode"
                     name="workMode"
                     value={job.workMode}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   >
                     <option>On-site</option>
                     <option>Remote</option>
                     <option>Hybrid</option>
                   </select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Job Details */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">
-                  Job Details
-                </CardTitle>
-              </CardHeader>
+            <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <h3 className="text-sm font-semibold text-foreground">Job Details</h3>
+              </div>
 
-              <CardContent className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="description">
-                    Job Description{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="description" className="text-xs font-medium text-muted-foreground">
+                    Job Description <span className="text-rose-500">*</span>
                   </Label>
-
                   <textarea
                     id="description"
                     name="description"
+                    rows={4}
                     value={job.description}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full resize-none rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="responsibilities">
-                    Responsibilities{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="responsibilities" className="text-xs font-medium text-muted-foreground">
+                    Responsibilities <span className="text-rose-500">*</span>
                   </Label>
-
                   <textarea
                     id="responsibilities"
                     name="responsibilities"
+                    rows={4}
                     value={job.responsibilities}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full resize-none rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="requirements">
-                    Requirements{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="requirements" className="text-xs font-medium text-muted-foreground">
+                    Requirements <span className="text-rose-500">*</span>
                   </Label>
-
                   <textarea
                     id="requirements"
                     name="requirements"
+                    rows={4}
                     value={job.requirements}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="min-h-24 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full resize-none rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Application Details */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">
-                  Application Details
-                </CardTitle>
-              </CardHeader>
+            <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <h3 className="text-sm font-semibold text-foreground">Application Deadline & Status</h3>
+              </div>
 
-              <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="deadline">
-                    Application Deadline{' '}
-                    <span className="text-destructive">*</span>
+                  <Label htmlFor="deadline" className="text-xs font-medium text-muted-foreground">
+                    Application Deadline <span className="text-rose-500">*</span>
                   </Label>
-
-                  <Input
+                  <input
                     id="deadline"
                     name="deadline"
                     type="date"
                     value={job.deadline}
                     onChange={handleChange}
                     disabled={isClosed}
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   />
-
-                  <p className="text-xs text-muted-foreground">
-                    Applications will close after this date.
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Applications will close automatically after this date.
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="status">
-                    Job Status
-                  </Label>
-
+                  <Label htmlFor="status" className="text-xs font-medium text-muted-foreground">Job Status</Label>
                   <select
                     id="status"
                     name="status"
                     value={job.status}
                     onChange={handleChange}
                     disabled={isClosed}
-                    className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   >
                     <option>Open</option>
                     <option>Closed</option>
                   </select>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Close warning */}
-            {!isClosed && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                <p className="font-medium">
-                  Close this job?
-                </p>
-
-                <p className="mt-1">
-                  Closing this job will prevent new applications.
-                </p>
               </div>
-            )}
+            </div>
 
-            {isClosed && (
-              <div className="rounded-lg border bg-muted px-4 py-3 text-sm">
-                <p className="font-medium">
-                  This job is closed.
-                </p>
-
-                <p className="mt-1 text-muted-foreground">
-                  New applications are no longer being accepted.
-                </p>
+            {/* Close warning / status notice */}
+            {!isClosed ? (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <p className="font-semibold">Listing is Active</p>
+                  <p className="mt-0.5 text-amber-700/90 dark:text-amber-400/90">
+                    Closing this job post will hide it from the search directory and reject any new candidate submissions.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border/70 bg-muted/40 p-4 text-xs text-muted-foreground flex items-start gap-2.5">
+                <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-foreground">This job is closed</p>
+                  <p className="mt-0.5">New applications are no longer accepted.</p>
+                </div>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={handleCancel}
+                className="rounded-lg h-8 px-3 text-xs"
               >
                 Cancel
               </Button>
@@ -459,14 +430,21 @@ export default function EditJobPage() {
                 <Button
                   type="button"
                   variant="destructive"
+                  size="sm"
                   onClick={handleCloseJob}
+                  className="rounded-lg h-8 px-3 text-xs"
                 >
-                  Close Job
+                  Close Job Post
                 </Button>
               )}
 
               {!isClosed && (
-                <Button type="submit">
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="rounded-lg h-8 px-3.5 text-xs font-medium bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90"
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
                   Save Changes
                 </Button>
               )}

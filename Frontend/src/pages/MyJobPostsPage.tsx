@@ -1,26 +1,23 @@
 import { useState, useEffect } from 'react'
 import {
-  Bell,
   Briefcase,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   Plus,
   Search,
+  CheckCircle,
+  Clock,
+  Users,
+  Eye,
+  Pencil,
+  XCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
+import EmployerHeader from '@/components/employer/EmployerHeader'
 import api from '@/lib/api'
-
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 
 const initialJobs = [
   {
@@ -57,16 +54,16 @@ const initialJobs = [
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    Approved: 'bg-green-100 text-green-700',
-    Pending: 'bg-yellow-100 text-yellow-700',
-    Rejected: 'bg-red-100 text-red-700',
-    Closed: 'bg-gray-100 text-gray-700',
+    Approved: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+    Pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+    Rejected: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
+    Closed: 'bg-muted text-muted-foreground border border-border',
   }
 
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-medium ${
-        styles[status] ?? 'bg-muted text-muted-foreground'
+      className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+        styles[status] ?? 'bg-muted text-muted-foreground border border-border'
       }`}
     >
       {status}
@@ -79,15 +76,10 @@ export default function MyJobPostsPage() {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
-  const [typeFilter, setTypeFilter] = useState(
-    'All Employment Types',
-  )
+  const [typeFilter, setTypeFilter] = useState('All Employment Types')
 
   const [currentPage, setCurrentPage] = useState(1)
-  const [showNotifications, setShowNotifications] =
-    useState(false)
-
-  const jobsPerPage = 2
+  const jobsPerPage = 5
 
   useEffect(() => {
     let mounted = true
@@ -177,416 +169,280 @@ export default function MyJobPostsPage() {
     )
   }
 
+  const activeCount = jobs.filter((j) => j.status === 'Approved').length
+  const pendingCount = jobs.filter((j) => j.status === 'Pending').length
+  const totalAppsCount = jobs.reduce((acc, j) => acc + (j.applications || 0), 0)
+
   return (
-    <div className="min-h-screen bg-muted/40 md:flex">
+    <div className="h-screen flex overflow-hidden bg-background">
       <EmployerSidebar />
 
-      <div className="min-w-0 flex-1">
-        <header className="relative flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
-          <h1 className="text-xl font-semibold">
-            My Job Posts
-          </h1>
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+        <EmployerHeader title="My Job Posts" />
 
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setShowNotifications(!showNotifications)
-                }
-                className="rounded-full p-2 hover:bg-muted"
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-              </button>
-
-              {showNotifications && (
-                <div className="absolute right-0 top-12 z-20 w-72 rounded-lg border bg-background p-4 shadow-lg">
-                  <p className="font-semibold">
-                    Notifications
-                  </p>
-
-                  <div className="mt-3 space-y-3 text-sm">
-                    <div className="border-b pb-3">
-                      You have new applications to review.
-                    </div>
-
-                    <div>Job post approved.</div>
-                  </div>
-                </div>
-              )}
+        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {/* Notion Document Header */}
+          <div className="border-b border-border/60 pb-5 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+                💼
+              </span>
+              <span>Job Postings / Listings Directory</span>
             </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-              TC
-            </div>
-          </div>
-        </header>
-
-        <main className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight">
-                My Job Posts
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Manage your job listings and track applications.
-              </p>
-            </div>
-
-            <Link to="/create-job">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Post a New Job
-              </Button>
-            </Link>
-          </div>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Jobs
-                </CardTitle>
-
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-
-              <CardContent>
-                <p className="text-2xl font-bold">12</p>
-
-                <p className="mt-1 text-xs text-muted-foreground">
-                  +2 from last month
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  My Job Posts
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Manage your active listings, track candidate submissions, and post new positions.
                 </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Active Jobs
-                </CardTitle>
-
-                <span className="h-2 w-2 rounded-full bg-green-500" />
-              </CardHeader>
-
-              <CardContent>
-                <p className="text-2xl font-bold">8</p>
-
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Currently receiving applications
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Pending Approval
-                </CardTitle>
-
-                <span className="h-2 w-2 rounded-full bg-yellow-500" />
-              </CardHeader>
-
-              <CardContent>
-                <p className="text-2xl font-bold">3</p>
-
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Under admin review
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Applications
-                </CardTitle>
-
-                <span className="text-xs text-muted-foreground">
-                  👥
-                </span>
-              </CardHeader>
-
-              <CardContent>
-                <p className="text-2xl font-bold">142</p>
-
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Across all job posts
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="mt-6">
-            <CardContent className="p-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                  <Input
-                    placeholder="Search jobs..."
-                    value={searchTerm}
-                    onChange={(e) =>
-                      handleSearchChange(e.target.value)
-                    }
-                    className="pl-9"
-                  />
-                </div>
-
-                <select
-                  value={statusFilter}
-                  onChange={(e) =>
-                    handleStatusChange(e.target.value)
-                  }
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
-                >
-                  <option>All Status</option>
-                  <option>Approved</option>
-                  <option>Pending</option>
-                  <option>Rejected</option>
-                  <option>Closed</option>
-                </select>
-
-                <select
-                  value={typeFilter}
-                  onChange={(e) =>
-                    handleTypeChange(e.target.value)
-                  }
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
-                >
-                  <option>All Employment Types</option>
-                  <option>Full-time</option>
-                  <option>Part-time</option>
-                  <option>Contract</option>
-                  <option>Internship</option>
-                </select>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/30 text-left">
-                      <th className="px-6 py-3 font-medium">
-                        Job Title
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Category
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Location
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Type
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Applications
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Deadline
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Status
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {paginatedJobs.length > 0 ? (
-                      paginatedJobs.map((job) => (
-                        <tr
-                          key={job.id}
-                          className="border-b last:border-0 hover:bg-muted/20"
-                        >
-                          <td className="px-6 py-4 font-medium">
-                            {job.title}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {job.category}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {job.location}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {job.type}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {job.applications}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {job.deadline}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <StatusBadge
-                              status={job.status}
-                            />
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1">
-                              <Link to={`/job-applicants?jobId=${job.id}`}>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                >
-                                  View
-                                </Button>
-                              </Link>
-
-                              <Link to="/edit-job">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                >
-                                  Edit
-                                </Button>
-                              </Link>
-
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={
-                                  job.status === 'Closed'
-                                }
-                                onClick={() =>
-                                  handleCloseJob(job.id)
-                                }
-                              >
-                                {job.status === 'Closed'
-                                  ? 'Closed'
-                                  : 'Close'}
-                              </Button>
-
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={8}
-                          className="px-6 py-12 text-center text-muted-foreground"
-                        >
-                          No job posts found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center justify-between py-5">
-            <p className="text-sm text-muted-foreground">
-              Showing {paginatedJobs.length} of{' '}
-              {filteredJobs.length} job posts
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() =>
-                  setCurrentPage((page) =>
-                    Math.max(page - 1, 1),
-                  )
-                }
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Previous
-              </Button>
-
-              {Array.from(
-                { length: totalPages },
-                (_, index) => (
-                  <Button
-                    key={index + 1}
-                    size="sm"
-                    variant={
-                      currentPage === index + 1
-                        ? 'default'
-                        : 'outline'
-                    }
-                    onClick={() =>
-                      setCurrentPage(index + 1)
-                    }
-                  >
-                    {index + 1}
-                  </Button>
-                ),
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={
-                  currentPage === totalPages ||
-                  filteredJobs.length === 0
-                }
-                onClick={() =>
-                  setCurrentPage((page) =>
-                    Math.min(page + 1, totalPages),
-                  )
-                }
-              >
-                Next
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <Card className="mt-4 hidden">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="mb-4 rounded-full bg-muted p-4">
-                <Briefcase className="h-8 w-8 text-muted-foreground" />
-              </div>
-
-              <h3 className="text-lg font-semibold">
-                No job posts yet
-              </h3>
-
-              <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                Create your first job post to start receiving
-                applications.
-              </p>
 
               <Link to="/create-job">
-                <Button className="mt-5">
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button size="sm" className="rounded-lg h-8 px-3.5 text-xs font-medium self-start sm:self-auto bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
                   Post a New Job
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Metric Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Total Jobs</span>
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold tracking-tight text-foreground">{jobs.length}</p>
+              <p className="text-[11px] text-muted-foreground">Created by organization</p>
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Active Listings</span>
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{activeCount}</p>
+              <p className="text-[11px] text-muted-foreground">Currently receiving applications</p>
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Pending Review</span>
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{pendingCount}</p>
+              <p className="text-[11px] text-muted-foreground">Awaiting admin moderation</p>
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Total Applications</span>
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold tracking-tight text-foreground">{totalAppsCount}</p>
+              <p className="text-[11px] text-muted-foreground">Across all positions</p>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search job title, category, or location..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full rounded-lg border border-border/80 bg-muted/30 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="rounded-lg border border-border/80 bg-muted/30 px-2.5 py-1.5 text-xs text-foreground outline-none"
+              >
+                <option value="All Status">All Statuses</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Closed">Closed</option>
+              </select>
+
+              <select
+                value={typeFilter}
+                onChange={(e) => handleTypeChange(e.target.value)}
+                className="rounded-lg border border-border/80 bg-muted/30 px-2.5 py-1.5 text-xs text-foreground outline-none"
+              >
+                <option value="All Employment Types">All Types</option>
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Internship">Internship</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Jobs Table */}
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                    <th className="px-5 py-3">Job Title</th>
+                    <th className="px-5 py-3">Category</th>
+                    <th className="px-5 py-3">Location</th>
+                    <th className="px-5 py-3">Type</th>
+                    <th className="px-5 py-3">Applications</th>
+                    <th className="px-5 py-3">Deadline</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-border/50">
+                  {paginatedJobs.length > 0 ? (
+                    paginatedJobs.map((job) => (
+                      <tr key={job.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-3.5 font-medium text-foreground">
+                          {job.title}
+                        </td>
+
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {job.category}
+                        </td>
+
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {job.location}
+                        </td>
+
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {job.type}
+                        </td>
+
+                        <td className="px-5 py-3.5 font-mono text-foreground">
+                          {job.applications}
+                        </td>
+
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {job.deadline}
+                        </td>
+
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={job.status} />
+                        </td>
+
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Link to={`/job-applicants?jobId=${job.id}`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                title="View Applicants"
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                Applicants
+                              </Button>
+                            </Link>
+
+                            <Link to="/edit-job">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                title="Edit Job"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={job.status === 'Closed'}
+                              onClick={() => handleCloseJob(job.id)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400"
+                              title="Close Job"
+                            >
+                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              {job.status === 'Closed' ? 'Closed' : 'Close'}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                        <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm font-semibold text-foreground">No job posts found</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Try changing your search keywords or filters.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-2 text-xs">
+            <p className="text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{paginatedJobs.length}</span> of{' '}
+              <span className="font-semibold text-foreground">{filteredJobs.length}</span> job posts
+            </p>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs rounded-lg"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+              >
+                <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+                Previous
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, index) => (
+                <button
+                  key={index + 1}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className={`h-7 w-7 rounded-lg text-xs font-medium transition-colors ${
+                    currentPage === index + 1
+                      ? 'bg-foreground text-background font-semibold'
+                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs rounded-lg"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
+              >
+                Next
+                <ChevronRight className="ml-1 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
         </main>
       </div>
     </div>
