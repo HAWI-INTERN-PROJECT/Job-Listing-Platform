@@ -26,7 +26,7 @@ class SavedJobResource extends JsonResource
             'job_post_id' => $this->job_post_id,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_at_human' => $this->created_at?->diffForHumans(),
-            'job_post' => $this->jobPost ? new JobPostResource($this->jobPost) : null,
+            'job_post' => $this->whenLoaded('jobPost', fn () => new JobPostResource($this->jobPost)),
         ];
     }
 }

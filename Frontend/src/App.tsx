@@ -36,6 +36,7 @@ import AdminUsersPage from '@/pages/AdminUsersPage'
 import AdmincompaniesPage from '@/pages/AdmincompaniesPage'
 import CVResumePage from './pages/CVResumePage'
 import JobDetailPage from './pages/JobDetailPage'
+import SavedJobsPage from '@/pages/SavedJobsPage'
 
 const queryClient = new QueryClient()
 
@@ -295,6 +296,15 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <MyApplicationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/saved-jobs"
+              element={
+                <ProtectedRoute>
+                  <SavedJobsPage />
                 </ProtectedRoute>
               }
             />

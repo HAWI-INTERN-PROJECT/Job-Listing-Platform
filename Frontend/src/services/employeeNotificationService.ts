@@ -1,34 +1,5 @@
 import api from '@/lib/api'
-import type { ApiResponse } from '@/types'
-
-export interface EmployeeNotification {
-  id: string
-  type: string
-  data: {
-    type?: string
-    title?: string
-    message?: string
-    job_post_id?: number
-    job_title?: string
-    job_slug?: string
-    company_name?: string
-    match_score?: number
-    matched_skills?: string[]
-    action_url?: string
-    status?: string
-    status_label?: string
-    application_id?: number
-    scheduled_at?: string
-    duration_minutes?: number
-    meeting_link?: string
-    [key: string]: unknown
-  }
-  read_at: string | null
-  is_read: boolean
-  created_at: string
-  created_at_human: string
-  unread_count?: number
-}
+import type { ApiResponse, EmployeeNotification } from '@/types'
 
 export interface GetEmployeeNotificationsParams {
   unread?: boolean

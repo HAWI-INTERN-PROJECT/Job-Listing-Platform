@@ -24,7 +24,15 @@ class AdminUserController extends Controller
 
         // Role filter: 'employee' (Job Seekers), 'employer', 'admin'
         if ($request->filled('role')) {
-            $query->where('role', $request->string('role')->value());
+            $role = $request->string('role')->value();
+            if ($role === 'employee' || $role === 'job_seeker') {
+                $query->where(function ($q): void {
+                    $q->where('role', 'employee')
+                        ->orWhere('role', 'job_seeker');
+                });
+            } else {
+                $query->where('role', $role);
+            }
         }
 
         // Status filter: 'active', 'suspended'

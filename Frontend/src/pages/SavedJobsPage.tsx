@@ -2,40 +2,32 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Search, MapPin, Building2, Check, X, Layers, Briefcase, Filter, Bookmark } from 'lucide-react'
-import { useSavedJobs } from '@/hooks/useSavedJobs'
+import {
+  Bookmark,
+  Search,
+  Building2,
+  Check,
+  X,
+  Layers,
+  ArrowRight,
+  Trash2,
+  Clock,
+  ExternalLink,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import api from '@/lib/api'
+import { useSavedJobs } from '@/hooks/useSavedJobs'
+import type { SavedJobItem } from '@/types'
 
 interface Category {
   id: number
   name: string
   slug: string
-  icon?: string | null
 }
 
-interface JobPost {
-  id: number
-  title: string
-  slug: string
-  description: string
-  category_id?: number
-  category?: Category | null
-  requirements?: string[] | null
-  responsibilities?: string[] | null
-  job_type_label: string
-  experience_level_label: string
-  salary_min: number | null
-  salary_max: number | null
-  salary_currency: string
-  location: string | null
-  is_remote: boolean
-  employer: { company_name: string } | null
-}
-
-function formatSalary(job: JobPost, notSpecified: string) {
+function formatSalary(job: NonNullable<SavedJobItem['job_post']>, notSpecified: string) {
   if (!job.salary_min && !job.salary_max) return notSpecified
   if (job.salary_min && job.salary_max) {
     return `${Number(job.salary_min).toLocaleString()} - ${Number(job.salary_max).toLocaleString()} ${job.salary_currency}`
@@ -43,18 +35,15 @@ function formatSalary(job: JobPost, notSpecified: string) {
   return `${Number(job.salary_min ?? job.salary_max).toLocaleString()} ${job.salary_currency}`
 }
 
-export default function JobSearchPage() {
+export default function SavedJobsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [locationFilter, setLocationFilter] = useState('')
   const [appliedIds, setAppliedIds] = useState<Set<number>>(new Set())
-  const [applyError, setApplyError] = useState<string | null>(null)
-  const { isSaved, toggleSave } = useSavedJobs()
 
-  // Fetch categories for filtering
+  // Categories for filter
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -68,20 +57,16 @@ export default function JobSearchPage() {
     },
   })
 
-  // Fetch jobs with enhanced title, keyword, category, and location filtering
-  const { data, isLoading, isError } = useQuery<JobPost[]>({
-    queryKey: ['jobs', search, categoryFilter, locationFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      if (search.trim()) params.append('search', search.trim())
-      if (categoryFilter) params.append('category_id', categoryFilter)
-      if (locationFilter.trim()) params.append('location', locationFilter.trim())
-      const res = await api.get(`/jobs?${params.toString()}`)
-      const raw = res.data?.data?.data ?? res.data?.data ?? res.data
-      return Array.isArray(raw) ? raw : []
-    },
-  })
+  // Saved jobs hook
+  const {
+    savedJobs,
+    isLoading,
+    isError,
+    refetch,
+    removeSaved,
+  } = useSavedJobs({ search: search.trim() || undefined, category_id: categoryFilter || undefined })
 
+  // Applications data to check if already applied
   const { data: applicationsData } = useQuery({
     queryKey: ['applications'],
     queryFn: async () => {
@@ -99,64 +84,69 @@ export default function JobSearchPage() {
     mutationFn: (jobId: number) => api.post(`/jobs/${jobId}/apply`),
     onSuccess: (_res, jobId) => {
       setAppliedIds((prev) => new Set(prev).add(jobId))
-      setApplyError(null)
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       toast.success(t('jobs.applicationSubmitted'))
     },
     onError: (error: any) => {
       const msg = error.response?.data?.message ?? t('jobs.failedToApply')
-      setApplyError(msg)
       toast.error(msg)
     },
   })
 
-  const jobs = Array.isArray(data) ? data : []
-
-  const hasActiveFilters = Boolean(search || categoryFilter || locationFilter)
+  const hasActiveFilters = Boolean(search || categoryFilter)
 
   const clearAllFilters = () => {
     setSearch('')
     setCategoryFilter('')
-    setLocationFilter('')
   }
-
-  const selectedCategoryObj = categories.find((c) => String(c.id) === categoryFilter)
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
       <EmployeeSidebar />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-        <EmployerHeader title={t('jobs.title')} />
+        <EmployerHeader title="Saved Jobs" />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-          {/* Opportunities Directory Header */}
+          {/* Header */}
           <div className="border-b border-border/60 pb-5 space-y-1.5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
-                🔍
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px]">
+                <Bookmark className="h-3 w-3" />
               </span>
-              <span>Opportunities Directory</span>
+              <span>Saved Opportunities</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              {t('jobs.title')}
-            </h1>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Explore open positions, remote opportunities, and career openings across verified employers.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Saved Jobs
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Keep track of positions you want to review, compare, and apply for later.
+                </p>
+              </div>
+
+              {!isLoading && savedJobs.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                    {savedJobs.length} {savedJobs.length === 1 ? 'saved position' : 'saved positions'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Search & Multi-Filter Bar */}
+          {/* Search & Filter Bar */}
           <div className="bg-card border border-border/70 rounded-xl p-3 shadow-xs space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
-              {/* Keyword / Title Search */}
-              <div className="relative md:col-span-6">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+              {/* Search */}
+              <div className="relative sm:col-span-8">
                 <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search job title, keywords, skills (React, Python...), or company..."
+                  placeholder="Search your saved jobs by title, company, or keyword..."
                   className="w-full pl-8 pr-8 py-2 text-xs rounded-lg bg-muted/40 border border-transparent focus:border-border/80 focus:bg-background focus:outline-none transition-colors"
                 />
                 {search && (
@@ -170,14 +160,14 @@ export default function JobSearchPage() {
                 )}
               </div>
 
-              {/* Category Filter Dropdown */}
-              <div className="relative md:col-span-3">
+              {/* Category Filter */}
+              <div className="relative sm:col-span-4">
                 <Layers className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   className="w-full pl-8 pr-8 py-2 text-xs rounded-lg bg-muted/40 border border-transparent focus:border-border/80 focus:bg-background focus:outline-none transition-colors cursor-pointer appearance-none text-foreground"
-                  aria-label="Filter by category"
+                  aria-label="Filter saved jobs by category"
                 >
                   <option value="">All Categories</option>
                   {categories.map((cat) => (
@@ -186,7 +176,7 @@ export default function JobSearchPage() {
                     </option>
                   ))}
                 </select>
-                {categoryFilter ? (
+                {categoryFilter && (
                   <button
                     onClick={() => setCategoryFilter('')}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
@@ -194,92 +184,27 @@ export default function JobSearchPage() {
                   >
                     <X className="h-3 w-3" />
                   </button>
-                ) : (
-                  <Filter className="h-3 w-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-60" />
-                )}
-              </div>
-
-              {/* Location Filter */}
-              <div className="relative md:col-span-3">
-                <MapPin className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  placeholder="Location or 'Remote'..."
-                  className="w-full pl-8 pr-8 py-2 text-xs rounded-lg bg-muted/40 border border-transparent focus:border-border/80 focus:bg-background focus:outline-none transition-colors"
-                />
-                {locationFilter && (
-                  <button
-                    onClick={() => setLocationFilter('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    title="Clear location"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
                 )}
               </div>
             </div>
-
-            {/* Quick Category Chips / Pills */}
-            {categories.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar text-xs">
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter('')}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                    !categoryFilter
-                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
-                      : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  All Categories
-                </button>
-                {categories.map((cat) => {
-                  const isSelected = categoryFilter === String(cat.id)
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setCategoryFilter(isSelected ? '' : String(cat.id))}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                        isSelected
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
-                    >
-                      {cat.name}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
 
             {/* Active Filters Summary */}
             {hasActiveFilters && (
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 text-xs">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-muted-foreground text-[11px]">Filtered by:</span>
+                  <span className="text-muted-foreground text-[11px]">Active filters:</span>
                   {search && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px]">
-                      <span>Keyword: &ldquo;{search}&rdquo;</span>
+                      <span>&ldquo;{search}&rdquo;</span>
                       <button onClick={() => setSearch('')} className="hover:opacity-75 cursor-pointer">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
                   )}
-                  {selectedCategoryObj && (
+                  {categoryFilter && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[11px]">
-                      <span>Category: {selectedCategoryObj.name}</span>
+                      <span>Category: {categories.find((c) => String(c.id) === categoryFilter)?.name}</span>
                       <button onClick={() => setCategoryFilter('')} className="hover:opacity-75 cursor-pointer">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  )}
-                  {locationFilter && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px]">
-                      <span>Location: {locationFilter}</span>
-                      <button onClick={() => setLocationFilter('')} className="hover:opacity-75 cursor-pointer">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
@@ -291,28 +216,13 @@ export default function JobSearchPage() {
                   onClick={clearAllFilters}
                   className="text-[11px] text-muted-foreground hover:text-foreground font-medium underline underline-offset-2 cursor-pointer"
                 >
-                  Reset all filters
+                  Clear filters
                 </button>
               </div>
             )}
           </div>
 
-          {applyError && (
-            <div className="bg-rose-500/10 border border-rose-200 dark:border-rose-900/50 rounded-xl px-4 py-3 text-xs text-rose-700 dark:text-rose-300">
-              {applyError}
-            </div>
-          )}
-
-          {/* Results Counter */}
-          {!isLoading && !isError && jobs.length > 0 && (
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                Showing <strong className="text-foreground">{jobs.length}</strong> {jobs.length === 1 ? 'position' : 'positions'}
-              </span>
-            </div>
-          )}
-
-          {/* Skeleton Loaders */}
+          {/* Loading Skeleton */}
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -332,31 +242,62 @@ export default function JobSearchPage() {
               ))}
             </div>
           ) : isError ? (
-            <div className="bg-rose-500/10 border border-rose-200 dark:border-rose-900/50 rounded-xl p-6 text-xs text-rose-700 dark:text-rose-300">
-              {t('jobs.failedToLoad')}
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="bg-card border border-border/70 rounded-xl p-12 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mx-auto">
-                <Briefcase className="h-6 w-6" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">{t('jobs.noJobs')}</p>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                No matching opportunities found. Try adjusting your keyword query, choosing another category, or resetting filters.
+            <div className="bg-rose-500/10 border border-rose-200 dark:border-rose-900/50 rounded-xl p-6 text-center space-y-3">
+              <p className="text-xs text-rose-700 dark:text-rose-300 font-medium">
+                Failed to load saved jobs.
               </p>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-medium border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
-                >
-                  Clear all filters
-                </button>
-              )}
+              <button
+                onClick={() => refetch()}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-border hover:bg-muted transition-colors cursor-pointer"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : savedJobs.length === 0 ? (
+            /* Empty State */
+            <div className="bg-card border border-border/70 rounded-2xl p-12 sm:p-16 text-center space-y-4 shadow-xs">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-inner">
+                <Bookmark className="h-7 w-7" />
+              </div>
+              <div className="space-y-1.5 max-w-md mx-auto">
+                <h3 className="text-base font-semibold text-foreground">
+                  {hasActiveFilters ? 'No matching saved jobs' : 'No saved jobs yet'}
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {hasActiveFilters
+                    ? 'No saved positions match your filter criteria. Try clearing search or choosing another category.'
+                    : "Bookmark jobs you find interesting to easily compare requirements, keep tabs on deadlines, and apply when you're ready."}
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-center gap-3">
+                {hasActiveFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="inline-flex items-center px-4 py-2 rounded-lg text-xs font-medium border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
+                  >
+                    Clear filters
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/job-search')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:opacity-90 shadow-sm transition-all cursor-pointer"
+                  >
+                    <span>Browse Open Positions</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
+            /* Saved Jobs List */
             <div className="space-y-3">
-              {jobs.map((job) => {
+              {savedJobs.map((item) => {
+                const job = item.job_post
+                if (!job) return null
+
                 const hasApplied =
                   appliedIds.has(job.id) ||
                   (applicationsData ?? []).some(
@@ -367,10 +308,11 @@ export default function JobSearchPage() {
 
                 return (
                   <div
-                    key={job.id}
-                    className="group bg-card border border-border/70 rounded-xl p-5 hover:border-foreground/25 hover:bg-muted/40 transition-all space-y-4 shadow-xs"
+                    key={item.id}
+                    className="group bg-card border border-border/70 rounded-xl p-5 hover:border-foreground/25 hover:bg-muted/30 transition-all space-y-4 shadow-xs"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      {/* Job Header & Details */}
                       <div className="flex items-start gap-3.5 min-w-0 flex-1">
                         <div className="h-10 w-10 rounded-lg bg-muted text-foreground/80 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
                           {job.employer?.company_name?.[0]?.toUpperCase() ?? (
@@ -379,17 +321,19 @@ export default function JobSearchPage() {
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-1">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/jobs/${job.slug}`)}
-                            className="font-semibold text-sm text-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors text-left"
-                          >
-                            {job.title}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/jobs/${job.slug}`)}
+                              className="font-semibold text-sm text-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors text-left truncate"
+                            >
+                              {job.title}
+                            </button>
+                          </div>
 
                           <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
                             <span className="font-medium text-foreground/80">
-                              {job.employer?.company_name ?? t('jobs.unknownCompany')}
+                              {job.employer?.company_name ?? 'Unknown Company'}
                             </span>
                             {job.location && (
                               <>
@@ -425,7 +369,7 @@ export default function JobSearchPage() {
                             </span>
                           </div>
 
-                          {/* Skills / Requirements tags if available */}
+                          {/* Requirements Pills */}
                           {job.requirements && job.requirements.length > 0 && (
                             <div className="flex flex-wrap items-center gap-1 pt-1.5">
                               {job.requirements.slice(0, 4).map((req, idx) => (
@@ -447,31 +391,37 @@ export default function JobSearchPage() {
                           <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 pt-1">
                             {job.description}
                           </p>
+
+                          <div className="flex items-center gap-1 pt-1 text-[11px] text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>Saved {item.created_at_human ?? new Date(item.created_at).toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Card Actions */}
                       <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-center">
+                        {/* Remove from saved */}
                         <button
                           type="button"
-                          onClick={() => toggleSave(job.id)}
-                          title={isSaved(job.id) ? 'Remove from saved' : 'Save job'}
-                          className={`p-2 rounded-lg border transition-colors cursor-pointer ${
-                            isSaved(job.id)
-                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50'
-                              : 'border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/70'
-                          }`}
+                          onClick={() => removeSaved(job.id)}
+                          title="Remove from saved jobs"
+                          className="p-2 rounded-lg border border-border/80 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900/50 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
                         >
-                          <Bookmark className={`h-3.5 w-3.5 ${isSaved(job.id) ? 'fill-current' : ''}`} />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
 
+                        {/* View Details */}
                         <button
                           type="button"
                           onClick={() => navigate(`/jobs/${job.slug}`)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-background text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-background text-foreground hover:bg-muted/70 transition-colors cursor-pointer inline-flex items-center gap-1"
                         >
-                          Details
+                          <span>Details</span>
+                          <ExternalLink className="h-3 w-3 opacity-60" />
                         </button>
 
+                        {/* Apply Button */}
                         <button
                           type="button"
                           onClick={() => !hasApplied && applyMutation.mutate(job.id)}
