@@ -122,6 +122,14 @@ class JobPost extends Model
     }
 
     /**
+     * @return HasMany<SavedJob, $this>
+     */
+    public function savedJobs(): HasMany
+    {
+        return $this->hasMany(SavedJob::class);
+    }
+
+    /**
      * Scope query to only include published and unexpired jobs.
      *
      * @param Builder<$this> $query

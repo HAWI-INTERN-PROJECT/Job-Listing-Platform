@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   MapPin, DollarSign, Briefcase, Globe,
-  Building2, Check, Clock, ArrowLeft
+  Building2, Check, Clock, ArrowLeft, Bookmark
 } from 'lucide-react'
+import { useSavedJobs } from '@/hooks/useSavedJobs'
 import { toast } from 'sonner'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
@@ -45,6 +46,7 @@ export default function JobDetailPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const { isSaved, toggleSave, isToggling } = useSavedJobs()
 
   const { data: job, isLoading, isError } = useQuery<JobPost>({
     queryKey: ['job', slug],
@@ -150,25 +152,42 @@ export default function JobDetailPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => !hasApplied && applyMutation.mutate(job.id)}
-                    disabled={hasApplied || applyMutation.isPending}
-                    className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all self-start sm:self-auto ${
-                      hasApplied
-                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 cursor-default'
-                        : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-50'
-                    }`}
-                  >
-                    {hasApplied && <Check className="h-3.5 w-3.5" />}
-                    <span>
-                      {applyMutation.isPending
-                        ? t('jobs.applying')
-                        : hasApplied
-                        ? t('jobs.applied')
-                        : t('jobs.applyNow')}
-                    </span>
-                  </button>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => toggleSave(job.id)}
+                      disabled={isToggling}
+                      className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                        isSaved(job.id)
+                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50'
+                          : 'bg-background border-border text-foreground hover:bg-muted'
+                      }`}
+                      title={isSaved(job.id) ? 'Remove from saved' : 'Save job'}
+                    >
+                      <Bookmark className={`h-3.5 w-3.5 ${isSaved(job.id) ? 'fill-current' : ''}`} />
+                      <span>{isSaved(job.id) ? 'Saved' : 'Save Job'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => !hasApplied && applyMutation.mutate(job.id)}
+                      disabled={hasApplied || applyMutation.isPending}
+                      className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                        hasApplied
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 cursor-default'
+                          : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-50'
+                      }`}
+                    >
+                      {hasApplied && <Check className="h-3.5 w-3.5" />}
+                      <span>
+                        {applyMutation.isPending
+                          ? t('jobs.applying')
+                          : hasApplied
+                          ? t('jobs.applied')
+                          : t('jobs.applyNow')}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 {applyMutation.isError && (
