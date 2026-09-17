@@ -65,6 +65,16 @@ describe('JobSearchPage', () => {
           },
         })
       }
+      if (url.startsWith('/categories')) {
+        return Promise.resolve({
+          data: {
+            data: [
+              { id: 1, name: 'Engineering', slug: 'engineering' },
+              { id: 2, name: 'Design', slug: 'design' },
+            ],
+          },
+        })
+      }
       if (url.startsWith('/employee/applications')) {
         return Promise.resolve({ data: { data: [] } })
       }
@@ -99,6 +109,15 @@ describe('JobSearchPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('jobs.noJobs')).toBeInTheDocument()
+    })
+  })
+
+  it('renders category options and allows filtering by category', async () => {
+    render(<JobSearchPage />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /filter by category/i })).toBeInTheDocument()
+      expect(screen.getAllByText('Engineering').length).toBeGreaterThan(0)
     })
   })
 })

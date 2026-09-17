@@ -94,3 +94,28 @@ export interface EmployerNotification {
   created_at: string
   created_at_human?: string
 }
+
+export interface EmployeeNotificationData {
+  type?: string
+  title?: string
+  message?: string
+  application_id?: number
+  job_post_id?: number
+  job_title?: string
+  company_name?: string
+  status?: string
+  status_label?: string
+  action_url?: string
+  [key: string]: unknown
+}
+
+export interface EmployeeNotification {
+  id: string
+  type: string
+  data: EmployeeNotificationData
+  read_at: string | null
+  is_read: boolean
+  unread_count?: number
+  created_at: string
+  created_at_human?: string
+}
