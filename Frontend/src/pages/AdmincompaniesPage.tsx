@@ -3,6 +3,8 @@ import {
   AlertCircle,
   Building2,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Eye,
   Globe,
@@ -74,6 +76,9 @@ export default function AdminCompaniesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [lastPage, setLastPage] = useState(1)
+  const [totalCompanies, setTotalCompanies] = useState(0)
 
   const [selectedCompany, setSelectedCompany] = useState<EmployerCompany | null>(null)
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
@@ -82,16 +87,30 @@ export default function AdminCompaniesPage() {
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const fetchCompanies = useCallback(async (searchTerm = search) => {
+  const fetchCompanies = useCallback(async (searchTerm = search, page = currentPage) => {
     try {
       setIsLoading(true)
-      const params: Record<string, string> = {}
+      const params: Record<string, string | number> = { page }
       if (searchTerm.trim()) params.search = searchTerm.trim()
       if (statusFilter !== 'all') params.status = statusFilter
 
       const res = await api.get('/admin/companies', { params })
       if (res.data.success && res.data.data) {
-        setCompanies(res.data.data.companies || [])
+        const rawCompanies = res.data.data.companies
+        if (Array.isArray(rawCompanies)) {
+          setCompanies(rawCompanies)
+          setCurrentPage(1)
+          setLastPage(1)
+          setTotalCompanies(rawCompanies.length)
+        } else if (rawCompanies && Array.isArray(rawCompanies.data)) {
+          setCompanies(rawCompanies.data)
+          setCurrentPage(rawCompanies.current_page || page)
+          setLastPage(rawCompanies.last_page || 1)
+          setTotalCompanies(rawCompanies.total ?? rawCompanies.data.length)
+        } else {
+          setCompanies([])
+        }
+
         if (res.data.data.stats) {
           setStats(res.data.data.stats)
         }
@@ -101,11 +120,11 @@ export default function AdminCompaniesPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [search, statusFilter])
+  }, [search, statusFilter, currentPage])
 
   useEffect(() => {
-    fetchCompanies()
-  }, [fetchCompanies])
+    fetchCompanies(search, 1)
+  }, [search, statusFilter])
 
   async function openCompanyDetail(companyId: number) {
     try {
@@ -127,7 +146,7 @@ export default function AdminCompaniesPage() {
       const res = await api.post(`/admin/companies/${companyId}/${status}`)
       if (res.data.success) {
         setMessage(`Company ${status} successfully.`)
-        await fetchCompanies()
+        await fetchCompanies(search, currentPage)
         if (selectedCompany?.id === companyId && res.data.data) {
           setSelectedCompany(res.data.data)
         }
@@ -151,7 +170,7 @@ export default function AdminCompaniesPage() {
         if (selectedCompany?.id === deleteTargetId) {
           setSelectedCompany(null)
         }
-        await fetchCompanies()
+        await fetchCompanies(search, currentPage)
         window.setTimeout(() => setMessage(''), 3500)
       }
     } catch {
@@ -183,8 +202,8 @@ export default function AdminCompaniesPage() {
             </p>
           </div>
           <button
-            onClick={() => fetchCompanies()}
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/50 transition-colors shadow-2xs"
+            onClick={() => fetchCompanies(search, currentPage)}
+            className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/50 transition-colors shadow-2xs cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -396,7 +415,7 @@ export default function AdminCompaniesPage() {
                       <div className="inline-flex items-center gap-1.5">
                         <button
                           onClick={() => openCompanyDetail(c.id)}
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                           title="View Company Dossier"
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -406,7 +425,7 @@ export default function AdminCompaniesPage() {
                           <button
                             onClick={() => handleStatusUpdate(c.id, 'approved')}
                             disabled={actionLoadingId === c.id}
-                            className="p-1.5 rounded-md hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 transition-colors"
+                            className="p-1.5 rounded-md hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 transition-colors cursor-pointer disabled:opacity-50"
                             title="Approve Company"
                           >
                             <CheckCircle className="h-3.5 w-3.5" />
@@ -417,7 +436,7 @@ export default function AdminCompaniesPage() {
                           <button
                             onClick={() => handleStatusUpdate(c.id, 'rejected')}
                             disabled={actionLoadingId === c.id}
-                            className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
+                            className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer disabled:opacity-50"
                             title="Reject Company"
                           >
                             <XCircle className="h-3.5 w-3.5" />
@@ -426,7 +445,7 @@ export default function AdminCompaniesPage() {
 
                         <button
                           onClick={() => setDeleteTargetId(c.id)}
-                          className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors"
+                          className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
                           title="Delete Company Record"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -437,6 +456,47 @@ export default function AdminCompaniesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Footer */}
+        {lastPage > 1 && (
+          <div className="px-5 py-3 border-t border-border/60 flex items-center justify-between bg-muted/20">
+            <p className="text-xs text-muted-foreground">
+              Page <span className="font-semibold text-foreground">{currentPage}</span> of{' '}
+              <span className="font-semibold text-foreground">{lastPage}</span>
+              {totalCompanies > 0 && (
+                <span className="ml-1">({totalCompanies} companies)</span>
+              )}
+            </p>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  const prevPage = Math.max(currentPage - 1, 1)
+                  setCurrentPage(prevPage)
+                  fetchCompanies(search, prevPage)
+                }}
+                disabled={currentPage === 1 || isLoading}
+                className="p-1.5 border border-border/70 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Previous page"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                onClick={() => {
+                  const nextPage = Math.min(currentPage + 1, lastPage)
+                  setCurrentPage(nextPage)
+                  fetchCompanies(search, nextPage)
+                }}
+                disabled={currentPage === lastPage || isLoading}
+                className="p-1.5 border border-border/70 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Next page"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -466,7 +526,7 @@ export default function AdminCompaniesPage() {
               </div>
               <button
                 onClick={() => setSelectedCompany(null)}
-                className="text-muted-foreground hover:text-foreground text-xs p-1 rounded-md"
+                className="text-muted-foreground hover:text-foreground text-xs p-1 rounded-md cursor-pointer"
               >
                 Close
               </button>
@@ -535,7 +595,7 @@ export default function AdminCompaniesPage() {
                 <button
                   onClick={() => handleStatusUpdate(selectedCompany.id, 'approved')}
                   disabled={actionLoadingId === selectedCompany.id}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors shadow-2xs"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
                 >
                   Approve Company
                 </button>
@@ -544,7 +604,7 @@ export default function AdminCompaniesPage() {
                 <button
                   onClick={() => handleStatusUpdate(selectedCompany.id, 'rejected')}
                   disabled={actionLoadingId === selectedCompany.id}
-                  className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition-colors shadow-2xs"
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
                 >
                   Reject Company
                 </button>
@@ -565,14 +625,14 @@ export default function AdminCompaniesPage() {
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setDeleteTargetId(null)}
-                className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted"
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteCompany}
                 disabled={actionLoadingId === deleteTargetId}
-                className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700"
+                className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 cursor-pointer disabled:opacity-50"
               >
                 Confirm Delete
               </button>
