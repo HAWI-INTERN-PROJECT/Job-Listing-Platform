@@ -188,6 +188,22 @@ class JobPostWorkflowTest extends TestCase
             ]);
     }
 
+    public function test_employer_can_view_rejection_reason_for_rejected_job_posts(): void
+    {
+        JobPost::factory()->rejected('Salary details and requirements are unclear.')->create([
+            'employer_id' => $this->employer->id,
+            'category_id' => $this->category->id,
+            'title' => 'Rejected Frontend Role',
+        ]);
+
+        $response = $this->actingAs($this->employerUser)
+            ->getJson('/api/v1/employer/jobs');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.data.0.status', JobStatus::REJECTED->value)
+            ->assertJsonPath('data.data.0.rejection_reason', 'Salary details and requirements are unclear.');
+    }
+
     public function test_employer_can_resubmit_rejected_job_post(): void
     {
         $job = JobPost::factory()->rejected('Missing details')->create([
@@ -285,6 +301,50 @@ class JobPostWorkflowTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.title', 'DevOps Cloud Engineer');
+    }
+
+
+    public function test_multi_keyword_search_matches_across_title_and_skills(): void
+    {
+        $catDesign = Category::create(['name' => 'Design', 'slug' => 'design']);
+
+        $job1 = JobPost::factory()->published()->create([
+            'title' => 'Senior Frontend Developer',
+            'description' => 'Working with React and TailwindCSS',
+            'requirements' => ['React', 'TypeScript', 'Redux'],
+            'category_id' => $this->category->id,
+        ]);
+
+        $job2 = JobPost::factory()->published()->create([
+            'title' => 'Product Designer',
+            'description' => 'Figma UI design',
+            'requirements' => ['Figma', 'Prototyping'],
+            'category_id' => $catDesign->id,
+        ]);
+
+        // Search 'React Senior' (different word order than 'Senior Frontend Developer')
+        $res1 = $this->getJson('/api/v1/jobs?search=React+Senior');
+        $res1->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job1->id);
+
+        // Search by skill keyword 'TypeScript'
+        $res2 = $this->getJson('/api/v1/jobs?search=TypeScript');
+        $res2->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job1->id);
+
+        // Filter by category_id
+        $res3 = $this->getJson('/api/v1/jobs?category_id=' . $catDesign->id);
+        $res3->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job2->id);
+
+        // Filter by category slug
+        $res4 = $this->getJson('/api/v1/jobs?category=design');
+        $res4->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $job2->id);
     }
 
     public function test_admin_can_list_all_job_posts_with_status_filter(): void

@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users,
   BriefcaseBusiness,
   FileText,
   Building2,
-  TrendingUp,
   UserCheck,
   Clock,
   CheckCircle,
   Loader2,
   AlertCircle,
+  ArrowRight,
+  ChevronRight,
 } from 'lucide-react'
 import api from '@/lib/api'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 interface RecentJob {
   id: number
@@ -41,24 +43,26 @@ export default function AdminOverviewPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const response = await api.get('/admin/stats')
-        const data: AdminStatsData = response.data?.data ?? response.data
-        setStats(data)
-      } catch (err: unknown) {
-        console.error('Failed to fetch admin stats:', err)
-        setError('Failed to load dashboard statistics from backend.')
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchStats = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const response = await api.get('/admin/stats')
+      const data: AdminStatsData = response.data?.data ?? response.data
+      setStats(data)
+    } catch (err: unknown) {
+      console.error('Failed to fetch admin stats:', err)
+      setError('Failed to load dashboard statistics from backend.')
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchStats()
   }, [])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
+
+  usePageRefresh(fetchStats)
 
   const statCards = [
     {
@@ -76,198 +80,201 @@ export default function AdminOverviewPage() {
     {
       title: 'Applications',
       value: stats ? stats.total_applications.toLocaleString() : '0',
-      subtitle: 'Submitted by candidates',
+      subtitle: 'Total candidate submissions',
       icon: FileText,
     },
     {
       title: 'Companies',
       value: stats ? stats.total_companies.toLocaleString() : '0',
-      subtitle: 'Registered employers',
+      subtitle: 'Registered organizations',
       icon: Building2,
     },
   ]
 
-  const getStatusBadge = (status: string) => {
-    const normalized = status.toLowerCase()
-    if (normalized.includes('approved') || normalized.includes('published')) {
-      return 'bg-green-100 text-green-700 border-green-200'
+  const statusPills = [
+    {
+      label: 'Jobs Awaiting Moderation',
+      count: stats?.pending_job_approvals ?? 0,
+      path: '/admin/jobs?status=pending_approval',
+      color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      icon: Clock,
+    },
+    {
+      label: 'Employer Accounts Pending',
+      count: stats?.pending_employer_approvals ?? 0,
+      path: '/admin/users?status=pending',
+      color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+      icon: UserCheck,
+    },
+    {
+      label: 'Active Published Positions',
+      count: stats?.jobs_approved ?? stats?.active_jobs ?? 0,
+      path: '/admin/jobs?status=published',
+      color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      icon: CheckCircle,
+    },
+  ]
+
+  const statusBadgeStyle = (status: string) => {
+    const s = status.toLowerCase()
+    if (s === 'published' || s === 'approved') {
+      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
     }
-    if (normalized.includes('pending')) {
-      return 'bg-amber-100 text-amber-700 border-amber-200'
+    if (s === 'pending_approval' || s === 'pending') {
+      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
     }
-    if (normalized.includes('rejected')) {
-      return 'bg-red-100 text-red-700 border-red-200'
+    if (s === 'rejected') {
+      return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
     }
-    return 'bg-slate-100 text-slate-700 border-slate-200'
+    return 'bg-muted text-muted-foreground border border-border'
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Notion Document Header */}
+      <div className="border-b border-border/60 pb-5 space-y-1.5">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+            ⚡
+          </span>
+          <span>Admin Operations / Platform Dashboard</span>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Dashboard Overview
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Real-time platform activity metrics, verification queues, and recent job postings.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Live Sync Active</span>
+          </div>
+        </div>
+      </div>
+
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700">
-          <AlertCircle size={20} />
-          <span className="text-sm font-medium">{error}</span>
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-xs text-rose-700 dark:text-rose-400 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Top Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        {statCards.map((stat) => {
-          const Icon = stat.icon
+      {/* KPI Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card) => {
+          const Icon = card.icon
           return (
-            <div key={stat.title} className="bg-white rounded-xl border p-5 shadow-sm">
+            <div
+              key={card.title}
+              className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all"
+            >
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">{stat.title}</p>
-                  {isLoading ? (
-                    <div className="h-8 w-20 bg-slate-100 animate-pulse rounded mt-2" />
-                  ) : (
-                    <h3 className="text-2xl font-bold text-slate-900 mt-2">{stat.value}</h3>
-                  )}
-                  <p className="text-xs text-slate-500 mt-2">{stat.subtitle}</p>
-                </div>
-                <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Icon size={22} />
+                <span className="text-xs font-medium text-muted-foreground">{card.title}</span>
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
+              <p className="text-2xl font-bold tracking-tight text-foreground">
+                {isLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : card.value}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{card.subtitle}</p>
             </div>
           )
         })}
       </div>
 
-      {/* Platform Overview & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-xl border p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Platform Overview</h3>
-              <p className="text-sm text-slate-500">Live platform activity metrics</p>
-            </div>
-            <TrendingUp className="text-green-600" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <UserCheck className="text-blue-600 mb-2" size={22} />
-              {isLoading ? (
-                <div className="h-7 w-16 bg-slate-200 animate-pulse rounded my-1" />
-              ) : (
-                <p className="text-2xl font-bold text-slate-900">{stats?.active_users ?? 0}</p>
-              )}
-              <p className="text-sm text-slate-500">Active users</p>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <Clock className="text-orange-500 mb-2" size={22} />
-              {isLoading ? (
-                <div className="h-7 w-16 bg-slate-200 animate-pulse rounded my-1" />
-              ) : (
-                <p className="text-2xl font-bold text-slate-900">{stats?.pending_reviews ?? 0}</p>
-              )}
-              <p className="text-sm text-slate-500">Pending reviews</p>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <CheckCircle className="text-green-600 mb-2" size={22} />
-              {isLoading ? (
-                <div className="h-7 w-16 bg-slate-200 animate-pulse rounded my-1" />
-              ) : (
-                <p className="text-2xl font-bold text-slate-900">{stats?.jobs_approved ?? 0}</p>
-              )}
-              <p className="text-sm text-slate-500">Jobs approved</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl border p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
+      {/* Priority Action Banners */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {statusPills.map((pill) => {
+          const Icon = pill.icon
+          return (
             <button
-              onClick={() => navigate('/create-job')}
-              className="w-full text-left px-4 py-3 rounded-lg bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 transition-colors"
+              key={pill.label}
+              onClick={() => navigate(pill.path)}
+              className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card hover:bg-muted/30 transition-all text-left group shadow-xs"
             >
-              + Add New Job
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${pill.color}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {pill.label}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {isLoading ? '...' : `${pill.count} items require action`}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
             </button>
-            <button
-              onClick={() => navigate('/admin/applications')}
-              className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 text-slate-700 font-medium hover:bg-slate-100 transition-colors"
-            >
-              Review Applications
-            </button>
-            <button
-              onClick={() => navigate('/admin/users')}
-              className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 text-slate-700 font-medium hover:bg-slate-100 transition-colors"
-            >
-              Manage Users
-            </button>
-          </div>
-        </div>
+          )
+        })}
       </div>
 
-      {/* Recent Job Listings */}
-      <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
-        <div className="p-6 border-b flex items-center justify-between">
+      {/* Recent Jobs Supervision Table */}
+      <div className="rounded-xl border border-border/70 bg-card shadow-xs overflow-hidden">
+        <div className="p-4.5 border-b border-border/60 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Recent Job Listings</h3>
-            <p className="text-sm text-slate-500">Latest jobs submitted across the platform</p>
+            <h2 className="text-sm font-semibold text-foreground">Recently Submitted Job Postings</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Most recent jobs submitted by registered employers</p>
           </div>
           <button
             onClick={() => navigate('/admin/jobs')}
-            className="text-sm text-blue-600 font-medium hover:underline"
+            className="text-xs font-medium text-foreground hover:text-muted-foreground flex items-center gap-1 transition-colors"
           >
-            View All
+            <span>View all</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-left text-sm text-slate-500 border-b bg-slate-50/50">
-                <th className="px-6 py-4">Job Title</th>
-                <th className="px-6 py-4">Company</th>
-                <th className="px-6 py-4">Applications</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Action</th>
+              <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <th className="px-5 py-3">Job Title</th>
+                <th className="px-5 py-3">Company</th>
+                <th className="px-5 py-3">Applications</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="animate-spin text-blue-600" size={20} />
-                      <span>Loading recent job listings...</span>
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span>Loading recent activities...</span>
                     </div>
                   </td>
                 </tr>
               ) : !stats?.recent_jobs || stats.recent_jobs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500 text-sm">
-                    No recent job listings found.
+                  <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
+                    No recent job activity recorded yet.
                   </td>
                 </tr>
               ) : (
                 stats.recent_jobs.map((job) => (
-                  <tr key={job.id} className="border-b last:border-0 hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{job.title}</td>
-                    <td className="px-6 py-4 text-slate-600">{job.company}</td>
-                    <td className="px-6 py-4 text-slate-700 font-medium">{job.applications}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(
-                          job.status
-                        )}`}
-                      >
-                        {job.status}
+                  <tr key={job.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-foreground">{job.title}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{job.company || 'Unknown Company'}</td>
+                    <td className="px-5 py-3.5 font-mono text-muted-foreground">{job.applications ?? 0}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize ${statusBadgeStyle(job.status)}`}>
+                        {job.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => navigate('/admin/jobs')}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-xs font-medium text-foreground hover:underline"
                       >
-                        Review
+                        Review &rarr;
                       </button>
                     </td>
                   </tr>
@@ -277,6 +284,6 @@ export default function AdminOverviewPage() {
           </table>
         </div>
       </div>
-    </>
+    </div>
   )
 }

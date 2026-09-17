@@ -9,6 +9,7 @@ use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -22,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read User|null $user
  * @property-read JobPost|null $jobPost
+ * @property-read Interview|null $interview
  */
 class Application extends Model
 {
@@ -57,5 +59,13 @@ class Application extends Model
     public function jobPost(): BelongsTo
     {
         return $this->belongsTo(JobPost::class);
+    }
+
+    /**
+     * @return HasOne<Interview, $this>
+     */
+    public function interview(): HasOne
+    {
+        return $this->hasOne(Interview::class);
     }
 }

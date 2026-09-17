@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\ApplicationResource;
 use App\Http\Traits\ApiResponse;
 use App\Models\Application;
+use App\Notifications\V1\Employee\ApplicationStatusChangedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -34,15 +35,16 @@ class AdminApplicationController extends Controller
         if ($request->filled('search')) {
             $search = $request->string('search')->value();
             $query->where(function ($q) use ($search): void {
-                $q->whereHas('user', function ($uQ) use ($search): void {
-                    $uQ->where('name', 'like', "%{$search}%")
+                $q->whereHas('user', function ($uq) use ($search): void {
+                    $uq->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
-                })->orWhereHas('jobPost', function ($jQ) use ($search): void {
-                    $jQ->where('title', 'like', "%{$search}%")
-                        ->orWhereHas('employer', function ($empQ) use ($search): void {
-                            $empQ->where('company_name', 'like', "%{$search}%");
-                        });
-                });
+                })
+                    ->orWhereHas('jobPost', function ($jq) use ($search): void {
+                        $jq->where('title', 'like', "%{$search}%")
+                            ->orWhereHas('employer', function ($eq) use ($search): void {
+                                $eq->where('company_name', 'like', "%{$search}%");
+                            });
+                    });
             });
         }
 
@@ -64,10 +66,16 @@ class AdminApplicationController extends Controller
         ]);
 
         $statusValue = $request->string('status')->value();
+        $newStatus = ApplicationStatus::from($statusValue);
 
         $application->update([
-            'status' => ApplicationStatus::from($statusValue),
+            'status' => $newStatus,
         ]);
+
+        $applicantUser = $application->user;
+        if ($applicantUser) {
+            $applicantUser->notify(new ApplicationStatusChangedNotification($application, $application->jobPost, $newStatus));
+        }
 
         return $this->success(
             new ApplicationResource($application->load(['user', 'jobPost.employer'])),
@@ -87,18 +95,27 @@ class AdminApplicationController extends Controller
 
         $application->delete();
 
-        return $this->success(null, 'Application deleted successfully');
+        return $this->deleted('Application deleted successfully');
     }
 
     /**
-     * Download CV for an application.
+     * Download an applicant's snapshot CV.
      */
     public function downloadCv(Application $application): StreamedResponse|JsonResponse
     {
         if (! $application->cv_path || ! Storage::disk('local')->exists($application->cv_path)) {
-            return $this->error('CV file not found.', 404);
+            return $this->notFound('CV file not found for this application.');
         }
 
-        return Storage::disk('local')->download($application->cv_path, 'application_cv_'.$application->id.'.pdf');
+        $mimeType = Storage::disk('local')->mimeType($application->cv_path) ?: 'application/pdf';
+        $applicantName = $application->user->name ?? 'Applicant';
+        $downloadFilename = 'CV-'.str_replace(' ', '_', $applicantName).'.pdf';
+
+        return response()->streamDownload(function () use ($application): void {
+            echo Storage::disk('local')->get($application->cv_path);
+        }, $downloadFilename, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'attachment; filename="'.$downloadFilename.'"',
+        ]);
     }
 }

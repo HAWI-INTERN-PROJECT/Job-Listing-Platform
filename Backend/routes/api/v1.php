@@ -12,7 +12,13 @@ use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
+use App\Http\Controllers\Api\V1\EmployeeFeedController;
+use App\Http\Controllers\Api\V1\EmployeeNotificationController;
+use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
+use App\Http\Controllers\Api\V1\InterviewController;
+use App\Http\Controllers\Api\V1\EmployeeNotificationController;
+use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
 use App\Http\Middleware\EnsureRole;
@@ -143,9 +149,15 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::get('{jobPost}/applicants', [ApplicationController::class, 'jobApplicants'])->name('applicants');
             });
 
-            // Application status management
-            Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
+            // Application status management & applicant review
+            Route::get('applications/{application}', [ApplicationController::class, 'showApplicant'])->name('api.v1.employer.applications.show');
+            Route::match(['put', 'patch'], 'applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
             Route::get('applications/{application}/cv', [ApplicationController::class, 'downloadCv'])->name('api.v1.employer.applications.cv');
+
+            // Interview scheduling for shortlisted candidates
+            Route::post('applications/{application}/interview', [InterviewController::class, 'schedule'])->name('api.v1.employer.applications.interview.schedule');
+            Route::get('applications/{application}/interview', [InterviewController::class, 'show'])->name('api.v1.employer.applications.interview.show');
+            Route::delete('applications/{application}/interview', [InterviewController::class, 'cancel'])->name('api.v1.employer.applications.interview.cancel');
 
             // Employer Notifications Workflow
             Route::prefix('notifications')->name('api.v1.employer.notifications.')->group(function (): void {
@@ -165,9 +177,49 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');
 
+            // Profile Management & Setup Status
+            Route::get('profile', [EmployeeProfileController::class, 'show'])->name('api.v1.employee.profile');
+            Route::match(['put', 'patch', 'post'], 'profile', [EmployeeProfileController::class, 'update'])->name('api.v1.employee.profile.update');
+
+            // Algorithmic Job Match Feed
+            Route::prefix('feed')->name('api.v1.employee.feed.')->group(function (): void {
+                Route::get('/', [EmployeeFeedController::class, 'index'])->name('index');
+                Route::post('{jobPost}/dismiss', [EmployeeFeedController::class, 'dismiss'])->name('dismiss');
+            });
+
+            // Notifications & Realtime SSE Stream
+            Route::prefix('notifications')->name('api.v1.employee.notifications.')->group(function (): void {
+                Route::get('/', [EmployeeNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [EmployeeNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [EmployeeNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [EmployeeNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [EmployeeNotificationController::class, 'destroy'])->name('destroy');
+            });
+
             // Job Applications
             Route::prefix('applications')->name('api.v1.employee.applications.')->group(function (): void {
                 Route::get('/', [ApplicationController::class, 'index'])->name('index');
+                Route::get('{application}/interview', [InterviewController::class, 'show'])->name('interview.show');
+            });
+
+            // Employee Notifications Workflow
+            Route::prefix('notifications')->name('api.v1.employee.notifications.')->group(function (): void {
+                Route::get('/', [EmployeeNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [EmployeeNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [EmployeeNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [EmployeeNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [EmployeeNotificationController::class, 'destroy'])->name('destroy');
+            });
+
+            // Saved Jobs Workflow
+            Route::prefix('saved-jobs')->name('api.v1.employee.saved-jobs.')->group(function (): void {
+                Route::get('/', [SavedJobController::class, 'index'])->name('index');
+                Route::get('ids', [SavedJobController::class, 'savedJobIds'])->name('ids');
+                Route::post('{jobPost}', [SavedJobController::class, 'store'])->name('store');
+                Route::delete('{jobPost}', [SavedJobController::class, 'destroy'])->name('destroy');
+                Route::post('{jobPost}/toggle', [SavedJobController::class, 'toggle'])->name('toggle');
             });
         });
 

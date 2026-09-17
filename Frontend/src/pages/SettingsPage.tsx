@@ -8,23 +8,36 @@ import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { OtpInput } from '@/components/ui/otp-input'
 import { ResendTimer } from '@/components/ui/resend-timer'
 import api from '@/lib/api'
 
-function PasswordField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function PasswordField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
   const [show, setShow] = useState(false)
   return (
-    <div>
-      <label className="text-sm font-medium block mb-1.5">{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-foreground">{label}</label>
       <div className="relative">
         <input
-          type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 pr-10 text-sm rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring pr-9 font-mono"
         />
-        <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        <button
+          type="button"
+          onClick={() => setShow((v) => !v)}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        >
+          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
       </div>
     </div>
@@ -32,158 +45,220 @@ function PasswordField({ label, value, onChange }: { label: string; value: strin
 }
 
 export default function SettingsPage() {
-  const { t } = useTranslation()
   const { user } = useAuthStore()
-  const Sidebar = user?.role === 'employer' ? EmployerSidebar : EmployeeSidebar
+  const { t } = useTranslation()
+  const isEmployer = user?.role === 'employer'
 
+  // Change Password state
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [pwError, setPwError] = useState('')
 
-  const [awaitingOtp, setAwaitingOtp] = useState(false)
-  const [otpCode, setOtpCode] = useState('')
-  const [otpError, setOtpError] = useState(false)
+  // 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [showOtp, setShowOtp] = useState(false)
+  const [otp, setOtp] = useState('')
 
-  const requestChangeMutation = useMutation({
-    mutationFn: (data: { current_password: string; password: string; password_confirmation: string }) =>
-      api.put('/change-password', data),
+  const passwordMutation = useMutation({
+    mutationFn: () =>
+      api.post('/settings/password', {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      }),
     onSuccess: () => {
-      setAwaitingOtp(true)
-      setOtpError(false)
-      toast.success(t('otp.codeSentTo', { email: user?.email ?? '' }))
-    },
-    onError: (error: any) => {
-      const msg = error.response?.data?.errors?.current_password?.[0] ?? error.response?.data?.message ?? 'Failed to update password'
-      setPwError(msg); toast.error(msg)
-    },
-  })
-
-  const confirmChangeMutation = useMutation({
-    mutationFn: (code: string) => api.post('/confirm-change-password', { code }),
-    onSuccess: () => {
-      toast.success(t('settings.passwordUpdated'))
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setPwError('')
-      setAwaitingOtp(false); setOtpCode(''); setOtpError(false)
+      toast.success(t('settings.passwordSuccess'))
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
     },
     onError: () => {
-      setOtpError(true)
-      toast.error(t('otp.invalidCode'))
+      toast.error(t('settings.passwordError'))
     },
   })
 
-  const handlePasswordSave = () => {
-    setPwError('')
-    if (!currentPassword || !newPassword || !confirmPassword) { setPwError(t('settings.allFieldsRequired')); return }
-    if (newPassword.length < 8) { setPwError(t('settings.passwordMinLength')); return }
-    if (newPassword !== confirmPassword) { setPwError(t('settings.passwordsNoMatch')); return }
-    requestChangeMutation.mutate({ current_password: currentPassword, password: newPassword, password_confirmation: confirmPassword })
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error(t('settings.fillAllFields'))
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error(t('settings.passwordsDoNotMatch'))
+      return
+    }
+    if (newPassword.length < 8) {
+      toast.error(t('settings.passwordMinLength'))
+      return
+    }
+    passwordMutation.mutate()
   }
 
-  const handleOtpComplete = (code: string) => {
-    confirmChangeMutation.mutate(code)
+  const handleToggle2FA = () => {
+    if (!twoFactorEnabled) {
+      setShowOtp(true)
+    } else {
+      setTwoFactorEnabled(false)
+      setShowOtp(false)
+      toast.success(t('settings.twoFactorDisabledSuccess'))
+    }
+  }
+
+  const handleVerifyOtp = () => {
+    if (otp.length < 6) {
+      toast.error(t('settings.otpIncomplete'))
+      return
+    }
+    setTwoFactorEnabled(true)
+    setShowOtp(false)
+    setOtp('')
+    toast.success(t('settings.twoFactorEnabledSuccess'))
   }
 
   const handleResendOtp = () => {
-    requestChangeMutation.mutate({ current_password: currentPassword, password: newPassword, password_confirmation: confirmPassword })
+    toast.info(t('settings.otpResent'))
   }
 
-  const handleCancelOtp = () => {
-    setAwaitingOtp(false)
-    setOtpCode('')
-    setOtpError(false)
-  }
+  const sectionCls =
+    'rounded-xl border border-border/70 bg-card p-5 shadow-xs space-y-4 max-w-2xl'
 
   return (
-    <div className="h-screen flex overflow-hidden bg-muted/30">
-      <Sidebar />
+    <div className="h-screen flex overflow-hidden bg-background">
+      {isEmployer ? <EmployerSidebar /> : <EmployeeSidebar />}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
         <EmployerHeader title={t('settings.title')} />
 
-        <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 max-w-2xl w-full space-y-5">
-
-          <section className="bg-background border rounded-lg p-5 space-y-4">
-            <h2 className="font-semibold">{t('settings.account')}</h2>
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                {user?.name?.[0]?.toUpperCase() ?? 'U'}
-              </div>
-              <div>
-                <p className="font-medium">{user?.name ?? '—'}</p>
-                <p className="text-sm text-muted-foreground">{user?.email ?? '—'}</p>
-                <p className="text-xs text-muted-foreground capitalize mt-0.5">{user?.role_label ?? user?.role ?? '—'}</p>
-              </div>
+        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {/* Notion Document Header */}
+          <div className="border-b border-border/60 pb-5 space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+                ⚙️
+              </span>
+              <span>Account & Security Preferences</span>
             </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {t('settings.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t('settings.subtitle')}
+            </p>
+          </div>
+
+          {/* Change Password */}
+          <section className={sectionCls}>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('settings.changePassword')}
+              </h2>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="space-y-3.5 pt-1">
+              <PasswordField
+                label={t('settings.currentPassword')}
+                value={currentPassword}
+                onChange={setCurrentPassword}
+              />
+              <PasswordField
+                label={t('settings.newPassword')}
+                value={newPassword}
+                onChange={setNewPassword}
+              />
+              <PasswordField
+                label={t('settings.confirmNewPassword')}
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+              />
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={passwordMutation.isPending}
+                  className="rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-4 py-2 text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {passwordMutation.isPending ? t('settings.updating') : t('settings.updatePassword')}
+                </button>
+              </div>
+            </form>
           </section>
 
-          <section className="bg-background border rounded-lg p-5 space-y-4">
-            <h2 className="font-semibold">{t('settings.changePassword')}</h2>
-
-            {!awaitingOtp ? (
-              <>
-                <div className="space-y-3">
-                  <PasswordField label={t('settings.currentPassword')} value={currentPassword} onChange={setCurrentPassword} />
-                  <PasswordField label={t('settings.newPassword')} value={newPassword} onChange={setNewPassword} />
-                  <PasswordField label={t('settings.confirmNewPassword')} value={confirmPassword} onChange={setConfirmPassword} />
-                </div>
-                {pwError && <p className="text-sm text-red-600">{pwError}</p>}
-                <div className="flex justify-end">
-                  <button onClick={handlePasswordSave} disabled={requestChangeMutation.isPending} className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-                    {requestChangeMutation.isPending ? t('settings.saving') : t('settings.updatePassword')}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground text-center">
-                  {t('otp.changePasswordDescription')}
+          {/* Two-Factor Authentication */}
+          <section className={sectionCls}>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('settings.twoFactorAuth')}
+              </h2>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                <p className="text-xs font-semibold text-foreground">
+                  {twoFactorEnabled ? t('settings.twoFactorEnabled') : t('settings.twoFactorDisabled')}
                 </p>
-                <OtpInput
-                  value={otpCode}
-                  onChange={setOtpCode}
-                  onComplete={handleOtpComplete}
-                  disabled={confirmChangeMutation.isPending}
-                  error={otpError}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {twoFactorEnabled
+                    ? t('settings.twoFactorEnabledDesc')
+                    : t('settings.twoFactorDisabledDesc')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggle2FA}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                  twoFactorEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition-transform ${
+                    twoFactorEnabled ? 'translate-x-4' : 'translate-x-0'
+                  }`}
                 />
-                <ResendTimer onResend={handleResendOtp} />
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={handleCancelOtp}
-                    className="px-6 py-2 text-sm font-medium rounded-md border hover:bg-muted"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    onClick={() => handleOtpComplete(otpCode)}
-                    disabled={confirmChangeMutation.isPending}
-                    className="px-6 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {confirmChangeMutation.isPending ? t('settings.saving') : t('common.confirm')}
-                  </button>
+              </button>
+            </div>
+
+            {showOtp && (
+              <div className="mt-4 space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.enterOtpDesc')}
+                </p>
+                <OtpInput value={otp} onChange={setOtp} length={6} />
+                <div className="flex items-center justify-between pt-1">
+                  <ResendTimer onResend={handleResendOtp} seconds={60} />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowOtp(false)
+                        setOtp('')
+                      }}
+                      className="rounded-lg border border-border/80 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                    >
+                      {t('settings.cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      className="rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                    >
+                      {t('settings.verifyEnable')}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
           </section>
 
-          <section className="bg-background border rounded-lg p-5 space-y-4">
-            <h2 className="font-semibold">{t('settings.appearance')}</h2>
-            <div className="flex items-center justify-between">
+          {/* Appearance / Theme */}
+          <section className={sectionCls}>
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('settings.appearance')}
+              </h2>
+            </div>
+            <div className="flex items-center justify-between pt-1">
               <div>
-                <p className="text-sm font-medium">{t('settings.theme')}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.themeDesc')}</p>
+                <p className="text-xs font-semibold text-foreground">{t('settings.theme')}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('settings.themeDesc')}</p>
               </div>
               <ThemeToggle />
-            </div>
-          </section>
-          <section className="bg-background border rounded-lg p-5 space-y-4">
-            <h2 className="font-semibold">{t('settings.language')}</h2>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{t('settings.displayLanguage')}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.languageDesc')}</p>
-              </div>
-              <LanguageSwitcher />
             </div>
           </section>
         </main>

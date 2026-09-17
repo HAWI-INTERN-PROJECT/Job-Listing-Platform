@@ -1,331 +1,305 @@
-
-import { useMemo, useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Download,
-  MoreHorizontal,
   Search,
   X,
+  Loader2,
+  Inbox,
+  Clock,
+  Star,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { ScheduleInterviewModal } from '@/components/interview/ScheduleInterviewModal'
+import { InterviewDetailsModal } from '@/components/interview/InterviewDetailsModal'
+import type { InterviewItem } from '@/types'
+import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
-
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import api from '@/lib/api'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
-type Applicant = {
+export type ApplicationStatusType =
+  | 'submitted'
+  | 'under_review'
+  | 'shortlisted'
+  | 'rejected'
+  | 'hired'
+
+export interface ApplicantUser {
   id: number
   name: string
-  job: string
-  date: string
-  dateValue: string
-  experience: string
-  status: string
-  cv: string
+  email: string
 }
 
-const initialApplicants: Applicant[] = [
-  {
-    id: 1,
-    name: 'Alex Rivers',
-    job: 'Senior React Developer',
-    date: 'Aug 12, 2026',
-    dateValue: '2026-08-12',
-    experience: '3 years',
-    status: 'Under Review',
-    cv: 'Alex-Rivers-CV.pdf',
-  },
-  {
-    id: 2,
-    name: 'Sara Johnson',
-    job: 'Senior React Developer',
-    date: 'Aug 11, 2026',
-    dateValue: '2026-08-11',
-    experience: '2 years',
-    status: 'Submitted',
-    cv: 'Sara-Johnson-CV.pdf',
-  },
-  {
-    id: 3,
-    name: 'Daniel Smith',
-    job: 'Senior React Developer',
-    date: 'Aug 10, 2026',
-    dateValue: '2026-08-10',
-    experience: '4 years',
-    status: 'Shortlisted',
-    cv: 'Daniel-Smith-CV.pdf',
-  },
-  {
-    id: 4,
-    name: 'Emily Brown',
-    job: 'UI/UX Designer',
-    date: 'Aug 9, 2026',
-    dateValue: '2026-08-09',
-    experience: '5 years',
-    status: 'Submitted',
-    cv: 'Emily-Brown-CV.pdf',
-  },
-  {
-    id: 5,
-    name: 'Michael Green',
-    job: 'UI/UX Designer',
-    date: 'Aug 8, 2026',
-    dateValue: '2026-08-08',
-    experience: '3 years',
-    status: 'Under Review',
-    cv: 'Michael-Green-CV.pdf',
-  },
-  {
-    id: 6,
-    name: 'Sophia Williams',
-    job: 'Marketing Manager',
-    date: 'Aug 7, 2026',
-    dateValue: '2026-08-07',
-    experience: '6 years',
-    status: 'Shortlisted',
-    cv: 'Sophia-Williams-CV.pdf',
-  },
-]
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    Submitted: 'bg-blue-100 text-blue-700',
-    'Under Review': 'bg-yellow-100 text-yellow-700',
-    Shortlisted: 'bg-green-100 text-green-700',
-    Rejected: 'bg-red-100 text-red-700',
-    Hired: 'bg-purple-100 text-purple-700',
+export interface ApplicationItem {
+  id: number
+  status: ApplicationStatusType
+  status_label?: string
+  created_at: string
+  cover_letter?: string | null
+  applicant?: ApplicantUser
+  user?: ApplicantUser
+  job_post?: {
+    id: number
+    title: string
   }
+  interview?: InterviewItem | null
+}
 
-  return (
-    <span
-      className={`rounded-full px-3 py-1 text-xs font-medium ${
-        styles[status] ?? 'bg-muted text-muted-foreground'
-      }`}
-    >
-      {status}
-    </span>
-  )
+export interface EmployerJob {
+  id: number
+  title: string
+  status: string
+  applications_count: number
+}
+
+interface StatusCounts {
+  submitted?: number
+  under_review?: number
+  shortlisted?: number
+  rejected?: number
+  hired?: number
+  all?: number
+}
+
+const statusConfig: Record<
+  ApplicationStatusType,
+  { label: string; badgeClass: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  submitted: {
+    label: 'Submitted',
+    badgeClass: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
+    icon: Inbox,
+  },
+  under_review: {
+    label: 'Under Review',
+    badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+    icon: Clock,
+  },
+  shortlisted: {
+    label: 'Shortlisted',
+    badgeClass: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20',
+    icon: Star,
+  },
+  rejected: {
+    label: 'Rejected',
+    badgeClass: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
+    icon: XCircle,
+  },
+  hired: {
+    label: 'Hired',
+    badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+    icon: CheckCircle2,
+  },
 }
 
 export default function JobApplicantsPage() {
-  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialJobId = searchParams.get('jobId')
 
-  const [applicants, setApplicants] =
-    useState<Applicant[]>(initialApplicants)
+  const [jobs, setJobs] = useState<EmployerJob[]>([])
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(
+    initialJobId ? Number(initialJobId) : null,
+  )
 
-  const [selectedJob, setSelectedJob] =
-    useState('Senior React Developer')
+  const [applicants, setApplicants] = useState<ApplicationItem[]>([])
+  const [counts, setCounts] = useState<StatusCounts | null>(null)
+  const [isLoadingJobs, setIsLoadingJobs] = useState(true)
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(false)
 
+  // Filters & Pagination
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All Statuses')
-  const [jobFilter, setJobFilter] = useState('All Jobs')
-  const [dateFilter, setDateFilter] = useState('')
-
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalApplicants, setTotalApplicants] = useState(0)
 
-  const [openMenu, setOpenMenu] =
-    useState<number | null>(null)
+  // Modal for quick status change
+  const [updatingApp, setUpdatingApp] = useState<ApplicationItem | null>(null)
+  const [schedulingApp, setSchedulingApp] = useState<ApplicationItem | null>(null)
+  const [viewingInterviewApp, setViewingInterviewApp] = useState<ApplicationItem | null>(null)
+  const [newStatus, setNewStatus] = useState<ApplicationStatusType>('submitted')
+  const [isUpdating, setIsUpdating] = useState(false)
 
-  const itemsPerPage = 3
+  // Fetch employer's jobs for the dropdown
+  useEffect(() => {
+    let mounted = true
 
-  const filteredApplicants = useMemo(() => {
-    return applicants.filter((applicant) => {
-      const matchesSearch =
-        applicant.name
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        applicant.job
-          .toLowerCase()
-          .includes(search.toLowerCase())
+    const fetchJobs = async () => {
+      try {
+        setIsLoadingJobs(true)
+        const res = await api.get('/employer/jobs')
+        const jobList: EmployerJob[] = res.data?.data?.data || res.data?.data || []
+        if (mounted) {
+          setJobs(jobList)
+          if (jobList.length > 0) {
+            const targetId = initialJobId ? Number(initialJobId) : jobList[0].id
+            const exists = jobList.some((j) => j.id === targetId)
+            setSelectedJobId(exists ? targetId : jobList[0].id)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load employer jobs:', err)
+        toast.error('Failed to load job listings.')
+      } finally {
+        if (mounted) setIsLoadingJobs(false)
+      }
+    }
 
-      const matchesStatus =
-        statusFilter === 'All Statuses' ||
-        applicant.status === statusFilter
+    fetchJobs()
 
-      const matchesJob =
-        jobFilter === 'All Jobs' ||
-        applicant.job === jobFilter
+    return () => {
+      mounted = false
+    }
+  }, [initialJobId])
 
-      const matchesDate =
-        dateFilter === '' ||
-        applicant.dateValue === dateFilter
+  // Fetch applicants for the selected job
+  const fetchApplicants = useCallback(
+    async (jobId: number, page: number, status: string, query: string) => {
+      try {
+        setIsLoadingApplicants(true)
+        const params: Record<string, string | number> = {
+          page,
+          per_page: 10,
+        }
+        if (status !== 'all') {
+          params.status = status
+        }
+        if (query.trim()) {
+          params.search = query.trim()
+        }
 
-      const matchesSelectedJob =
-        selectedJob === 'All Jobs' ||
-        applicant.job === selectedJob
+        const res = await api.get(`/employer/jobs/${jobId}/applicants`, { params })
+        const paginatedData = res.data?.data?.data ?? res.data?.data ?? []
+        const meta = res.data?.data?.meta ?? res.data?.data ?? {}
+        const serverCounts: StatusCounts | undefined = res.data?.data?.counts
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesJob &&
-        matchesDate &&
-        matchesSelectedJob
+        setApplicants(paginatedData)
+        setCurrentPage(meta.current_page || 1)
+        setTotalPages(meta.last_page || 1)
+        setTotalApplicants(meta.total || paginatedData.length)
+
+        if (serverCounts) {
+          setCounts(serverCounts)
+        }
+      } catch (err) {
+        console.error('Failed to load applicants:', err)
+        toast.error('Failed to load applicants for this job post.')
+        setApplicants([])
+      } finally {
+        setIsLoadingApplicants(false)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (selectedJobId) {
+      fetchApplicants(selectedJobId, currentPage, statusFilter, search)
+    }
+  }, [selectedJobId, currentPage, statusFilter, search, fetchApplicants])
+
+  // Wire into global refresh button
+  usePageRefresh(() => {
+    if (selectedJobId) {
+      fetchApplicants(selectedJobId, currentPage, statusFilter, search)
+    }
+  })
+
+  const handleSelectedJobChange = (jobId: number) => {
+    setSelectedJobId(jobId)
+    setCurrentPage(1)
+    setSearchParams({ jobId: String(jobId) })
+  }
+
+  const handleDownloadCV = async (applicant: ApplicationItem) => {
+    try {
+      toast.info('Downloading applicant CV...')
+      const response = await api.get(`/employer/applications/${applicant.id}/cv`, {
+        responseType: 'blob',
+      })
+
+      const contentType = response.headers['content-type']
+      const blob = new Blob([response.data], {
+        type: typeof contentType === 'string' ? contentType : 'application/pdf',
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `CV-${applicant.user?.name || applicant.applicant?.name || 'Applicant'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success('CV downloaded successfully!')
+    } catch {
+      toast.error('Applicant has not uploaded a CV document yet.')
+    }
+  }
+
+  const handleStatusUpdate = async () => {
+    if (!updatingApp) return
+
+    try {
+      setIsUpdating(true)
+      const res = await api.put(`/employer/applications/${updatingApp.id}/status`, {
+        status: newStatus,
+      })
+
+      const updatedPayload = res.data?.data || res.data
+      toast.success(`Application status updated to ${statusConfig[newStatus]?.label || newStatus}!`)
+
+      setApplicants((prev) =>
+        prev.map((app) =>
+          app.id === updatingApp.id
+            ? {
+                ...app,
+                status: newStatus,
+                status_label: statusConfig[newStatus]?.label || newStatus,
+                interview: updatedPayload.interview !== undefined ? updatedPayload.interview : app.interview,
+              }
+            : app,
+        ),
       )
-    })
-  }, [
-    applicants,
-    search,
-    statusFilter,
-    jobFilter,
-    dateFilter,
-    selectedJob,
-  ])
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredApplicants.length / itemsPerPage),
-  )
-
-  const startIndex = (currentPage - 1) * itemsPerPage
-
-  const visibleApplicants = filteredApplicants.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  )
-
-  function resetPage() {
-    setCurrentPage(1)
+      if (selectedJobId) {
+        fetchApplicants(selectedJobId, currentPage, statusFilter, search)
+      }
+      setUpdatingApp(null)
+    } catch (err: unknown) {
+      console.error('Failed to update status:', err)
+      const errorObj = err as {
+        response?: {
+          data?: {
+            message?: string
+            error?: string
+            errors?: Record<string, string[]>
+          }
+        }
+        message?: string
+      }
+      const data = errorObj.response?.data
+      let message = data?.message || data?.error || errorObj.message
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0]
+        if (firstKey && data.errors[firstKey]?.[0]) {
+          message = data.errors[firstKey][0]
+        }
+      }
+      toast.error(message || 'Failed to update application status. Please check and retry.')
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
-  function handleSearch(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    setSearch(event.target.value)
-    resetPage()
-  }
-
-  function handleStatusFilter(
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) {
-    setStatusFilter(event.target.value)
-    resetPage()
-  }
-
-  function handleJobFilter(
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) {
-    setJobFilter(event.target.value)
-    resetPage()
-  }
-
-  function handleDateFilter(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    setDateFilter(event.target.value)
-    resetPage()
-  }
-
-  function handleSelectedJob(
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) {
-    setSelectedJob(event.target.value)
-    resetPage()
-  }
-
-  function handlePrevious() {
-    setCurrentPage((page) => Math.max(page - 1, 1))
-  }
-
-  function handleNext() {
-    setCurrentPage((page) =>
-      Math.min(page + 1, totalPages),
-    )
-  }
-
-  function handlePageChange(page: number) {
-    setCurrentPage(page)
-  }
-
-  function handleDownloadCV(applicant: Applicant) {
-    const cvContent = `
-${applicant.name}
-
-Applied Position: ${applicant.job}
-Experience: ${applicant.experience}
-
-This is a sample CV file for demonstration purposes.
-    `
-
-    const blob = new Blob([cvContent], {
-      type: 'text/plain',
-    })
-
-    const url = URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.download = applicant.cv.replace('.pdf', '.txt')
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    URL.revokeObjectURL(url)
-  }
-
-  function updateApplicantStatus(
-    applicantId: number,
-    status: string,
-  ) {
-    setApplicants((currentApplicants) =>
-      currentApplicants.map((applicant) =>
-        applicant.id === applicantId
-          ? { ...applicant, status }
-          : applicant,
-      ),
-    )
-
-    setOpenMenu(null)
-  }
-
-  function handleViewProfile(applicantId: number) {
-    setOpenMenu(null)
-
-    navigate(`/applicant-details?id=${applicantId}`)
-  }
-
-  function clearFilters() {
-    setSearch('')
-    setStatusFilter('All Statuses')
-    setJobFilter('All Jobs')
-    setDateFilter('')
-    setSelectedJob('All Jobs')
-    setCurrentPage(1)
-  }
-
-  const selectedJobApplicants =
-    selectedJob === 'All Jobs'
-      ? applicants
-      : applicants.filter(
-          (applicant) => applicant.job === selectedJob,
-        )
-
-  const totalApplicants =
-    selectedJobApplicants.length
-
-  const submittedCount =
-    selectedJobApplicants.filter(
-      (applicant) => applicant.status === 'Submitted',
-    ).length
-
-  const underReviewCount =
-    selectedJobApplicants.filter(
-      (applicant) =>
-        applicant.status === 'Under Review',
-    ).length
-
-  const shortlistedCount =
-    selectedJobApplicants.filter(
-      (applicant) =>
-        applicant.status === 'Shortlisted',
-    ).length
+  const selectedJob = jobs.find((j) => j.id === selectedJobId)
 
   return (
     <div className="h-screen flex overflow-hidden bg-muted/40">
@@ -337,417 +311,378 @@ This is a sample CV file for demonstration purposes.
         {/* Header */}
         <EmployerHeader title="Job Applicants" />
 
-        {/* Content */}
-        <main className="px-4 py-6 sm:px-6 lg:px-8">
-          {/* Page heading */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Job Applicants
-            </h1>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              Review and manage applications received for your job posts.
-            </p>
-          </div>
-
-          {/* Job selector */}
-          <Card>
-            <CardContent className="p-4">
+        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {/* Notion Document Header */}
+          <div className="border-b border-border/60 pb-5 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+                👥
+              </span>
+              <span>Hiring Pipeline / Applicant Tracking Directory</span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <label className="text-sm font-medium">
-                  Select Job
-                </label>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Candidate Applications
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Review applicant profiles, download attached CVs, and advance candidates through hiring stages.
+                </p>
+              </div>
 
+              {/* Job Selector Dropdown */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Filter by Position:</span>
                 <select
-                  value={selectedJob}
-                  onChange={handleSelectedJob}
-                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm sm:w-80"
+                  value={selectedJobId || ''}
+                  onChange={(e) => handleSelectedJobChange(Number(e.target.value))}
+                  disabled={isLoadingJobs || jobs.length === 0}
+                  className="rounded-lg border border-border/80 bg-muted/30 px-3 py-1.5 text-xs text-foreground font-medium outline-none focus:ring-1 focus:ring-ring max-w-xs"
                 >
-                  <option>All Jobs</option>
-                  <option>Senior React Developer</option>
-                  <option>UI/UX Designer</option>
-                  <option>Marketing Manager</option>
+                  {jobs.map((job) => (
+                    <option key={job.id} value={job.id}>
+                      {job.title} ({job.applications_count || 0})
+                    </option>
+                  ))}
+                  {jobs.length === 0 && <option>No job posts available</option>}
                 </select>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Summary cards */}
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">
-                  Total Applicants
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {totalApplicants}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">
-                  Submitted
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {submittedCount}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">
-                  Under Review
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {underReviewCount}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">
-                  Shortlisted
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {shortlistedCount}
-                </p>
-              </CardContent>
-            </Card>
+            </div>
           </div>
 
-          {/* Filters */}
-          <Card className="mt-5">
-            <CardContent className="p-4">
-              <div className="grid gap-3 md:grid-cols-4">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                  <Input
-                    value={search}
-                    onChange={handleSearch}
-                    className="pl-9"
-                    placeholder="Search applicant"
-                  />
+          {/* Metric Status Chips */}
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            {(
+              [
+                ['all', 'Total Applicants', counts?.all ?? totalApplicants, Inbox, 'text-foreground'],
+                ['submitted', 'Submitted', counts?.submitted ?? 0, Inbox, 'text-blue-600 dark:text-blue-400'],
+                ['under_review', 'Under Review', counts?.under_review ?? 0, Clock, 'text-amber-600 dark:text-amber-400'],
+                ['shortlisted', 'Shortlisted', counts?.shortlisted ?? 0, Star, 'text-purple-600 dark:text-purple-400'],
+                ['hired', 'Hired', counts?.hired ?? 0, CheckCircle2, 'text-emerald-600 dark:text-emerald-400'],
+              ] as const
+            ).map(([key, label, count, IconComponent, colorCls]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(key)
+                  setCurrentPage(1)
+                }}
+                className={`flex flex-col items-start p-3.5 rounded-xl border transition-all text-left shadow-2xs ${
+                  statusFilter === key
+                    ? 'border-foreground/30 bg-muted/40 ring-1 ring-ring/40'
+                    : 'border-border/70 bg-card hover:bg-muted/20'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <span className="text-xs text-muted-foreground font-medium">{label}</span>
+                  <IconComponent className={`h-3.5 w-3.5 ${colorCls}`} />
                 </div>
+                <span className={`text-xl font-bold font-mono ${colorCls}`}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
 
-                {/* Status */}
-                <select
-                  value={statusFilter}
-                  onChange={handleStatusFilter}
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
-                >
-                  <option>All Statuses</option>
-                  <option>Submitted</option>
-                  <option>Under Review</option>
-                  <option>Shortlisted</option>
-                  <option>Rejected</option>
-                  <option>Hired</option>
-                </select>
+          {/* Search bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-card shadow-xs">
+            <div className="relative flex-1 w-full max-w-md">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search candidate name or email..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full rounded-lg border border-border/80 bg-muted/30 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
 
-                {/* Job */}
-                <select
-                  value={jobFilter}
-                  onChange={handleJobFilter}
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
-                >
-                  <option>All Jobs</option>
-                  <option>Senior React Developer</option>
-                  <option>UI/UX Designer</option>
-                  <option>Marketing Manager</option>
-                </select>
+            <div className="text-xs text-muted-foreground">
+              Showing applicants for <span className="font-semibold text-foreground">{selectedJob?.title || 'Selected Job'}</span>
+            </div>
+          </div>
 
-                {/* Date */}
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={dateFilter}
-                    onChange={handleDateFilter}
-                  />
+          {/* Applicants Table */}
+          <div className="rounded-xl border border-border/70 bg-card shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                    <th className="px-5 py-3">Candidate</th>
+                    <th className="px-5 py-3">Applied On</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={clearFilters}
-                    title="Clear filters"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Applicants table */}
-          <Card className="mt-5">
-            <CardHeader>
-              <CardTitle>
-                Applicants
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/30 text-left">
-                      <th className="px-6 py-3 font-medium">
-                        Applicant
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Job
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Applied Date
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Experience
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        CV
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Status
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Actions
-                      </th>
+                <tbody className="divide-y divide-border/50">
+                  {isLoadingApplicants ? (
+                    <tr>
+                      <td colSpan={4} className="px-5 py-10 text-center text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <span>Loading applicant submissions...</span>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
+                  ) : applicants.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-5 py-12 text-center text-muted-foreground">
+                        <Inbox className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm font-semibold text-foreground">No candidate applications found</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {statusFilter !== 'all'
+                            ? `No applicants marked as "${statusFilter}". Try selecting "Total Applicants".`
+                            : 'This job posting currently has no applicant submissions.'}
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    applicants.map((app) => {
+                      const candidateName = app.user?.name || app.applicant?.name || 'Applicant'
+                      const candidateEmail = app.user?.email || app.applicant?.email || 'N/A'
+                      const config = statusConfig[app.status] || statusConfig.submitted
 
-                  <tbody>
-                    {visibleApplicants.length > 0 ? (
-                      visibleApplicants.map(
-                        (applicant) => (
-                          <tr
-                            key={applicant.id}
-                            className="border-b last:border-0 hover:bg-muted/20"
-                          >
-                            {/* Applicant */}
-                            <td className="px-6 py-4">
-                              <Link
-                                to={`/applicant-details?id=${applicant.id}`}
-                                className="font-medium text-primary hover:underline"
-                              >
-                                {applicant.name}
-                              </Link>
-                            </td>
+                      return (
+                        <tr key={app.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <div className="font-medium text-foreground">{candidateName}</div>
+                            <div className="text-[11px] text-muted-foreground">{candidateEmail}</div>
+                          </td>
 
-                            {/* Job */}
-                            <td className="px-6 py-4">
-                              {applicant.job}
-                            </td>
+                          <td className="px-5 py-3.5 text-muted-foreground">
+                            {app.created_at ? new Date(app.created_at).toLocaleDateString() : 'Recent'}
+                          </td>
 
-                            {/* Date */}
-                            <td className="px-6 py-4">
-                              {applicant.date}
-                            </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize ${config.badgeClass}`}>
+                              <config.icon className="h-3 w-3" />
+                              {app.status_label || config.label}
+                            </span>
+                          </td>
 
-                            {/* Experience */}
-                            <td className="px-6 py-4">
-                              {applicant.experience}
-                            </td>
-
-                            {/* CV */}
-                            <td className="px-6 py-4">
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() =>
-                                  handleDownloadCV(applicant)
-                                }
+                                onClick={() => handleDownloadCV(app)}
+                                className="h-7 px-2 text-xs"
+                                title="Download CV"
                               >
-                                <Download className="mr-2 h-4 w-4" />
+                                <Download className="h-3.5 w-3.5 mr-1" />
                                 CV
                               </Button>
-                            </td>
 
-                            {/* Status */}
-                            <td className="px-6 py-4">
-                              <StatusBadge
-                                status={applicant.status}
-                              />
-                            </td>
-
-                            {/* Actions */}
-                            <td className="relative px-6 py-4">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() =>
-                                  setOpenMenu(
-                                    openMenu === applicant.id
-                                      ? null
-                                      : applicant.id,
-                                  )
-                                }
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-
-                              {openMenu === applicant.id && (
-                                <div className="absolute right-6 top-14 z-20 w-48 rounded-md border bg-background p-1 shadow-lg">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleViewProfile(
-                                        applicant.id,
-                                      )
-                                    }
-                                    className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted"
-                                  >
-                                    View Profile
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateApplicantStatus(
-                                        applicant.id,
-                                        'Under Review',
-                                      )
-                                    }
-                                    className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted"
-                                  >
-                                    Mark Under Review
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateApplicantStatus(
-                                        applicant.id,
-                                        'Shortlisted',
-                                      )
-                                    }
-                                    className="w-full rounded px-3 py-2 text-left text-sm hover:bg-muted"
-                                  >
-                                    Shortlist
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateApplicantStatus(
-                                        applicant.id,
-                                        'Rejected',
-                                      )
-                                    }
-                                    className="w-full rounded px-3 py-2 text-left text-sm text-red-600 hover:bg-muted"
-                                  >
-                                    Reject
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateApplicantStatus(
-                                        applicant.id,
-                                        'Hired',
-                                      )
-                                    }
-                                    className="w-full rounded px-3 py-2 text-left text-sm text-green-600 hover:bg-muted"
-                                  >
-                                    Hire Applicant
-                                  </button>
-                                </div>
+                              {app.interview ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setViewingInterviewApp(app)}
+                                  className="h-7 px-2 text-xs border-border text-foreground hover:bg-muted bg-background shadow-2xs font-medium"
+                                  title="View Interview Details"
+                                >
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-foreground" />
+                                  Interview
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSchedulingApp(app)}
+                                  className="h-7 px-2 text-xs border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
+                                  title="Schedule Candidate Interview"
+                                >
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                                  Schedule
+                                </Button>
                               )}
-                            </td>
-                          </tr>
-                        ),
+
+                              <Link to={`/applicant-details?id=${app.id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                  title="View Details"
+                                >
+                                  Details
+                                </Button>
+                              </Link>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setUpdatingApp(app)
+                                  setNewStatus(app.status)
+                                }}
+                                className="h-7 px-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+                                title="Update Status"
+                              >
+                                Stage
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       )
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="px-6 py-12 text-center text-muted-foreground"
-                        >
-                          No applicants found matching your filters.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between py-2 text-xs">
+              <p className="text-muted-foreground">
+                Showing page <span className="font-semibold text-foreground">{currentPage}</span> of{' '}
+                <span className="font-semibold text-foreground">{totalPages}</span>
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  className="h-7 px-2 text-xs rounded-lg"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  className="h-7 px-2 text-xs rounded-lg"
+                >
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
               </div>
-
-              {/* Pagination */}
-              <div className="flex flex-col gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Showing{' '}
-                  {filteredApplicants.length === 0
-                    ? 0
-                    : startIndex + 1}
-                  –
-                  {Math.min(
-                    startIndex + itemsPerPage,
-                    filteredApplicants.length,
-                  )}{' '}
-                  of {filteredApplicants.length} applicants
-                </p>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrevious}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-
-                  {Array.from(
-                    { length: totalPages },
-                    (_, index) => index + 1,
-                  ).map((page) => (
-                    <Button
-                      key={page}
-                      variant={
-                        currentPage === page
-                          ? 'default'
-                          : 'outline'
-                      }
-                      size="sm"
-                      onClick={() =>
-                        handlePageChange(page)
-                      }
-                    >
-                      {page}
-                    </Button>
-                  ))}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNext}
-                    disabled={
-                      currentPage === totalPages
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </main>
       </div>
+
+      {/* Interview Scheduling Modal */}
+      {schedulingApp && (
+        <ScheduleInterviewModal
+          isOpen={!!schedulingApp}
+          onClose={() => setSchedulingApp(null)}
+          applicationId={schedulingApp.id}
+          candidateName={schedulingApp.user?.name || schedulingApp.applicant?.name}
+          jobTitle={schedulingApp.job_post?.title || selectedJob?.title}
+          existingInterview={schedulingApp.interview}
+          onSuccess={(interview) => {
+            setApplicants((prev) =>
+              prev.map((item) =>
+                item.id === schedulingApp.id
+                  ? { ...item, status: 'shortlisted', status_label: 'Shortlisted', interview }
+                  : item
+              )
+            )
+            toast.success('Interview scheduled successfully! Candidate notified.')
+          }}
+        />
+      )}
+
+      {/* Interview Details Modal */}
+      {viewingInterviewApp?.interview && (
+        <InterviewDetailsModal
+          isOpen={!!viewingInterviewApp}
+          onClose={() => setViewingInterviewApp(null)}
+          interview={viewingInterviewApp.interview}
+          companyName={selectedJob?.title}
+          jobTitle={viewingInterviewApp.job_post?.title || selectedJob?.title}
+        />
+      )}
+
+      {/* Stage Change Modal */}
+      {updatingApp && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-xl max-w-sm w-full p-5 shadow-2xl border border-border space-y-4 text-foreground">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <h3 className="text-sm font-bold text-foreground">Update Applicant Stage</h3>
+              <button
+                onClick={() => setUpdatingApp(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-muted-foreground">
+                Candidate: <strong className="text-foreground">{updatingApp.user?.name || updatingApp.applicant?.name || 'Applicant'}</strong>
+              </p>
+
+              {updatingApp.interview && (
+                <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Active Interview Scheduled</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {new Date(updatingApp.interview.scheduled_at).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}{' '}
+                    ({updatingApp.interview.duration_minutes} mins).
+                    {newStatus === 'rejected' && ' Changing status to Rejected will cancel this scheduled interview.'}
+                    {newStatus === 'hired' && ' Changing status to Hired will mark this interview completed.'}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="font-medium text-foreground">Select New Stage:</label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as ApplicationStatusType)}
+                  className="w-full rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="submitted">Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="shortlisted">Shortlisted</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="hired">Hired</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setUpdatingApp(null)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+
+              <Button
+                size="sm"
+                disabled={isUpdating}
+                onClick={handleStatusUpdate}
+                className="h-8 text-xs bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90"
+              >
+                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                Save Stage
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

@@ -65,6 +65,7 @@ class ApplicationResource extends JsonResource
                 ApplicationStatus::REJECTED => 'Rejected',
                 ApplicationStatus::HIRED => 'Hired',
             },
+            'interview' => $this->interview ? new InterviewResource($this->interview) : null,
             'created_at' => $this->created_at?->toDateTimeString(),
             'updated_at' => $this->updated_at?->toDateTimeString(),
         ];

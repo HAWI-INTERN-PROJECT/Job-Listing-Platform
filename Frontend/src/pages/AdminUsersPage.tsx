@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '@/lib/api'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 interface EmployerInfo {
   id: number
@@ -113,6 +114,11 @@ export default function AdminUsersPage() {
     fetchUsers(currentPage, activeFilter, searchQuery)
   }, [currentPage, activeFilter, searchQuery, fetchUsers])
 
+  // Wire into global refresh button
+  usePageRefresh(() => {
+    fetchUsers(currentPage, activeFilter, searchQuery)
+  })
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
@@ -188,48 +194,58 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Search */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">User Management</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage registered accounts, roles, and status suspensions across the platform ({totalUsers} total)
-          </p>
+      {/* Notion Document Header */}
+      <div className="border-b border-border/60 pb-5 space-y-1.5">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+          <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
+            👥
+          </span>
+          <span>User Management / Directory & Access Control</span>
         </div>
-
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by name, email, username..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border rounded-lg outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-            />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              User Management
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Manage registered accounts, roles, and status suspensions across the platform ({totalUsers} total).
+            </p>
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            Search
-          </button>
-        </form>
+
+          {/* Search Bar */}
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+              <input
+                type="text"
+                placeholder="Search name, email, username..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-card border border-border/80 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-3.5 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              Search
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-200">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border/60">
         {FILTERS.map((f) => {
           const isActive = activeFilter === f.id
           return (
             <button
               key={f.id}
               onClick={() => handleFilterChange(f.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
                 isActive
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border'
+                  ? "bg-muted text-foreground font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               }`}
             >
               {f.label}
@@ -240,109 +256,109 @@ export default function AdminUsersPage() {
 
       {/* Error Notice */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700">
-          <AlertCircle size={20} />
-          <span className="text-sm font-medium">{error}</span>
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3 text-rose-700 dark:text-rose-400 text-sm font-medium">
+          <AlertCircle size={18} className="flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+      <div className="bg-card border border-border/70 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b bg-slate-50/70 text-slate-500 font-medium">
-                <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Email</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Joined</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+              <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <th className="px-5 py-3">User</th>
+                <th className="px-5 py-3">Email</th>
+                <th className="px-5 py-3">Role</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Joined</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="animate-spin text-blue-600" size={24} />
-                      <p className="text-sm font-medium">Loading user accounts...</p>
+                      <Loader2 className="animate-spin text-muted-foreground" size={20} />
+                      <p className="text-xs font-medium">Loading user accounts...</p>
                     </div>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    <p className="text-base font-semibold text-slate-700">No users found</p>
-                    <p className="text-sm mt-1">Try selecting a different filter tab or search term.</p>
+                  <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
+                    <p className="text-sm font-semibold text-foreground">No users found</p>
+                    <p className="text-xs mt-1">Try selecting a different filter tab or search term.</p>
                   </td>
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50/70 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 border">
+                  <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-foreground border border-border/60">
                           {u.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">{u.name}</p>
-                          <p className="text-xs text-slate-400">@{u.username}</p>
+                          <p className="font-semibold text-foreground">{u.name}</p>
+                          <p className="text-[10px] text-muted-foreground">@{u.username}</p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600 font-medium">{u.email}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground font-medium">{u.email}</td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadge(
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${getRoleBadge(
                           u.role
                         )}`}
                       >
                         {u.role_label || u.role}
                       </span>
                       {u.employer && (
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                          <Building2 size={12} /> {u.employer.company_name}
+                        <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                          <Building2 size={11} /> {u.employer.company_name}
                         </p>
                       )}
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${
                           u.is_suspended
-                            ? 'bg-red-100 text-red-700 border-red-200'
-                            : 'bg-green-100 text-green-700 border-green-200'
+                            ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                         }`}
                       >
-                        {u.is_suspended ? 'Suspended' : 'Active'}
+                        {u.is_suspended ? "Suspended" : "Active"}
                       </span>
                     </td>
 
-                    <td className="px-6 py-4 text-slate-500">{formatDate(u.created_at)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{formatDate(u.created_at)}</td>
 
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         {/* Toggle Suspension */}
                         {u.is_suspended ? (
                           <button
                             onClick={() => handleToggleSuspend(u)}
                             disabled={isActionLoading}
                             title="Reactivate Account"
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 transition-colors flex items-center gap-1.5"
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1.5"
                           >
-                            <CheckCircle size={14} /> Reactivate
+                            <CheckCircle size={13} /> Reactivate
                           </button>
                         ) : (
                           <button
                             onClick={() => handleToggleSuspend(u)}
                             disabled={isActionLoading}
                             title="Suspend Account"
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-1.5"
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors flex items-center gap-1.5"
                           >
-                            <Ban size={14} /> Suspend
+                            <Ban size={13} /> Suspend
                           </button>
                         )}
 
@@ -350,9 +366,9 @@ export default function AdminUsersPage() {
                         <button
                           onClick={() => setSelectedUser(u)}
                           title="View Profile Details"
-                          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         >
-                          <MoreVertical size={16} />
+                          <MoreVertical size={15} />
                         </button>
                       </div>
                     </td>
@@ -365,27 +381,27 @@ export default function AdminUsersPage() {
 
         {/* Pagination Footer */}
         {lastPage > 1 && (
-          <div className="px-6 py-4 border-t flex items-center justify-between bg-slate-50/50">
-            <p className="text-xs text-slate-500">
-              Page <span className="font-semibold text-slate-700">{currentPage}</span> of{' '}
-              <span className="font-semibold text-slate-700">{lastPage}</span>
+          <div className="px-5 py-3 border-t border-border/60 flex items-center justify-between bg-muted/20">
+            <p className="text-xs text-muted-foreground">
+              Page <span className="font-semibold text-foreground">{currentPage}</span> of{" "}
+              <span className="font-semibold text-foreground">{lastPage}</span>
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1 || isLoading}
-                className="p-2 border rounded-lg text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 border border-border/70 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
               </button>
 
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, lastPage))}
                 disabled={currentPage === lastPage || isLoading}
-                className="p-2 border rounded-lg text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 border border-border/70 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
@@ -394,42 +410,42 @@ export default function AdminUsersPage() {
 
       {/* User Details Modal */}
       {selectedUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 space-y-6">
-            <div className="flex items-start justify-between border-b pb-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-xl max-w-lg w-full p-6 shadow-2xl border border-border space-y-5 text-foreground">
+            <div className="flex items-start justify-between border-b border-border/60 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 font-bold text-xl flex items-center justify-center border border-blue-200">
+                <div className="w-10 h-10 rounded-full bg-muted text-foreground font-bold text-base flex items-center justify-center border border-border">
                   {selectedUser.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">{selectedUser.name}</h3>
-                  <p className="text-xs text-slate-400">@{selectedUser.username}</p>
+                  <h3 className="text-base font-bold text-foreground">{selectedUser.name}</h3>
+                  <p className="text-xs text-muted-foreground">@{selectedUser.username}</p>
                 </div>
               </div>
 
               <button
                 onClick={() => setSelectedUser(null)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                className="p-1 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Profile Grid */}
-            <div className="space-y-4 text-sm">
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border">
-                <Mail className="text-blue-600" size={18} />
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border/60">
+                <Mail className="text-blue-600 dark:text-blue-400" size={16} />
                 <div>
-                  <span className="text-xs text-slate-400 block">Email Address</span>
-                  <span className="font-semibold text-slate-800">{selectedUser.email}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium block">Email Address</span>
+                  <span className="font-semibold text-foreground">{selectedUser.email}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border">
-                  <span className="text-xs text-slate-400 block">Role</span>
+                <div className="p-3 bg-muted/40 rounded-xl border border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium block">Role</span>
                   <span
-                    className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getRoleBadge(
+                    className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${getRoleBadge(
                       selectedUser.role
                     )}`}
                   >
@@ -437,26 +453,26 @@ export default function AdminUsersPage() {
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border">
-                  <span className="text-xs text-slate-400 block">Status</span>
+                <div className="p-3 bg-muted/40 rounded-xl border border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium block">Status</span>
                   <span
-                    className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
                       selectedUser.is_suspended
-                        ? 'bg-red-100 text-red-700 border-red-200'
-                        : 'bg-green-100 text-green-700 border-green-200'
+                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                     }`}
                   >
-                    {selectedUser.is_suspended ? 'Suspended' : 'Active'}
+                    {selectedUser.is_suspended ? "Suspended" : "Active"}
                   </span>
                 </div>
               </div>
 
               {selectedUser.employer && (
-                <div className="p-3 bg-slate-50 rounded-xl border flex items-center gap-3">
-                  <Building2 className="text-blue-600" size={18} />
+                <div className="p-3 bg-muted/40 rounded-xl border border-border/60 flex items-center gap-3">
+                  <Building2 className="text-blue-600 dark:text-blue-400" size={16} />
                   <div>
-                    <span className="text-xs text-slate-400 block">Employer Company</span>
-                    <span className="font-semibold text-slate-800">
+                    <span className="text-[10px] text-muted-foreground uppercase font-medium block">Employer Company</span>
+                    <span className="font-semibold text-foreground">
                       {selectedUser.employer.company_name}
                     </span>
                   </div>
@@ -464,23 +480,23 @@ export default function AdminUsersPage() {
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border">
-                  <span className="text-xs text-slate-400 block">Email Verified</span>
-                  <span className="font-medium text-slate-700 flex items-center gap-1.5 mt-1">
+                <div className="p-3 bg-muted/40 rounded-xl border border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium block">Email Verified</span>
+                  <span className="font-medium text-foreground flex items-center gap-1.5 mt-1">
                     {selectedUser.email_verified_at ? (
                       <>
-                        <ShieldCheck size={16} className="text-green-600" /> Verified
+                        <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400" /> Verified
                       </>
                     ) : (
-                      'Unverified'
+                      "Unverified"
                     )}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border">
-                  <span className="text-xs text-slate-400 block">Joined Date</span>
-                  <span className="font-medium text-slate-700 flex items-center gap-1.5 mt-1">
-                    <Calendar size={16} className="text-blue-600" />
+                <div className="p-3 bg-muted/40 rounded-xl border border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium block">Joined Date</span>
+                  <span className="font-medium text-foreground flex items-center gap-1.5 mt-1">
+                    <Calendar size={14} className="text-blue-600 dark:text-blue-400" />
                     {formatDate(selectedUser.created_at)}
                   </span>
                 </div>
@@ -488,37 +504,37 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-4 border-t flex items-center justify-between">
+            <div className="pt-4 border-t border-border/60 flex items-center justify-between">
               <button
                 onClick={() => setDeletingUser(selectedUser)}
-                className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors flex items-center gap-1.5"
               >
-                <Trash2 size={16} /> Delete Account
+                <Trash2 size={14} /> Delete Account
               </button>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleToggleSuspend(selectedUser)}
                   disabled={isActionLoading}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
                     selectedUser.is_suspended
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-red-600 text-white hover:bg-red-700'
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "bg-rose-600 text-white hover:bg-rose-700"
                   }`}
                 >
                   {isActionLoading ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                   ) : selectedUser.is_suspended ? (
-                    <UserCheck size={16} />
+                    <UserCheck size={14} />
                   ) : (
-                    <UserX size={16} />
+                    <UserX size={14} />
                   )}
-                  {selectedUser.is_suspended ? 'Reactivate User' : 'Suspend User'}
+                  {selectedUser.is_suspended ? "Reactivate User" : "Suspend User"}
                 </button>
 
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 rounded-lg transition-colors"
                 >
                   Close
                 </button>
@@ -530,25 +546,25 @@ export default function AdminUsersPage() {
 
       {/* Delete User Modal */}
       {deletingUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-red-600">Delete User Account</h3>
-              <button onClick={() => setDeletingUser(null)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-xl max-w-md w-full p-6 shadow-2xl border border-border space-y-4 text-foreground">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <h3 className="text-sm font-bold text-rose-600 dark:text-rose-400">Delete User Account</h3>
+              <button onClick={() => setDeletingUser(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={16} />
               </button>
             </div>
 
-            <p className="text-sm text-slate-600">
+            <p className="text-xs text-muted-foreground">
               Are you sure you want to permanently delete user <strong>"{deletingUser.name}"</strong> (
               {deletingUser.email})? This action cannot be undone.
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
               <button
                 type="button"
                 onClick={() => setDeletingUser(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -556,9 +572,9 @@ export default function AdminUsersPage() {
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={isActionLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors flex items-center gap-1.5"
               >
-                {isActionLoading && <Loader2 size={16} className="animate-spin" />}
+                {isActionLoading && <Loader2 size={14} className="animate-spin" />}
                 Confirm Delete
               </button>
             </div>

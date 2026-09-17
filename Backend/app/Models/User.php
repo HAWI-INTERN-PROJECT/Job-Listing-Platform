@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Notifications\V1\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -74,9 +75,49 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => UserRole::class,
             'is_suspended' => 'boolean',
         ];
+    }
+
+    /**
+     * Interact with the user's role.
+     *
+     * @return Attribute<UserRole|null, string|UserRole|null>
+     */
+    protected function role(): Attribute
+    {
+        return Attribute::make(
+            get: static function (mixed $value): ?UserRole {
+                if ($value === null) {
+                    return null;
+                }
+
+                if ($value instanceof UserRole) {
+                    return $value;
+                }
+
+                if ($value === 'job_seeker') {
+                    return UserRole::EMPLOYEE;
+                }
+
+                return UserRole::tryFrom((string) $value) ?? UserRole::EMPLOYEE;
+            },
+            set: static function (mixed $value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+
+                if ($value instanceof UserRole) {
+                    return $value->value;
+                }
+
+                if ($value === 'job_seeker') {
+                    return UserRole::EMPLOYEE->value;
+                }
+
+                return (string) $value;
+            },
+        );
     }
 
     /**
@@ -152,6 +193,37 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<SavedJob, $this>
+     */
+    public function savedJobs(): HasMany
+    {
+        return $this->hasMany(SavedJob::class);
+    }
+
+    /**
+     * @return HasMany<Interview, $this>
+     */
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
+    }
+
+    /**
+     * @return HasOne<EmployeeProfile, $this>
+     */
+    public function employeeProfile(): HasOne
+    {
+        return $this->hasOne(EmployeeProfile::class);
+    }
+
+    /**
+     * @return HasMany<JobMatch, $this>
+     */
+    public function jobMatches(): HasMany
+    {
+        return $this->hasMany(JobMatch::class);
+    }
+
      * Create a personal access token with custom expiration.
      */
     public function createAccessToken(bool $rememberMe = false): NewAccessToken
