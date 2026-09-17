@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -25,7 +24,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </Link>
 
         <div className="flex items-center gap-2">
-          <LanguageSwitcher />
           <ThemeToggle />
         </div>
       </header>
@@ -38,8 +36,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       </main>
 
       {/* Clean footer */}
-      <footer className="py-4 border-t border-border/50 text-center text-xs text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} HireStream. All rights reserved.</p>
+      <footer className="py-4 text-center text-xs text-muted-foreground border-t border-border/40">
+        &copy; {new Date().getFullYear()} HireStream Platform. All rights reserved.
       </footer>
     </div>
   )

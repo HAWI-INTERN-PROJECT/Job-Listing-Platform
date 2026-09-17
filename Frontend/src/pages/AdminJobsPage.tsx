@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '@/lib/api'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 
 interface EmployerInfo {
   id: number
@@ -89,7 +90,6 @@ export default function AdminJobsPage() {
   const [searchInput, setSearchInput] = useState<string>('')
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [lastPage, setLastPage] = useState<number>(1)
-  const [totalJobs, setTotalJobs] = useState<number>(0)
 
   // Modals state
   const [reviewJob, setReviewJob] = useState<JobItem | null>(null)
@@ -118,7 +118,6 @@ export default function AdminJobsPage() {
       setJobs(paginated.data || [])
       setCurrentPage(paginated.current_page || 1)
       setLastPage(paginated.last_page || 1)
-      setTotalJobs(paginated.total || 0)
     } catch (err: unknown) {
       console.error('Failed to load jobs:', err)
       setError('Failed to fetch job posts. Please try again.')
@@ -130,6 +129,11 @@ export default function AdminJobsPage() {
   useEffect(() => {
     fetchJobs(currentPage, statusFilter, searchQuery)
   }, [currentPage, statusFilter, searchQuery, fetchJobs])
+
+  // Wire into global refresh button
+  usePageRefresh(() => {
+    fetchJobs(currentPage, statusFilter, searchQuery)
+  })
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -239,7 +243,7 @@ export default function AdminJobsPage() {
               Job Post Management
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Review, approve, reject, or remove job listings submitted across the platform ({totalJobs} total).
+              Review, approve, reject, or remove job listings submitted across the platform.
             </p>
           </div>
 

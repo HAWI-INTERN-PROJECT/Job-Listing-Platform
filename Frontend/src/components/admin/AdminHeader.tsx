@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Settings, LogOut, ChevronDown, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { RefreshButton } from '@/components/RefreshButton'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import AdminNotificationDropdown from '@/components/admin/AdminNotificationDropdown'
 
@@ -46,7 +46,7 @@ export default function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <LanguageSwitcher />
+        <RefreshButton />
         <ThemeToggle />
         <AdminNotificationDropdown />
 
@@ -80,21 +80,21 @@ export default function AdminHeader() {
                   setOpen(false)
                   navigate('/admin/settings')
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-foreground text-left transition-colors"
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-foreground hover:bg-muted/70 transition-colors"
               >
-                <Settings className="h-4 w-4 text-muted-foreground" />
-                Settings
+                <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                Platform Settings
               </button>
 
-              <div className="border-t border-border/60 mt-1 pt-1">
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-rose-600 dark:text-rose-400 text-left transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
+              <div className="border-t border-border/60 my-1" />
+
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
+              </button>
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@ import { Bell, User, Settings, LogOut, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { RefreshButton } from '@/components/RefreshButton'
 import EmployerNotificationDropdown from '@/components/employer/EmployerNotificationDropdown'
 import { useEmployerRealtimeNotifications } from '@/hooks/useEmployerRealtimeNotifications'
 
@@ -49,7 +49,7 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
       <h1 className="text-base font-semibold text-foreground tracking-tight">{title}</h1>
 
       <div className="flex items-center gap-3">
-        <LanguageSwitcher />
+        <RefreshButton />
         <ThemeToggle />
         {isEmployer ? (
           <EmployerNotificationDropdown />
@@ -75,8 +75,8 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium leading-tight">{user?.name ?? 'User'}</p>
               <p className="text-xs text-muted-foreground capitalize leading-tight">
-                {user?.role_label ?? user?.role ?? 'Guest'}
-              </p>
+                {user?.role_label ?? user?.role ?? 'Guest'
+              }</p>
             </div>
             <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
@@ -90,11 +90,12 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
 
               {isEmployee && (
                 <button
+                  type="button"
                   onClick={() => {
                     setOpen(false)
                     navigate('/my-profile')
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-foreground text-left transition-colors"
+                  className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs hover:bg-muted transition-colors text-foreground"
                 >
                   <User className="h-4 w-4 text-muted-foreground" />
                   My Profile
@@ -102,25 +103,27 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
               )}
 
               <button
+                type="button"
                 onClick={() => {
                   setOpen(false)
                   navigate('/settings')
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-foreground text-left transition-colors"
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs hover:bg-muted transition-colors text-foreground"
               >
                 <Settings className="h-4 w-4 text-muted-foreground" />
                 Settings
               </button>
 
-              <div className="border-t border-border/60 mt-1 pt-1">
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-muted text-rose-600 dark:text-rose-400 text-left transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
+              <div className="border-t border-border/60 my-1" />
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-500/10 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
             </div>
           )}
         </div>
