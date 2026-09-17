@@ -7,6 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useProfileStore } from '@/stores/profile'
 import type { WorkExperience, Education, Language } from '@/stores/profile'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
+import { employeeFeedService } from '@/services/employeeFeedService'
+import { useEffect } from 'react'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 
 function uid() {
@@ -29,11 +31,65 @@ export default function EditProfilePage() {
   const [experience, setExperience] = useState<WorkExperience[]>(profile.experience)
   const [education, setEducation] = useState<Education[]>(profile.education)
   const [languages, setLanguages] = useState<Language[]>(profile.languages)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleSave = () => {
-    setProfile({ headline, phone, location, bio, skills, experience, education, languages })
-    toast.success(t('editProfile.profileSaved'))
-    navigate('/my-profile')
+  useEffect(() => {
+    employeeFeedService.getProfile().then((res) => {
+      if (res?.profile) {
+        const p = res.profile
+        if (p.headline) setHeadline(p.headline)
+        if (p.phone) setPhone(p.phone)
+        if (p.location) setLocation(p.location)
+        if (p.bio) setBio(p.bio)
+        if (Array.isArray(p.skills) && p.skills.length > 0) setSkills(p.skills)
+        if (Array.isArray(p.experience) && p.experience.length > 0) {
+          setExperience(p.experience.map((e) => ({
+            id: uid(),
+            title: e.title || '',
+            company: e.company || '',
+            period: e.start_date ? `${e.start_date} - ${e.end_date || 'Present'}` : '',
+          })))
+        }
+        if (Array.isArray(p.education) && p.education.length > 0) {
+          setEducation(p.education.map((e) => ({
+            id: uid(),
+            degree: e.degree || '',
+            institution: e.institution || '',
+            year: e.year || '',
+          })))
+        }
+        if (Array.isArray(p.languages) && p.languages.length > 0) {
+          setLanguages(p.languages.map((l) => ({
+            id: uid(),
+            name: typeof l === 'string' ? l : (l as any).name || '',
+            level: (l as any).level || 'Conversational',
+          })))
+        }
+      }
+    }).catch(() => {})
+  }, [])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      setProfile({ headline, phone, location, bio, skills, experience, education, languages })
+      await employeeFeedService.updateProfile({
+        headline,
+        phone,
+        location,
+        bio,
+        skills,
+        experience,
+        education,
+        languages,
+      })
+      toast.success(t('editProfile.profileSaved'))
+      navigate('/my-profile')
+    } catch {
+      toast.error('Failed to sync profile with recommendation worker')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const addSkill = () => {
@@ -460,9 +516,11 @@ export default function EditProfilePage() {
             <button
               type="button"
               onClick={handleSave}
-              className="px-4 py-2 text-xs font-medium rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:opacity-90 transition-opacity"
+              disabled={isSaving}
+              className="px-4 py-2 text-xs font-medium rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:opacity-90 transition-opacity disabled:opacity-50 inline-flex items-center gap-2"
             >
-              {t('common.saveChanges')}
+              {isSaving && <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+              <span>{isSaving ? 'Saving...' : t('common.saveChanges')}</span>
             </button>
           </div>
         </main>

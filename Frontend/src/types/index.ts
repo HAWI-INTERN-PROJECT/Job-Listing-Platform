@@ -118,6 +118,40 @@ export interface InterviewItem {
   updated_at?: string
 }
 
+export interface JobPost {
+  id: number
+  employer_id?: number
+  category_id?: number
+  title: string
+  slug: string
+  description?: string
+  requirements?: string[]
+  responsibilities?: string[]
+  job_type?: string
+  experience_level?: string
+  location?: string | null
+  salary_min?: number | null
+  salary_max?: number | null
+  salary_currency?: string
+  is_remote?: boolean
+  status?: string
+  employer?: {
+    id?: number
+    company_name?: string
+    logo?: string | null
+    location?: string | null
+  } | null
+  category?: {
+    id?: number
+    name?: string
+    slug?: string
+  } | null
+  published_at?: string | null
+  expires_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 export interface EmployeeNotificationData {
   type?: string
   title?: string

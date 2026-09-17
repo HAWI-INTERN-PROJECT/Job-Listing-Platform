@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
+import RecommendedJobFeed from '@/components/employee/RecommendedJobFeed'
 import api from '@/lib/api'
 
 type StatusLabel = 'Submitted' | 'Under Review' | 'Shortlisted' | 'Rejected' | 'Hired'
@@ -235,6 +236,9 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
+
+          {/* Recommended Jobs Feed - Algorithmic Matching */}
+          <RecommendedJobFeed />
 
           {/* Recent Applications - Notion Table / Database View */}
           <div className="space-y-3">

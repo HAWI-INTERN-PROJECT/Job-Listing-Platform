@@ -122,6 +122,14 @@ class JobPost extends Model
     }
 
     /**
+     * @return HasMany<JobMatch, $this>
+     */
+    public function jobMatches(): HasMany
+    {
+        return $this->hasMany(JobMatch::class);
+    }
+
+    /**
      * @return HasMany<SavedJob, $this>
      */
     public function savedJobs(): HasMany

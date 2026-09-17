@@ -26,7 +26,7 @@ export default function EmployerHeader({ title }: EmployerHeaderProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Stream real-time employer notifications and trigger popups
+  // Stream real-time employer and employee notifications
   useEmployerRealtimeNotifications()
   useEmployeeRealtimeNotifications()
 
