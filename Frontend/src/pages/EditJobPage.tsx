@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   CheckCircle,
   XCircle,
@@ -8,14 +8,20 @@ import {
   FileText,
   Calendar,
   AlertTriangle,
+  AlertCircle,
   Save,
+  Send,
+  Loader2,
+  ArrowLeft,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import api from '@/lib/api'
 
 type JobForm = {
   title: string
@@ -50,11 +56,72 @@ const initialJob: JobForm = {
 
 export default function EditJobPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const jobIdParam = searchParams.get('jobId')
+  const jobId = jobIdParam ? Number(jobIdParam) : null
 
   const [job, setJob] = useState<JobForm>(initialJob)
   const [savedJob, setSavedJob] = useState<JobForm>(initialJob)
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null)
+  const [jobStatusRaw, setJobStatusRaw] = useState<string>('draft')
   const [message, setMessage] = useState('')
   const [isClosed, setIsClosed] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isResubmitting, setIsResubmitting] = useState(false)
+
+  // Fetch real job data if jobId provided
+  useEffect(() => {
+    if (!jobId) return
+
+    let isMounted = true
+    async function loadJobData() {
+      try {
+        setIsLoading(true)
+        const res = await api.get('/employer/jobs')
+        const data = res.data?.data?.data || res.data?.data
+        if (Array.isArray(data)) {
+          const found = data.find((j: any) => j.id === jobId)
+          if (found && isMounted) {
+            setJobStatusRaw((found.status || '').toLowerCase())
+            setRejectionReason(found.rejection_reason || null)
+            const closed = (found.status || '').toLowerCase() === 'closed'
+            setIsClosed(closed)
+
+            const loadedForm: JobForm = {
+              title: found.title || '',
+              category: found.category?.name || 'Technology',
+              employmentType: found.job_type_label || (found.job_type === 'full_time' ? 'Full-time' : found.job_type || 'Full-time'),
+              positions: found.positions ? String(found.positions) : '1',
+              location: found.location || 'Remote',
+              workMode: found.is_remote ? 'Remote' : 'On-site',
+              description: found.description || '',
+              responsibilities: Array.isArray(found.responsibilities)
+                ? found.responsibilities.join('\n')
+                : found.responsibilities || '',
+              requirements: Array.isArray(found.requirements)
+                ? found.requirements.join('\n')
+                : found.requirements || '',
+              deadline: found.deadline ? found.deadline.split('T')[0] : '2026-08-30',
+              status: closed ? 'Closed' : 'Open',
+            }
+
+            setJob(loadedForm)
+            setSavedJob(loadedForm)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load job post details:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    loadJobData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [jobId])
 
   function handleChange(
     event: React.ChangeEvent<
@@ -69,7 +136,7 @@ export default function EditJobPage() {
     }))
   }
 
-  function handleSave(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (isClosed) {
@@ -80,11 +147,59 @@ export default function EditJobPage() {
       return
     }
 
-    setSavedJob(job)
-    setMessage('Job changes saved successfully.')
-    setTimeout(() => {
-      setMessage('')
-    }, 3000)
+    try {
+      if (jobId) {
+        await api.put(`/employer/jobs/${jobId}`, {
+          title: job.title,
+          location: job.location,
+          description: job.description,
+          responsibilities: job.responsibilities,
+          requirements: job.requirements,
+          deadline: job.deadline,
+        })
+      }
+      setSavedJob(job)
+      setMessage('Job changes saved successfully.')
+      toast.success('Job changes saved successfully.')
+      setTimeout(() => {
+        setMessage('')
+      }, 3000)
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Failed to save job changes.'
+      setMessage(errorMsg)
+      toast.error(errorMsg)
+    }
+  }
+
+  async function handleResubmitForReview() {
+    if (!jobId) return
+
+    try {
+      setIsResubmitting(true)
+      // First save latest edits
+      await api.put(`/employer/jobs/${jobId}`, {
+        title: job.title,
+        location: job.location,
+        description: job.description,
+        responsibilities: job.responsibilities,
+        requirements: job.requirements,
+        deadline: job.deadline,
+      })
+
+      // Submit for admin review
+      await api.post(`/employer/jobs/${jobId}/submit`)
+      toast.success('Job post updated and resubmitted for admin review!')
+      setJobStatusRaw('pending_approval')
+      setRejectionReason(null)
+      setTimeout(() => {
+        navigate('/my-job-posts')
+      }, 1200)
+    } catch (err: any) {
+      console.error('Failed to resubmit job post:', err)
+      toast.error(err.response?.data?.message || 'Failed to resubmit job post.')
+    } finally {
+      setIsResubmitting(false)
+    }
   }
 
   function handleCancel() {
@@ -95,7 +210,7 @@ export default function EditJobPage() {
     }, 1000)
   }
 
-  function handleCloseJob() {
+  async function handleCloseJob() {
     const confirmed = window.confirm(
       'Are you sure you want to close this job? New applications will no longer be accepted.',
     )
@@ -104,20 +219,30 @@ export default function EditJobPage() {
       return
     }
 
-    setIsClosed(true)
-    setJob((currentJob) => ({
-      ...currentJob,
-      status: 'Closed',
-    }))
-    setSavedJob((currentJob) => ({
-      ...currentJob,
-      status: 'Closed',
-    }))
-    setMessage('Job has been closed successfully.')
-    setTimeout(() => {
-      setMessage('')
-    }, 3000)
+    try {
+      if (jobId) {
+        await api.post(`/employer/jobs/${jobId}/close`)
+      }
+      setIsClosed(true)
+      setJob((currentJob) => ({
+        ...currentJob,
+        status: 'Closed',
+      }))
+      setSavedJob((currentJob) => ({
+        ...currentJob,
+        status: 'Closed',
+      }))
+      setMessage('Job has been closed successfully.')
+      toast.success('Job has been closed.')
+      setTimeout(() => {
+        setMessage('')
+      }, 3000)
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to close job.')
+    }
   }
+
+  const isRejected = jobStatusRaw === 'rejected'
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
@@ -129,33 +254,94 @@ export default function EditJobPage() {
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Notion Document Header */}
           <div className="border-b border-border/60 pb-5 space-y-1.5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-muted text-foreground text-[11px] font-semibold">
-                ✏️
-              </span>
-              <span>Job Postings / Edit Listing</span>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  Edit Job Post
-                </h1>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Update position details, requirements, compensation, or close this listing.
-                </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                <Link
+                  to="/my-job-posts"
+                  className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Back to My Job Posts</span>
+                </Link>
+                <span>/</span>
+                <span>Edit Listing</span>
               </div>
 
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium self-start sm:self-auto ${
                   isClosed
                     ? 'bg-muted text-muted-foreground border border-border'
+                    : isRejected
+                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                     : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                 }`}
               >
-                {isClosed ? 'Closed' : 'Approved'}
+                {isClosed ? 'Closed' : isRejected ? 'Rejected' : 'Active'}
               </span>
             </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Edit Job Post
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Update position details, requirements, compensation, or address admin feedback.
+                </p>
+              </div>
+
+              {isRejected && jobId && (
+                <Button
+                  size="sm"
+                  disabled={isResubmitting}
+                  onClick={handleResubmitForReview}
+                  className="rounded-lg h-8 px-3.5 text-xs font-medium bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 self-start sm:self-auto gap-1.5"
+                >
+                  {isResubmitting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Save & Resubmit for Review
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* Rejection Feedback Alert Box */}
+          {isRejected && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 space-y-3 text-rose-900 dark:text-rose-200">
+              <div className="flex items-start gap-3">
+                <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 flex-shrink-0">
+                  <AlertCircle size={20} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-rose-950 dark:text-rose-100">
+                    Admin Rejection Confirmation Message & Feedback
+                  </h3>
+                  <p className="text-xs text-rose-800 dark:text-rose-300">
+                    The administrator reviewed this job listing and rejected it with the following note:
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-background/80 dark:bg-card/90 border border-rose-500/20 text-xs leading-relaxed text-foreground font-medium">
+                {rejectionReason || 'No detailed reason was provided by the administrator.'}
+              </div>
+
+              <p className="text-[11px] text-rose-800/90 dark:text-rose-300/90">
+                💡 <strong>Next steps:</strong> Review the issues raised above, make the necessary corrections in the form below, and click <strong>Save & Resubmit for Review</strong>.
+              </p>
+            </div>
+          )}
+
+          {/* Loading Indicator */}
+          {isLoading && (
+            <div className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading job post details...</span>
+            </div>
+          )}
 
           {/* Message Alert */}
           {message && (
@@ -435,6 +621,23 @@ export default function EditJobPage() {
                   className="rounded-lg h-8 px-3 text-xs"
                 >
                   Close Job Post
+                </Button>
+              )}
+
+              {!isClosed && isRejected && jobId && (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isResubmitting}
+                  onClick={handleResubmitForReview}
+                  className="rounded-lg h-8 px-3.5 text-xs font-medium bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                >
+                  {isResubmitting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Save & Resubmit
                 </Button>
               )}
 

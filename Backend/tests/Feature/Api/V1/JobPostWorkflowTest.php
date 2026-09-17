@@ -188,6 +188,22 @@ class JobPostWorkflowTest extends TestCase
             ]);
     }
 
+    public function test_employer_can_view_rejection_reason_for_rejected_job_posts(): void
+    {
+        JobPost::factory()->rejected('Salary details and requirements are unclear.')->create([
+            'employer_id' => $this->employer->id,
+            'category_id' => $this->category->id,
+            'title' => 'Rejected Frontend Role',
+        ]);
+
+        $response = $this->actingAs($this->employerUser)
+            ->getJson('/api/v1/employer/jobs');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.data.0.status', JobStatus::REJECTED->value)
+            ->assertJsonPath('data.data.0.rejection_reason', 'Salary details and requirements are unclear.');
+    }
+
     public function test_employer_can_resubmit_rejected_job_post(): void
     {
         $job = JobPost::factory()->rejected('Missing details')->create([

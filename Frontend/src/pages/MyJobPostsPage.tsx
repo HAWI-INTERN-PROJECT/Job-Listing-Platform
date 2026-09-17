@@ -11,15 +11,32 @@ import {
   Eye,
   Pencil,
   XCircle,
+  AlertCircle,
+  X,
+  Send,
+  Loader2,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import EmployerSidebar from '@/components/employer/EmployerSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/button'
 
-const initialJobs = [
+export interface EmployerJob {
+  id: number
+  title: string
+  category: string
+  location: string
+  type: string
+  applications: number
+  deadline: string
+  status: string
+  rejection_reason?: string | null
+}
+
+const initialJobs: EmployerJob[] = [
   {
     id: 1,
     title: 'Senior React Developer',
@@ -29,6 +46,7 @@ const initialJobs = [
     applications: 24,
     deadline: 'Aug 30, 2026',
     status: 'Approved',
+    rejection_reason: null,
   },
   {
     id: 2,
@@ -39,6 +57,7 @@ const initialJobs = [
     applications: 12,
     deadline: 'Sep 5, 2026',
     status: 'Pending',
+    rejection_reason: null,
   },
   {
     id: 3,
@@ -49,6 +68,7 @@ const initialJobs = [
     applications: 15,
     deadline: 'Aug 25, 2026',
     status: 'Closed',
+    rejection_reason: null,
   },
 ]
 
@@ -72,7 +92,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function MyJobPostsPage() {
-  const [jobs, setJobs] = useState(initialJobs)
+  const [jobs, setJobs] = useState<EmployerJob[]>(initialJobs)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
@@ -81,15 +101,32 @@ export default function MyJobPostsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const jobsPerPage = 5
 
-  useEffect(() => {
-    let mounted = true
-    const fetchEmployerJobs = async () => {
-      try {
-        const res = await api.get('/employer/jobs')
-        const data = res.data?.data?.data || res.data?.data
-        if (mounted && Array.isArray(data) && data.length > 0) {
-          setJobs(
-            data.map((j: any) => ({
+  // Rejection modal state
+  const [selectedRejectionJob, setSelectedRejectionJob] = useState<EmployerJob | null>(null)
+  const [resubmittingId, setResubmittingId] = useState<number | null>(null)
+
+  const fetchEmployerJobs = async () => {
+    try {
+      const res = await api.get('/employer/jobs')
+      const data = res.data?.data?.data || res.data?.data
+      if (Array.isArray(data)) {
+        setJobs(
+          data.map((j: any) => {
+            let normalizedStatus = 'Pending'
+            const s = (j.status || '').toLowerCase()
+            if (s === 'published' || s === 'approved') {
+              normalizedStatus = 'Approved'
+            } else if (s === 'rejected') {
+              normalizedStatus = 'Rejected'
+            } else if (s === 'closed') {
+              normalizedStatus = 'Closed'
+            } else if (s === 'pending_approval' || s === 'pending') {
+              normalizedStatus = 'Pending'
+            } else if (j.status) {
+              normalizedStatus = j.status.charAt(0).toUpperCase() + j.status.slice(1)
+            }
+
+            return {
               id: j.id,
               title: j.title,
               category: j.category?.name || 'General',
@@ -97,20 +134,19 @@ export default function MyJobPostsPage() {
               type: j.job_type_label || j.job_type || 'Full-time',
               applications: j.applications_count ?? 0,
               deadline: j.deadline ? new Date(j.deadline).toLocaleDateString() : 'N/A',
-              status: j.status
-                ? j.status.charAt(0).toUpperCase() + j.status.slice(1)
-                : 'Pending',
-            })),
-          )
-        }
-      } catch {
-        // Fallback to initialJobs if guest or offline
+              status: normalizedStatus,
+              rejection_reason: j.rejection_reason || null,
+            }
+          }),
+        )
       }
+    } catch {
+      // Fallback to initialJobs if guest or offline
     }
+  }
+
+  useEffect(() => {
     fetchEmployerJobs()
-    return () => {
-      mounted = false
-    }
   }, [])
 
   const filteredJobs = jobs.filter((job) => {
@@ -169,8 +205,32 @@ export default function MyJobPostsPage() {
     )
   }
 
+  const handleResubmitJob = async (jobId: number) => {
+    try {
+      setResubmittingId(jobId)
+      await api.post(`/employer/jobs/${jobId}/submit`)
+      toast.success('Job post resubmitted for admin review successfully!')
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? { ...j, status: 'Pending', rejection_reason: null }
+            : j,
+        ),
+      )
+      if (selectedRejectionJob?.id === jobId) {
+        setSelectedRejectionJob(null)
+      }
+    } catch (err: any) {
+      console.error('Failed to resubmit job post:', err)
+      toast.error(err.response?.data?.message || 'Failed to resubmit job post.')
+    } finally {
+      setResubmittingId(null)
+    }
+  }
+
   const activeCount = jobs.filter((j) => j.status === 'Approved').length
   const pendingCount = jobs.filter((j) => j.status === 'Pending').length
+  const rejectedCount = jobs.filter((j) => j.status === 'Rejected').length
   const totalAppsCount = jobs.reduce((acc, j) => acc + (j.applications || 0), 0)
 
   return (
@@ -245,13 +305,29 @@ export default function MyJobPostsPage() {
 
             <div className="rounded-xl border border-border/70 bg-card p-4.5 shadow-xs space-y-2 hover:border-foreground/20 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Total Applications</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {rejectedCount > 0 ? 'Rejected Posts' : 'Total Applications'}
+                </span>
                 <div className="p-2 rounded-lg bg-muted text-foreground">
-                  <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  {rejectedCount > 0 ? (
+                    <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                  ) : (
+                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  )}
                 </div>
               </div>
-              <p className="text-2xl font-bold tracking-tight text-foreground">{totalAppsCount}</p>
-              <p className="text-[11px] text-muted-foreground">Across all positions</p>
+              <p
+                className={`text-2xl font-bold tracking-tight ${
+                  rejectedCount > 0
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-foreground'
+                }`}
+              >
+                {rejectedCount > 0 ? rejectedCount : totalAppsCount}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {rejectedCount > 0 ? 'Needs updates & resubmission' : 'Across all positions'}
+              </p>
             </div>
           </div>
 
@@ -346,40 +422,84 @@ export default function MyJobPostsPage() {
 
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Link to={`/job-applicants?jobId=${job.id}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                title="View Applicants"
-                              >
-                                <Eye className="h-3.5 w-3.5 mr-1" />
-                                Applicants
-                              </Button>
-                            </Link>
+                            {job.status === 'Rejected' ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedRejectionJob(job)}
+                                  className="h-7 px-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                                  title="View Admin Confirmation Message"
+                                >
+                                  <AlertCircle className="h-3.5 w-3.5 mr-1" />
+                                  Reason
+                                </Button>
 
-                            <Link to="/edit-job">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                title="Edit Job"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={resubmittingId === job.id}
+                                  onClick={() => handleResubmitJob(job.id)}
+                                  className="h-7 px-2 text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+                                  title="Resubmit for admin approval"
+                                >
+                                  {resubmittingId === job.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                  ) : (
+                                    <Send className="h-3.5 w-3.5 mr-1" />
+                                  )}
+                                  Resubmit
+                                </Button>
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={job.status === 'Closed'}
-                              onClick={() => handleCloseJob(job.id)}
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400"
-                              title="Close Job"
-                            >
-                              <XCircle className="h-3.5 w-3.5 mr-1" />
-                              {job.status === 'Closed' ? 'Closed' : 'Close'}
-                            </Button>
+                                <Link to={`/edit-job?jobId=${job.id}`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                    title="Edit Job"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </Link>
+                              </>
+                            ) : (
+                              <>
+                                <Link to={`/job-applicants?jobId=${job.id}`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                    title="View Applicants"
+                                  >
+                                    <Eye className="h-3.5 w-3.5 mr-1" />
+                                    Applicants
+                                  </Button>
+                                </Link>
+
+                                <Link to={`/edit-job?jobId=${job.id}`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                    title="Edit Job"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </Link>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={job.status === 'Closed'}
+                                  onClick={() => handleCloseJob(job.id)}
+                                  className="h-7 px-2 text-xs text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400"
+                                  title="Close Job"
+                                >
+                                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                                  {job.status === 'Closed' ? 'Closed' : 'Close'}
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -445,6 +565,87 @@ export default function MyJobPostsPage() {
           </div>
         </main>
       </div>
+
+      {/* Rejection Confirmation Message Modal */}
+      {selectedRejectionJob && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-xl max-w-lg w-full p-6 shadow-2xl border border-border space-y-4 text-foreground">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                  <AlertCircle size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Rejection Confirmation Message</h3>
+                  <p className="text-[11px] text-muted-foreground">Admin review reason for "{selectedRejectionJob.title}"</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedRejectionJob(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1.5">
+                <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+                  Admin Rejection Reason:
+                </p>
+                <p className="text-xs text-rose-700 dark:text-rose-400 leading-relaxed whitespace-pre-wrap">
+                  {selectedRejectionJob.rejection_reason || 'No specific rejection message was provided by the administrator.'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-muted/40 rounded-xl border border-border/60 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">What should you do next?</p>
+                <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                  <li>Review the rejection feedback provided by the administrator above.</li>
+                  <li>Click <strong>Edit Job</strong> to adjust the job details according to the requirements.</li>
+                  <li>After updating or resolving the concerns, click <strong>Resubmit for Review</strong>.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedRejectionJob(null)}
+                className="h-8 text-xs"
+              >
+                Close
+              </Button>
+
+              <Link to={`/edit-job?jobId=${selectedRejectionJob.id}`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <Pencil size={13} />
+                  Edit Job
+                </Button>
+              </Link>
+
+              <Button
+                size="sm"
+                disabled={resubmittingId === selectedRejectionJob.id}
+                onClick={() => handleResubmitJob(selectedRejectionJob.id)}
+                className="h-8 text-xs gap-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90"
+              >
+                {resubmittingId === selectedRejectionJob.id ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Send size={13} />
+                )}
+                Resubmit for Review
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
