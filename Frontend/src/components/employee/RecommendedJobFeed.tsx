@@ -204,6 +204,13 @@ export default function RecommendedJobFeed() {
                         {match_score}% MATCH
                       </span>
 
+                      {match_reasons?.is_core_match && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-foreground border border-border/80">
+                          <CheckCircle2 size={11} className="text-foreground" />
+                          Role Match{match_reasons?.seniority_alignment ? ` (${match_reasons.seniority_alignment})` : ''}
+                        </span>
+                      )}
+
                       {job.is_remote && (
                         <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border/60">
                           Remote

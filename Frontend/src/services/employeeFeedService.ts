@@ -3,7 +3,10 @@ import type { ApiResponse, JobPost } from '@/types'
 
 export interface JobMatchReasons {
   matched_skills?: string[]
+  matched_role?: string
   title_similarity?: number
+  is_core_match?: boolean
+  seniority_alignment?: string | null
   category_match?: boolean
   is_remote?: boolean
   matched_skills_count?: number

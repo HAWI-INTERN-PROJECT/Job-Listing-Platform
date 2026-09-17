@@ -214,4 +214,126 @@ class JobMatchingWorkflowTest extends TestCase
             'is_dismissed' => true,
         ]);
     }
+    public function test_senior_backend_developer_matches_backend_developer_job_post_with_high_score(): void
+    {
+        $matchingService = app(JobMatchingService::class);
+
+        $employerUser = User::factory()->create(['role' => UserRole::EMPLOYER]);
+        $employer = Employer::factory()->create(['user_id' => $employerUser->id]);
+        $job = JobPost::factory()->create([
+            'employer_id' => $employer->id,
+            'title' => 'Backend Developer',
+            'description' => 'Looking for a solid backend developer to build scalable services.',
+            'requirements' => ['Experience with server-side logic', 'Team player'],
+            'status' => JobStatus::PUBLISHED,
+            'is_remote' => true,
+        ]);
+
+        $candidate = User::factory()->create(['role' => UserRole::EMPLOYEE]);
+        $profile = EmployeeProfile::create([
+            'user_id' => $candidate->id,
+            'headline' => 'Senior Backend Developer',
+            'skills' => ['PHP', 'Laravel', 'PostgreSQL', 'Docker'],
+        ]);
+
+        $result = $matchingService->calculateMatch($job, $profile);
+
+        $this->assertTrue($result['is_match'], 'Senior Backend Developer should match Backend Developer job');
+        $this->assertGreaterThanOrEqual(80, $result['score'], 'Score should be at least 80% for direct core role match');
+        $this->assertTrue($result['reasons']['is_core_match']);
+        $this->assertEquals('Senior', $result['reasons']['seniority_alignment']);
+
+        // Test running background worker on this job
+        $worker = new AnalyzeJobPostMatchesJob($job);
+        $worker->handle($matchingService);
+
+        $this->assertDatabaseHas('job_matches', [
+            'user_id' => $candidate->id,
+            'job_post_id' => $job->id,
+        ]);
+
+        $match = JobMatch::where('user_id', $candidate->id)->where('job_post_id', $job->id)->first();
+        $this->assertNotNull($match);
+        $this->assertGreaterThanOrEqual(80, $match->match_score);
+    }
+
+    public function test_backend_engineer_matches_backend_developer_via_synonym_normalization(): void
+    {
+        $matchingService = app(JobMatchingService::class);
+
+        $employerUser = User::factory()->create(['role' => UserRole::EMPLOYER]);
+        $employer = Employer::factory()->create(['user_id' => $employerUser->id]);
+        $job = JobPost::factory()->create([
+            'employer_id' => $employer->id,
+            'title' => 'Backend Developer',
+            'status' => JobStatus::PUBLISHED,
+        ]);
+
+        $candidate = User::factory()->create(['role' => UserRole::EMPLOYEE]);
+        $profile = EmployeeProfile::create([
+            'user_id' => $candidate->id,
+            'headline' => 'Lead Server-Side Engineer',
+            'skills' => ['Node.js', 'PostgreSQL'],
+        ]);
+
+        $result = $matchingService->calculateMatch($job, $profile);
+
+        $this->assertTrue($result['is_match']);
+        $this->assertGreaterThanOrEqual(75, $result['score']);
+        $this->assertTrue($result['reasons']['is_core_match']);
+    }
+
+    public function test_work_experience_titles_are_considered_for_job_matching(): void
+    {
+        $matchingService = app(JobMatchingService::class);
+
+        $employerUser = User::factory()->create(['role' => UserRole::EMPLOYER]);
+        $employer = Employer::factory()->create(['user_id' => $employerUser->id]);
+        $job = JobPost::factory()->create([
+            'employer_id' => $employer->id,
+            'title' => 'Backend Developer',
+            'status' => JobStatus::PUBLISHED,
+        ]);
+
+        $candidate = User::factory()->create(['role' => UserRole::EMPLOYEE]);
+        $profile = EmployeeProfile::create([
+            'user_id' => $candidate->id,
+            'headline' => 'Consultant',
+            'skills' => ['Architecture', 'Databases'],
+            'experience' => [
+                ['title' => 'Senior Backend Developer', 'company' => 'Acme Corp', 'years' => '3'],
+            ],
+        ]);
+
+        $result = $matchingService->calculateMatch($job, $profile);
+
+        $this->assertTrue($result['is_match']);
+        $this->assertGreaterThanOrEqual(75, $result['score']);
+    }
+
+    public function test_opposing_domains_are_penalized_in_matching(): void
+    {
+        $matchingService = app(JobMatchingService::class);
+
+        $employerUser = User::factory()->create(['role' => UserRole::EMPLOYER]);
+        $employer = Employer::factory()->create(['user_id' => $employerUser->id]);
+        $job = JobPost::factory()->create([
+            'employer_id' => $employer->id,
+            'title' => 'Backend Developer',
+            'requirements' => ['Go', 'gRPC'],
+            'status' => JobStatus::PUBLISHED,
+        ]);
+
+        $candidate = User::factory()->create(['role' => UserRole::EMPLOYEE]);
+        $profile = EmployeeProfile::create([
+            'user_id' => $candidate->id,
+            'headline' => 'Frontend Developer',
+            'skills' => ['React', 'CSS', 'HTML'],
+        ]);
+
+        $result = $matchingService->calculateMatch($job, $profile);
+
+        $this->assertFalse($result['is_match']);
+        $this->assertLessThan(35, $result['score']);
+    }
 }

@@ -21,6 +21,40 @@ class JobMatchingService
     ];
 
     /**
+     * Seniority modifiers to detect and normalize for core role comparison.
+     *
+     * @var list<string>
+     */
+    protected const SENIORITY_MODIFIERS = [
+        'senior', 'sr', 'sr.', 'lead', 'principal', 'staff',
+        'junior', 'jr', 'jr.', 'mid', 'mid-level', 'intermediate',
+        'entry', 'entry-level', 'intern', 'associate', 'head of',
+        'director', 'chief',
+    ];
+
+    /**
+     * Synonym mappings to canonicalize tech roles and domains.
+     *
+     * @var array<string, string>
+     */
+    protected const ROLE_SYNONYMS = [
+        'engineer' => 'developer',
+        'programmer' => 'developer',
+        'architect' => 'developer',
+        'specialist' => 'developer',
+        'back-end' => 'backend',
+        'back end' => 'backend',
+        'server-side' => 'backend',
+        'front-end' => 'frontend',
+        'front end' => 'frontend',
+        'client-side' => 'frontend',
+        'full-stack' => 'fullstack',
+        'full stack' => 'fullstack',
+        'dev ops' => 'devops',
+        'sre' => 'devops',
+    ];
+
+    /**
      * Minimum score threshold to qualify as a recommended job match.
      */
     public const MATCH_THRESHOLD = 35;
@@ -55,7 +89,6 @@ class JobMatchingService
         $skillCoverage = count($matchedSkills) / $candidateSkillsCount;
         $skillScore = (int) round(min(1.0, $skillCoverage * 1.3) * 100);
 
-        // Boost if multiple direct skills matched
         if (count($matchedSkills) >= 3) {
             $skillScore = max($skillScore, 75);
         } elseif (count($matchedSkills) >= 2) {
@@ -64,19 +97,45 @@ class JobMatchingService
             $skillScore = max($skillScore, 40);
         }
 
-        // 2. Title & Role Overlap Calculation
-        $titleScore = $this->calculateTitleSimilarity($profile->headline ?? '', $jobPost->title);
+        // 2. Title & Role Overlap Calculation (Seniority & Synonym Normalized)
+        $titleAnalysis = $this->analyzeRoleSimilarity($profile, $jobPost->title);
+        $titleScore = $titleAnalysis['score'];
+        $isCoreRoleMatch = $titleAnalysis['is_core_match'];
+        $seniorityAlignment = $titleAnalysis['seniority'];
+
+        // If core role is an exact match and skill list lacks direct keyword match, recognize domain skill
+        if ($isCoreRoleMatch) {
+            $coreSkillLabel = ucwords(trim($titleAnalysis['core_role']));
+            if (! in_array($coreSkillLabel, $matchedSkills, true) && ! in_array($coreSkillLabel . ' Development', $matchedSkills, true)) {
+                $matchedSkills[] = $coreSkillLabel . ' Development';
+            }
+        }
 
         // 3. Category, Location, & Preference Alignment
         $preferenceScore = $this->calculatePreferenceAlignment($profile, $jobPost);
 
-        // 4. Composite Algorithmic Score
-        // Weight: 55% Skills, 30% Role/Title Alignment, 15% Location/Preference
-        $compositeScore = (int) round(
-            ($skillScore * 0.55) +
-            ($titleScore * 0.30) +
-            ($preferenceScore * 0.15)
-        );
+        // 4. Adaptive Composite Algorithmic Score
+        if ($isCoreRoleMatch || $titleScore >= 85) {
+            // Strong Role Match: Guarantee high baseline (75+), with skills and preferences boosting up to 98%
+            $baseScore = 75;
+            $skillBonus = (int) round(($skillScore / 100) * 15);
+            $prefBonus = (int) round(($preferenceScore / 100) * 10);
+            $compositeScore = min(100, $baseScore + $skillBonus + $prefBonus);
+        } elseif ($titleScore >= 50 && $skillScore >= 40) {
+            // Good role alignment + verified skills
+            $compositeScore = (int) round(
+                ($titleScore * 0.45) +
+                ($skillScore * 0.40) +
+                ($preferenceScore * 0.15)
+            );
+        } else {
+            // General weighted scoring
+            $compositeScore = (int) round(
+                ($skillScore * 0.50) +
+                ($titleScore * 0.35) +
+                ($preferenceScore * 0.15)
+            );
+        }
 
         $compositeScore = max(0, min(100, $compositeScore));
         $isMatch = $compositeScore >= self::MATCH_THRESHOLD && (! empty($matchedSkills) || $titleScore >= 50);
@@ -85,8 +144,11 @@ class JobMatchingService
             'is_match' => $isMatch,
             'score' => $compositeScore,
             'reasons' => [
-                'matched_skills' => $matchedSkills,
+                'matched_skills' => array_values(array_unique($matchedSkills)),
+                'matched_role' => $jobPost->title,
                 'title_similarity' => $titleScore,
+                'is_core_match' => $isCoreRoleMatch,
+                'seniority_alignment' => $seniorityAlignment,
                 'category_match' => $this->checkCategoryMatch($profile, $jobPost),
                 'is_remote' => (bool) $jobPost->is_remote,
                 'matched_skills_count' => count($matchedSkills),
@@ -122,7 +184,7 @@ class JobMatchingService
 
             // Word-boundary or direct token occurrence match
             $escaped = preg_quote($normalizedSkill, '/');
-            if (preg_match('/(?:\b|[\s\-_,\.\/]|^)' . $escaped . '(?:\b|[\s\-_,\.\/]|$)/i', $haystack)) {
+            if (preg_match('/(?:\\b|[\\s\\-_,\\.\\/]|^)' . $escaped . '(?:\\b|[\\s\\-_,\\.\\/]|$)/i', $haystack)) {
                 $matched[] = $skill;
             } elseif (str_contains($haystack, $normalizedSkill)) {
                 $matched[] = $skill;
@@ -133,27 +195,161 @@ class JobMatchingService
     }
 
     /**
-     * Calculate token-based Jaccard/overlap similarity between candidate headline and job title.
+     * Analyze role similarity with seniority normalization and synonym canonicalization.
+     *
+     * @return array{score: int, is_core_match: bool, core_role: string, seniority: string|null}
      */
-    protected function calculateTitleSimilarity(string $headline, string $jobTitle): int
+    public function analyzeRoleSimilarity(EmployeeProfile $profile, string $jobTitle): array
     {
-        $headlineTokens = $this->tokenize($headline);
-        $titleTokens = $this->tokenize($jobTitle);
+        $titlesToCheck = [];
 
-        if (empty($headlineTokens) || empty($titleTokens)) {
-            return 0;
+        if (! empty(trim($profile->headline ?? ''))) {
+            $titlesToCheck[] = trim($profile->headline);
         }
 
-        $intersection = array_intersect($headlineTokens, $titleTokens);
+        // Also check work experience titles if present
+        if (is_array($profile->experience)) {
+            foreach ($profile->experience as $exp) {
+                if (is_array($exp) && ! empty($exp['title']) && is_string($exp['title'])) {
+                    $titlesToCheck[] = trim($exp['title']);
+                }
+            }
+        }
+
+        if (empty($titlesToCheck)) {
+            return [
+                'score' => 0,
+                'is_core_match' => false,
+                'core_role' => '',
+                'seniority' => null,
+            ];
+        }
+
+        $bestScore = 0;
+        $bestIsCoreMatch = false;
+        $bestCoreRole = '';
+        $bestSeniority = null;
+
+        foreach ($titlesToCheck as $candidateTitle) {
+            $result = $this->compareSingleTitle($candidateTitle, $jobTitle);
+            if ($result['score'] > $bestScore) {
+                $bestScore = $result['score'];
+                $bestIsCoreMatch = $result['is_core_match'];
+                $bestCoreRole = $result['core_role'];
+                $bestSeniority = $result['seniority'];
+            }
+        }
+
+        return [
+            'score' => $bestScore,
+            'is_core_match' => $bestIsCoreMatch,
+            'core_role' => $bestCoreRole,
+            'seniority' => $bestSeniority,
+        ];
+    }
+
+    /**
+     * Compare a single candidate title against the job title.
+     *
+     * @return array{score: int, is_core_match: bool, core_role: string, seniority: string|null}
+     */
+    protected function compareSingleTitle(string $candidateTitle, string $jobTitle): array
+    {
+        $candidateParsed = $this->canonicalizeTitle($candidateTitle);
+        $jobParsed = $this->canonicalizeTitle($jobTitle);
+
+        $candCore = $candidateParsed['core'];
+        $jobCore = $jobParsed['core'];
+        $candTokens = $candidateParsed['tokens'];
+        $jobTokens = $jobParsed['tokens'];
+        $seniority = $candidateParsed['seniority'];
+
+        // Exact core role match (e.g. "backend developer" == "backend developer")
+        if ($candCore !== '' && $candCore === $jobCore) {
+            return [
+                'score' => 100,
+                'is_core_match' => true,
+                'core_role' => $jobCore,
+                'seniority' => $seniority ?? 'Aligned',
+            ];
+        }
+
+        if (empty($candTokens) || empty($jobTokens)) {
+            return [
+                'score' => 0,
+                'is_core_match' => false,
+                'core_role' => '',
+                'seniority' => null,
+            ];
+        }
+
+        // Filter out polar opposite domains (e.g. Backend vs Frontend)
+        if (
+            (in_array('backend', $candTokens, true) && in_array('frontend', $jobTokens, true)) ||
+            (in_array('frontend', $candTokens, true) && in_array('backend', $jobTokens, true))
+        ) {
+            return [
+                'score' => 10,
+                'is_core_match' => false,
+                'core_role' => $jobCore,
+                'seniority' => null,
+            ];
+        }
+
+        $intersection = array_intersect($candTokens, $jobTokens);
         $overlapCount = count($intersection);
 
         if ($overlapCount === 0) {
-            return 0;
+            return [
+                'score' => 0,
+                'is_core_match' => false,
+                'core_role' => '',
+                'seniority' => null,
+            ];
         }
 
-        $similarity = $overlapCount / count($titleTokens);
+        $similarity = $overlapCount / count($jobTokens);
+        $score = (int) round(min(1.0, $similarity * 1.3) * 100);
 
-        return (int) round(min(1.0, $similarity * 1.5) * 100);
+        return [
+            'score' => $score,
+            'is_core_match' => $similarity >= 0.8,
+            'core_role' => $jobCore,
+            'seniority' => $seniority,
+        ];
+    }
+
+    /**
+     * Canonicalize title by replacing synonyms, detecting seniority, and cleaning tokens.
+     *
+     * @return array{core: string, tokens: list<string>, seniority: string|null}
+     */
+    protected function canonicalizeTitle(string $title): array
+    {
+        $lower = mb_strtolower(trim($title));
+
+        // Canonicalize tech role synonyms
+        foreach (self::ROLE_SYNONYMS as $syn => $repl) {
+            $lower = preg_replace('/\\b' . preg_quote($syn, '/') . '\\b/u', $repl, $lower) ?? $lower;
+        }
+
+        // Detect and strip seniority modifiers
+        $detectedSeniority = null;
+        foreach (self::SENIORITY_MODIFIERS as $sen) {
+            if (preg_match('/\\b' . preg_quote($sen, '/') . '\\b/u', $lower)) {
+                $detectedSeniority = ucfirst($sen);
+                $lower = preg_replace('/\\b' . preg_quote($sen, '/') . '\\b/u', '', $lower) ?? $lower;
+            }
+        }
+
+        $tokens = $this->tokenize($lower);
+        $core = implode(' ', $tokens);
+
+        return [
+            'core' => $core,
+            'tokens' => $tokens,
+            'seniority' => $detectedSeniority,
+        ];
     }
 
     /**
@@ -206,7 +402,7 @@ class JobMatchingService
      */
     protected function tokenize(string $text): array
     {
-        $clean = preg_replace('/[^\p{L}\p{N}]+/u', ' ', mb_strtolower($text));
+        $clean = preg_replace('/[^\\p{L}\\p{N}]+/u', ' ', mb_strtolower($text));
         if (! $clean) {
             return [];
         }
