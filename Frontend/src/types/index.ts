@@ -117,3 +117,57 @@ export interface InterviewItem {
   created_at?: string
   updated_at?: string
 }
+
+export interface EmployeeNotificationData {
+  type?: string
+  title?: string
+  message?: string
+  application_id?: number
+  job_post_id?: number
+  job_title?: string
+  company_name?: string
+  status?: string
+  status_label?: string
+  action_url?: string
+  [key: string]: unknown
+}
+
+export interface EmployeeNotification {
+  id: string
+  type: string
+  data: EmployeeNotificationData
+  read_at: string | null
+  is_read: boolean
+  unread_count?: number
+  created_at: string
+  created_at_human?: string
+}
+
+export interface SavedJobItem {
+  id: number
+  user_id: number
+  job_post_id: number
+  created_at: string
+  created_at_human?: string
+  job_post?: {
+    id: number
+    title: string
+    slug: string
+    description: string
+    category_id?: number
+    category?: { id: number; name: string; slug: string } | null
+    requirements?: string[] | null
+    responsibilities?: string[] | null
+    job_type?: string
+    job_type_label: string
+    experience_level?: string
+    experience_level_label: string
+    salary_min: number | null
+    salary_max: number | null
+    salary_currency: string
+    location: string | null
+    is_remote: boolean
+    employer?: { company_name: string; logo?: string | null } | null
+    published_at?: string | null
+  }
+}

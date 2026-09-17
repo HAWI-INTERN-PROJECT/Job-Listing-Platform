@@ -11,6 +11,7 @@ use App\Http\Traits\ApiResponse;
 use App\Models\JobPost;
 use App\Models\SavedJob;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,33 +20,41 @@ class SavedJobController extends Controller
     use ApiResponse;
 
     /**
-     * Display a paginated listing of the employee's saved jobs.
+     * Display a paginated listing of saved jobs for the authenticated employee.
      */
     public function index(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $query = SavedJob::with(['jobPost.employer', 'jobPost.category'])
-            ->where('user_id', $user->id);
+        $query = SavedJob::query()
+            ->where('user_id', $user->id)
+            ->with(['jobPost.employer', 'jobPost.category'])
+            ->latest();
 
-        if ($search = $request->input('search')) {
-            $query->whereHas('jobPost', function ($q) use ($search): void {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhereHas('employer', function ($emp) use ($search): void {
-                        $emp->where('company_name', 'like', "%{$search}%");
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->whereHas('jobPost', function (Builder $jq) use ($search): void {
+                $jq->where('title', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhereHas('employer', function (Builder $eq) use ($search): void {
+                        $eq->where('company_name', 'like', "%{$search}%");
                     });
             });
         }
 
-        if ($categoryId = $request->input('category_id')) {
-            $query->whereHas('jobPost', function ($q) use ($categoryId): void {
-                $q->where('category_id', $categoryId);
+        if ($category = $request->query('category_id') ?? $request->query('category')) {
+            $query->whereHas('jobPost', function (Builder $jq) use ($category): void {
+                if (is_numeric($category)) {
+                    $jq->where('category_id', (int) $category);
+                } else {
+                    $jq->whereHas('category', function (Builder $cq) use ($category): void {
+                        $cq->where('slug', (string) $category)->orWhere('name', (string) $category);
+                    });
+                }
             });
         }
 
-        $savedJobs = $query->latest()->paginate($request->integer('per_page', 12));
+        $savedJobs = $query->paginate($request->integer('per_page', 15));
 
         return $this->success(
             SavedJobResource::collection($savedJobs)->response()->getData(true),
@@ -54,20 +63,23 @@ class SavedJobController extends Controller
     }
 
     /**
-     * Return array of all saved job post IDs for fast O(1) checking.
+     * Get a list of all saved job post IDs for the authenticated employee.
      */
     public function savedJobIds(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $ids = SavedJob::where('user_id', $user->id)->pluck('job_post_id')->values()->all();
+        $ids = SavedJob::where('user_id', $user->id)
+            ->pluck('job_post_id')
+            ->values()
+            ->all();
 
-        return $this->success($ids, 'Saved job IDs retrieved');
+        return $this->success($ids, 'Saved job IDs retrieved successfully');
     }
 
     /**
-     * Save a job post.
+     * Save a job post to the employee's saved list.
      */
     public function store(Request $request, JobPost $jobPost): JsonResponse
     {
@@ -75,7 +87,7 @@ class SavedJobController extends Controller
         $user = $request->user();
 
         if ($jobPost->status !== JobStatus::PUBLISHED) {
-            return $this->error('Only published job posts can be saved.', 422);
+            return $this->notFound('Job post not found or is no longer available.');
         }
 
         $savedJob = SavedJob::firstOrCreate([
@@ -83,29 +95,37 @@ class SavedJobController extends Controller
             'job_post_id' => $jobPost->id,
         ]);
 
+        $savedJob->load(['jobPost.employer', 'jobPost.category']);
+
         return $this->created(
-            new SavedJobResource($savedJob->load(['jobPost.employer', 'jobPost.category'])),
+            new SavedJobResource($savedJob),
             'Job saved successfully'
         );
     }
 
     /**
-     * Remove a saved job.
+     * Remove a job post from the employee's saved list.
      */
     public function destroy(Request $request, JobPost $jobPost): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        SavedJob::where('user_id', $user->id)
+        $deleted = SavedJob::where('user_id', $user->id)
             ->where('job_post_id', $jobPost->id)
             ->delete();
 
-        return $this->success(['job_post_id' => $jobPost->id, 'removed' => true], 'Job removed from saved list');
+        return $this->success(
+            [
+                'job_post_id' => $jobPost->id,
+                'removed' => (bool) $deleted,
+            ],
+            'Job removed from saved jobs successfully'
+        );
     }
 
     /**
-     * Toggle saved status of a job post.
+     * Toggle save/unsave state for a job post.
      */
     public function toggle(Request $request, JobPost $jobPost): JsonResponse
     {
@@ -113,7 +133,7 @@ class SavedJobController extends Controller
         $user = $request->user();
 
         if ($jobPost->status !== JobStatus::PUBLISHED) {
-            return $this->error('Only published job posts can be saved.', 422);
+            return $this->notFound('Job post not found or is no longer available.');
         }
 
         $existing = SavedJob::where('user_id', $user->id)
@@ -122,7 +142,11 @@ class SavedJobController extends Controller
 
         if ($existing) {
             $existing->delete();
-            return $this->success(['job_post_id' => $jobPost->id, 'saved' => false], 'Job removed from saved list');
+
+            return $this->success([
+                'is_saved' => false,
+                'job_post_id' => $jobPost->id,
+            ], 'Job removed from saved jobs');
         }
 
         $savedJob = SavedJob::create([
@@ -131,8 +155,8 @@ class SavedJobController extends Controller
         ]);
 
         return $this->success([
+            'is_saved' => true,
             'job_post_id' => $jobPost->id,
-            'saved' => true,
             'saved_job' => new SavedJobResource($savedJob->load(['jobPost.employer', 'jobPost.category'])),
         ], 'Job saved successfully');
     }

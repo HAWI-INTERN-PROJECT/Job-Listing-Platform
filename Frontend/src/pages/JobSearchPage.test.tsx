@@ -8,7 +8,12 @@ import api from '@/lib/api'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
 }))
 
 vi.mock('@/lib/api', () => ({
@@ -65,6 +70,16 @@ describe('JobSearchPage', () => {
           },
         })
       }
+      if (url.startsWith('/categories')) {
+        return Promise.resolve({
+          data: {
+            data: [
+              { id: 1, name: 'Engineering', slug: 'engineering' },
+              { id: 2, name: 'Design', slug: 'design' },
+            ],
+          },
+        })
+      }
       if (url.startsWith('/employee/applications')) {
         return Promise.resolve({ data: { data: [] } })
       }
@@ -99,6 +114,15 @@ describe('JobSearchPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('jobs.noJobs')).toBeInTheDocument()
+    })
+  })
+
+  it('renders category options and allows filtering by category', async () => {
+    render(<JobSearchPage />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /filter by category/i })).toBeInTheDocument()
+      expect(screen.getAllByText('Engineering').length).toBeGreaterThan(0)
     })
   })
 })

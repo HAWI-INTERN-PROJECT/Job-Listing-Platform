@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Employer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdminUserManagementTest extends TestCase
@@ -121,5 +122,32 @@ class AdminUserManagementTest extends TestCase
             ->getJson('/api/v1/admin/users');
 
         $response->assertStatus(403);
+    }
+
+    public function test_admin_can_list_users_with_legacy_job_seeker_role(): void
+    {
+        DB::table('users')->insert([
+            'name' => 'Legacy Seeker',
+            'email' => 'legacy@example.com',
+            'username' => 'legacy_seeker',
+            'password' => Hash::make('password'),
+            'role' => 'job_seeker',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->getJson('/api/v1/admin/users');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $employeeResponse = $this->actingAs($this->admin, 'sanctum')
+            ->getJson('/api/v1/admin/users?role=employee');
+
+        $employeeResponse->assertOk();
+        $this->assertTrue(
+            collect($employeeResponse->json('data.data'))->contains('email', 'legacy@example.com')
+        );
     }
 }

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   Search, FileText, ClipboardList, Briefcase,
-  CheckCircle2, Clock, XCircle, ArrowRight, Building2
+  CheckCircle2, Clock, XCircle, ArrowRight, Building2, Bookmark
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
@@ -139,6 +139,12 @@ export default function DashboardPage() {
       desc: t('dashboard.myApplicationsDesc'),
     },
     {
+      label: 'Saved Jobs',
+      icon: Bookmark,
+      path: '/saved-jobs',
+      desc: 'View bookmarked positions',
+    },
+    {
       label: t('dashboard.cvResume'),
       icon: ClipboardList,
       path: '/cv-resume',
@@ -201,7 +207,7 @@ export default function DashboardPage() {
                 {t('dashboard.quickActions')}
               </h2>
             </div>
-            <div className="grid sm:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {quickLinks.map((link) => {
                 const Icon = link.icon
                 return (

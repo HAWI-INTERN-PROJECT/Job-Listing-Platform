@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
 use App\Http\Controllers\Api\V1\InterviewController;
+use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
@@ -179,7 +180,17 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
                 Route::get('{application}/interview', [InterviewController::class, 'show'])->name('interview.show');
             });
 
-            // Saved Jobs
+            // Employee Notifications Workflow
+            Route::prefix('notifications')->name('api.v1.employee.notifications.')->group(function (): void {
+                Route::get('/', [EmployeeNotificationController::class, 'index'])->name('index');
+                Route::get('stream', [EmployeeNotificationController::class, 'stream'])->name('stream');
+                Route::get('unread-count', [EmployeeNotificationController::class, 'unreadCount'])->name('unread-count');
+                Route::patch('{id}/read', [EmployeeNotificationController::class, 'markAsRead'])->name('read');
+                Route::post('mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+                Route::delete('{id}', [EmployeeNotificationController::class, 'destroy'])->name('destroy');
+            });
+
+            // Saved Jobs Workflow
             Route::prefix('saved-jobs')->name('api.v1.employee.saved-jobs.')->group(function (): void {
                 Route::get('/', [SavedJobController::class, 'index'])->name('index');
                 Route::get('ids', [SavedJobController::class, 'savedJobIds'])->name('ids');
