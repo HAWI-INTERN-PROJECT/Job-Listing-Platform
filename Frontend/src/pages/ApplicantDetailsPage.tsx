@@ -13,7 +13,14 @@ import {
   Star,
   CheckCircle2,
   XCircle,
+  Video,
+  ExternalLink,
 } from 'lucide-react'
+import { ScheduleInterviewModal } from '@/components/interview/ScheduleInterviewModal'
+import { InterviewDetailsModal } from '@/components/interview/InterviewDetailsModal'
+import { InterviewCountdown } from '@/components/interview/InterviewCountdown'
+import { interviewService } from '@/services/interviewService'
+import type { InterviewItem } from '@/types'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
@@ -57,6 +64,7 @@ interface ApplicationDetails {
   status: ApplicationStatusType
   status_label: string
   created_at: string
+  interview?: InterviewItem | null
 }
 
 const STATUS_CONFIG: Record<
@@ -118,6 +126,25 @@ export default function ApplicantDetailsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatusType>('under_review')
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [isCancellingInterview, setIsCancellingInterview] = useState(false)
+
+  const handleCancelInterview = async () => {
+    if (!application?.id) return
+    if (!window.confirm('Are you sure you want to cancel this scheduled interview?')) return
+    try {
+      setIsCancellingInterview(true)
+      await interviewService.cancel(application.id)
+      setApplication({ ...application, interview: null })
+      toast.success('Interview cancelled.')
+    } catch (err) {
+      console.error('Failed to cancel interview:', err)
+      toast.error('Failed to cancel interview.')
+    } finally {
+      setIsCancellingInterview(false)
+    }
+  }
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [isDownloadingCv, setIsDownloadingCv] = useState(false)
 
@@ -193,6 +220,13 @@ export default function ApplicantDetailsPage() {
     if (!application) return
     const statusValue = statusToSet || selectedStatus
 
+    if (application.interview && statusValue === 'rejected') {
+      const confirmed = window.confirm(
+        'This candidate has an active scheduled interview. Marking them as Rejected will automatically cancel the interview schedule. Do you wish to continue?'
+      )
+      if (!confirmed) return
+    }
+
     try {
       setIsUpdatingStatus(true)
       const res = await api.put(`/employer/applications/${application.id}/status`, {
@@ -202,9 +236,27 @@ export default function ApplicantDetailsPage() {
       setApplication(updated)
       setSelectedStatus(updated.status)
       toast.success(`Application status updated to "${updated.status_label || statusValue}".`)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err)
-      toast.error('Failed to update application status.')
+      const errorObj = err as {
+        response?: {
+          data?: {
+            message?: string
+            error?: string
+            errors?: Record<string, string[]>
+          }
+        }
+        message?: string
+      }
+      const data = errorObj.response?.data
+      let message = data?.message || data?.error || errorObj.message
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0]
+        if (firstKey && data.errors[firstKey]?.[0]) {
+          message = data.errors[firstKey][0]
+        }
+      }
+      toast.error(message || 'Failed to update application status. Please try again.')
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -436,6 +488,108 @@ export default function ApplicantDetailsPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">Examine attached documents and assign final status</p>
                   </div>
 
+                  {/* Interview Schedule Section */}
+                  <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-foreground" />
+                        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                          Interview Schedule
+                        </h4>
+                      </div>
+                      {application.interview ? (
+                        <InterviewCountdown
+                          scheduledAt={application.interview.scheduled_at}
+                          durationMinutes={application.interview.duration_minutes}
+                          variant="badge"
+                        />
+                      ) : (
+                        <span className="text-[11px] font-medium text-muted-foreground">Not Scheduled</span>
+                      )}
+                    </div>
+
+                    {application.interview ? (
+                      <div className="space-y-2.5 pt-1">
+                        <div className="bg-background/80 border border-border/70 rounded-lg p-3 space-y-1.5 text-xs">
+                          <div className="font-semibold text-foreground">
+                            {application.interview.title || 'Candidate Interview'}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {new Date(application.interview.scheduled_at).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}{' '}
+                            ({application.interview.duration_minutes} mins)
+                          </div>
+                          <div className="text-muted-foreground capitalize">
+                            Format: {application.interview.type === 'video' ? 'Video Conference' : application.interview.type === 'in_person' ? 'On-Site' : 'Phone'}
+                          </div>
+                          {application.interview.meeting_link && (
+                            <div className="pt-1">
+                              <a
+                                href={application.interview.meeting_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-primary hover:underline text-xs font-medium break-all"
+                              >
+                                <Video className="w-3.5 h-3.5" />
+                                {application.interview.meeting_link}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setIsDetailsModalOpen(true)}
+                            className="h-7 px-2.5 text-xs"
+                          >
+                            <Calendar className="mr-1 h-3.5 w-3.5 text-foreground" />
+                            Calendar & Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setIsScheduleModalOpen(true)}
+                            className="h-7 px-2.5 text-xs"
+                          >
+                            Reschedule
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={isCancellingInterview}
+                            onClick={handleCancelInterview}
+                            className="h-7 px-2 text-xs text-rose-600 hover:bg-rose-500/10"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs text-muted-foreground">
+                          Invite this candidate to a technical interview, phone call, or on-site meeting with live countdown and calendar sync.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsScheduleModalOpen(true)}
+                          className="h-7 px-3 text-xs bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 rounded-lg shadow-xs font-semibold"
+                        >
+                          <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                          Schedule Interview
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* CV Download Section */}
                   <div>
                     <p className="text-xs text-muted-foreground mb-2 font-medium">
@@ -628,6 +782,39 @@ export default function ApplicantDetailsPage() {
           )}
         </main>
       </div>
+
+      {application && (
+        <>
+          <ScheduleInterviewModal
+            isOpen={isScheduleModalOpen}
+            onClose={() => setIsScheduleModalOpen(false)}
+            applicationId={application.id}
+            candidateName={application.applicant?.name}
+            jobTitle={application.job_post?.title}
+            existingInterview={application.interview}
+            onSuccess={(interview) => {
+              setApplication({
+                ...application,
+                status: 'shortlisted',
+                status_label: 'Shortlisted',
+                interview,
+              })
+              setSelectedStatus('shortlisted')
+              toast.success('Interview scheduled successfully! Candidate notified.')
+            }}
+          />
+
+          {application.interview && (
+            <InterviewDetailsModal
+              isOpen={isDetailsModalOpen}
+              onClose={() => setIsDetailsModalOpen(false)}
+              interview={application.interview}
+              companyName={application.job_post?.title}
+              jobTitle={application.job_post?.title}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

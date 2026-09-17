@@ -11,7 +11,11 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from 'lucide-react'
+import { ScheduleInterviewModal } from '@/components/interview/ScheduleInterviewModal'
+import { InterviewDetailsModal } from '@/components/interview/InterviewDetailsModal'
+import type { InterviewItem } from '@/types'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
@@ -46,6 +50,7 @@ export interface ApplicationItem {
     id: number
     title: string
   }
+  interview?: InterviewItem | null
 }
 
 export interface EmployerJob {
@@ -118,6 +123,8 @@ export default function JobApplicantsPage() {
 
   // Modal for quick status change
   const [updatingApp, setUpdatingApp] = useState<ApplicationItem | null>(null)
+  const [schedulingApp, setSchedulingApp] = useState<ApplicationItem | null>(null)
+  const [viewingInterviewApp, setViewingInterviewApp] = useState<ApplicationItem | null>(null)
   const [newStatus, setNewStatus] = useState<ApplicationStatusType>('submitted')
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -242,15 +249,23 @@ export default function JobApplicantsPage() {
 
     try {
       setIsUpdating(true)
-      await api.patch(`/employer/applications/${updatingApp.id}/status`, {
+      const res = await api.put(`/employer/applications/${updatingApp.id}/status`, {
         status: newStatus,
       })
 
+      const updatedPayload = res.data?.data || res.data
       toast.success(`Application status updated to ${statusConfig[newStatus]?.label || newStatus}!`)
 
       setApplicants((prev) =>
         prev.map((app) =>
-          app.id === updatingApp.id ? { ...app, status: newStatus } : app,
+          app.id === updatingApp.id
+            ? {
+                ...app,
+                status: newStatus,
+                status_label: statusConfig[newStatus]?.label || newStatus,
+                interview: updatedPayload.interview !== undefined ? updatedPayload.interview : app.interview,
+              }
+            : app,
         ),
       )
 
@@ -258,9 +273,27 @@ export default function JobApplicantsPage() {
         fetchApplicants(selectedJobId, currentPage, statusFilter, search)
       }
       setUpdatingApp(null)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err)
-      toast.error(err.response?.data?.message || 'Failed to update application status.')
+      const errorObj = err as {
+        response?: {
+          data?: {
+            message?: string
+            error?: string
+            errors?: Record<string, string[]>
+          }
+        }
+        message?: string
+      }
+      const data = errorObj.response?.data
+      let message = data?.message || data?.error || errorObj.message
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0]
+        if (firstKey && data.errors[firstKey]?.[0]) {
+          message = data.errors[firstKey][0]
+        }
+      }
+      toast.error(message || 'Failed to update application status. Please check and retry.')
     } finally {
       setIsUpdating(false)
     }
@@ -442,6 +475,30 @@ export default function JobApplicantsPage() {
                                 CV
                               </Button>
 
+                              {app.interview ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setViewingInterviewApp(app)}
+                                  className="h-7 px-2 text-xs border-border text-foreground hover:bg-muted bg-background shadow-2xs font-medium"
+                                  title="View Interview Details"
+                                >
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-foreground" />
+                                  Interview
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSchedulingApp(app)}
+                                  className="h-7 px-2 text-xs border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
+                                  title="Schedule Candidate Interview"
+                                >
+                                  <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                                  Schedule
+                                </Button>
+                              )}
+
                               <Link to={`/applicant-details?id=${app.id}`}>
                                 <Button
                                   variant="ghost"
@@ -511,6 +568,39 @@ export default function JobApplicantsPage() {
         </main>
       </div>
 
+      {/* Interview Scheduling Modal */}
+      {schedulingApp && (
+        <ScheduleInterviewModal
+          isOpen={!!schedulingApp}
+          onClose={() => setSchedulingApp(null)}
+          applicationId={schedulingApp.id}
+          candidateName={schedulingApp.user?.name || schedulingApp.applicant?.name}
+          jobTitle={schedulingApp.job_post?.title || selectedJob?.title}
+          existingInterview={schedulingApp.interview}
+          onSuccess={(interview) => {
+            setApplicants((prev) =>
+              prev.map((item) =>
+                item.id === schedulingApp.id
+                  ? { ...item, status: 'shortlisted', status_label: 'Shortlisted', interview }
+                  : item
+              )
+            )
+            toast.success('Interview scheduled successfully! Candidate notified.')
+          }}
+        />
+      )}
+
+      {/* Interview Details Modal */}
+      {viewingInterviewApp?.interview && (
+        <InterviewDetailsModal
+          isOpen={!!viewingInterviewApp}
+          onClose={() => setViewingInterviewApp(null)}
+          interview={viewingInterviewApp.interview}
+          companyName={selectedJob?.title}
+          jobTitle={viewingInterviewApp.job_post?.title || selectedJob?.title}
+        />
+      )}
+
       {/* Stage Change Modal */}
       {updatingApp && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
@@ -529,6 +619,27 @@ export default function JobApplicantsPage() {
               <p className="text-muted-foreground">
                 Candidate: <strong className="text-foreground">{updatingApp.user?.name || updatingApp.applicant?.name || 'Applicant'}</strong>
               </p>
+
+              {updatingApp.interview && (
+                <div className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Active Interview Scheduled</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {new Date(updatingApp.interview.scheduled_at).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}{' '}
+                    ({updatingApp.interview.duration_minutes} mins).
+                    {newStatus === 'rejected' && ' Changing status to Rejected will cancel this scheduled interview.'}
+                    {newStatus === 'hired' && ' Changing status to Hired will mark this interview completed.'}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="font-medium text-foreground">Select New Stage:</label>

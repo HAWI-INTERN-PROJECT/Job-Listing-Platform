@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmployerController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
+use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
@@ -147,8 +148,13 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
             // Application status management & applicant review
             Route::get('applications/{application}', [ApplicationController::class, 'showApplicant'])->name('api.v1.employer.applications.show');
-            Route::put('applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
+            Route::match(['put', 'patch'], 'applications/{application}/status', [ApplicationController::class, 'updateStatus'])->name('api.v1.employer.applications.status');
             Route::get('applications/{application}/cv', [ApplicationController::class, 'downloadCv'])->name('api.v1.employer.applications.cv');
+
+            // Interview scheduling for shortlisted candidates
+            Route::post('applications/{application}/interview', [InterviewController::class, 'schedule'])->name('api.v1.employer.applications.interview.schedule');
+            Route::get('applications/{application}/interview', [InterviewController::class, 'show'])->name('api.v1.employer.applications.interview.show');
+            Route::delete('applications/{application}/interview', [InterviewController::class, 'cancel'])->name('api.v1.employer.applications.interview.cancel');
 
             // Employer Notifications Workflow
             Route::prefix('notifications')->name('api.v1.employer.notifications.')->group(function (): void {
@@ -171,6 +177,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
             // Job Applications
             Route::prefix('applications')->name('api.v1.employee.applications.')->group(function (): void {
                 Route::get('/', [ApplicationController::class, 'index'])->name('index');
+                Route::get('{application}/interview', [InterviewController::class, 'show'])->name('interview.show');
             });
 
             // Employee Notifications Workflow

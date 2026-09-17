@@ -5,6 +5,10 @@ import { useTranslation } from 'react-i18next'
 import { Briefcase, ArrowUpRight, Search, Building2, Calendar } from 'lucide-react'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
+import { InterviewCountdown } from '@/components/interview/InterviewCountdown'
+import { InterviewDetailsModal } from '@/components/interview/InterviewDetailsModal'
+import type { InterviewItem } from '@/types'
+import { Video } from 'lucide-react'
 import api from '@/lib/api'
 
 type StatusLabel = 'Submitted' | 'Under Review' | 'Shortlisted' | 'Rejected' | 'Hired'
@@ -25,6 +29,7 @@ interface Application {
     salary_currency: string
     employer: { company_name: string } | null
   } | null
+  interview?: InterviewItem | null
 }
 
 const statusTagStyles: Record<StatusLabel, string> = {
@@ -70,6 +75,7 @@ export default function MyApplicationsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<StatusLabel | 'All'>('All')
+  const [selectedInterviewApp, setSelectedInterviewApp] = useState<Application | null>(null)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['applications'],
@@ -217,8 +223,9 @@ export default function MyApplicationsPage() {
                 return (
                   <div
                     key={app.id}
-                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 hover:bg-muted/40 transition-colors gap-4"
+                    className="group flex flex-col p-4 sm:p-5 hover:bg-muted/40 transition-colors gap-3"
                   >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
                     <div className="flex items-start gap-3.5 min-w-0 flex-1">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-foreground/80 font-bold text-xs flex-shrink-0 mt-0.5">
                         {job?.employer?.company_name?.[0]?.toUpperCase() ?? (
@@ -276,6 +283,67 @@ export default function MyApplicationsPage() {
                         </button>
                       )}
                     </div>
+                    </div>
+
+                    {/* Interview Callout Banner */}
+                    {app.interview && (
+                      <div className="w-full mt-2 p-3 sm:p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                        <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                          <div className="p-2 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-foreground shrink-0">
+                            <Calendar className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-foreground truncate">
+                                {app.interview.title || 'Interview Scheduled'}
+                              </span>
+                              <InterviewCountdown
+                                scheduledAt={app.interview.scheduled_at}
+                                durationMinutes={app.interview.duration_minutes}
+                                variant="badge"
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                              {new Date(app.interview.scheduled_at).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}{' '}
+                              • {app.interview.duration_minutes} mins •{' '}
+                              {app.interview.type === 'video'
+                                ? 'Video Call'
+                                : app.interview.type === 'in_person'
+                                ? 'On-Site'
+                                : 'Phone Call'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-1 sm:pt-0">
+                          {app.interview.meeting_link && (
+                            <a
+                              href={app.interview.meeting_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold shadow-2xs transition-colors"
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              Join Meeting
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedInterviewApp(app)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
+                          >
+                            <Calendar className="w-3.5 h-3.5 text-foreground" />
+                            Details & Calendar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -283,6 +351,16 @@ export default function MyApplicationsPage() {
           )}
         </main>
       </div>
+
+      {selectedInterviewApp?.interview && (
+        <InterviewDetailsModal
+          isOpen={!!selectedInterviewApp}
+          onClose={() => setSelectedInterviewApp(null)}
+          interview={selectedInterviewApp.interview}
+          companyName={selectedInterviewApp.job_post?.employer?.company_name}
+          jobTitle={selectedInterviewApp.job_post?.title}
+        />
+      )}
     </div>
   )
 }
