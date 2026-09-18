@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
 use App\Http\Controllers\Api\V1\InterviewController;
-use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
