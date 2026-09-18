@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\EmployeeProfileController;
 use App\Http\Controllers\Api\V1\EmployerNotificationController;
 use App\Http\Controllers\Api\V1\InterviewController;
-use App\Http\Controllers\Api\V1\EmployeeNotificationController;
 use App\Http\Controllers\Api\V1\SavedJobController;
 use App\Http\Controllers\Api\V1\JobPostController;
 use App\Http\Controllers\Api\V1\UserCVController;
@@ -34,7 +33,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health check
-Route::get('health', fn () => response()->json([
+Route::get('health', fn() => response()->json([
     'status' => 'healthy',
     'timestamp' => now()->toDateTimeString(),
 ]))->name('api.v1.health');
@@ -74,7 +73,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
     Route::middleware('verified')->group(function (): void {
         // Administrator Routes
         Route::middleware(EnsureRole::class . ':admin')->prefix('admin')->group(function (): void {
-            Route::get('dashboard', fn () => response()->json([
+            Route::get('dashboard', fn() => response()->json([
                 'success' => true,
                 'message' => 'Welcome Administrator',
             ]))->name('api.v1.admin.dashboard');
@@ -128,7 +127,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
         // Employer Routes
         Route::middleware(EnsureRole::class . ':employer')->prefix('employer')->group(function (): void {
-            Route::get('dashboard', fn () => response()->json([
+            Route::get('dashboard', fn() => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employer',
             ]))->name('api.v1.employer.dashboard');
@@ -172,7 +171,7 @@ Route::middleware(['auth:sanctum', 'throttle:authenticated'])->group(function ()
 
         // Employee Routes
         Route::middleware(EnsureRole::class . ':employee')->prefix('employee')->group(function (): void {
-            Route::get('dashboard', fn () => response()->json([
+            Route::get('dashboard', fn() => response()->json([
                 'success' => true,
                 'message' => 'Welcome Employee',
             ]))->name('api.v1.employee.dashboard');

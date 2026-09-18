@@ -26,7 +26,6 @@ import SettingsPage from '@/pages/SettingsPage'
 import MyProfilePage from '@/pages/MyProfilePage'
 import MyApplicationsPage from '@/pages/MyApplicationsPage'
 import EditProfilePage from '@/pages/EditProfilePage'
-
 import AdminApplicationsPage from '@/pages/AdminApplicationsPage'
 import AdminJobsPage from '@/pages/AdminJobsPage'
 import AdminLayoutPage from '@/pages/AdminLayoutPage'
@@ -38,6 +37,7 @@ import CVResumePage from './pages/CVResumePage'
 import JobDetailPage from './pages/JobDetailPage'
 import LandingPage from '@/pages/LandingPage'
 import SavedJobsPage from '@/pages/SavedJobsPage'
+import EmployeeLayoutPage from '@/pages/EmployeeLayoutPage'
 
 const queryClient = new QueryClient()
 
@@ -141,225 +141,48 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthInitializer>
-          
-            <Routes>
-              <Route
-                path="/"
-                element={<LandingPage />}
-              />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
 
-              <Route
-                path="/login"
-                element={
-                  <GuestRoute>
-                    <LoginPage />
-                  </GuestRoute>
-                }
-              />
+            <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+            <Route path="/verify-email" element={<ProtectedRoute><VerifyEmailPage /></ProtectedRoute>} />
+            <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
+            <Route path="/reset-password" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
 
-              <Route
-                path="/register"
-                element={
-                  <GuestRoute>
-                    <RegisterPage />
-                  </GuestRoute>
-                }
-              />
+            <Route path="/dashboard" element={<ProtectedRoute><EmployeeLayoutPage /></ProtectedRoute>}>
+              <Route index element={<DashboardPage />} />
+              <Route path="my-applications" element={<MyApplicationsPage />} />
+              <Route path="saved-jobs" element={<SavedJobsPage />} />
+              <Route path="job-search" element={<JobSearchPage />} />
+              <Route path="cv-resume" element={<CVResumePage />} />
+              <Route path="jobs/:slug" element={<JobDetailPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="my-profile" element={<MyProfilePage />} />
+              <Route path="edit-profile" element={<EditProfilePage />} />
+            </Route>
 
-              <Route
-                path="/verify-email"
-                element={
-                  <ProtectedRoute>
-                    <VerifyEmailPage />
-                  </ProtectedRoute>
-                }
-              />
+            <Route path="/employer-dashboard" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><EmployerDashboardPage /></RoleProtectedRoute>} />
+            <Route path="/my-job-posts" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><MyJobPostsPage /></RoleProtectedRoute>} />
+            <Route path="/create-job" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><CreateJobPage /></RoleProtectedRoute>} />
+            <Route path="/edit-job" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><EditJobPage /></RoleProtectedRoute>} />
+            <Route path="/job-applicants" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><JobApplicantsPage /></RoleProtectedRoute>} />
+            <Route path="/applicant-details" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><ApplicantDetailsPage /></RoleProtectedRoute>} />
+            <Route path="/company-profile" element={<RoleProtectedRoute allowedRoles={['employer', 'admin']}><CompanyProfilePage /></RoleProtectedRoute>} />
 
-              <Route
-                path="/forgot-password"
-                element={
-                  <GuestRoute>
-                    <ForgotPasswordPage />
-                  </GuestRoute>
-                }
-              />
+            <Route path="/admin" element={<RoleProtectedRoute allowedRoles={['admin']}><AdminLayoutPage /></RoleProtectedRoute>}>
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="overview" element={<AdminOverviewPage />} />
+              <Route path="applications" element={<AdminApplicationsPage />} />
+              <Route path="jobs" element={<AdminJobsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="companies" element={<AdmincompaniesPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
 
-              <Route
-                path="/reset-password"
-                element={
-                  <GuestRoute>
-                    <ResetPasswordPage />
-                  </GuestRoute>
-                }
-              />
-
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/employer-dashboard"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <EmployerDashboardPage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/my-job-posts"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <MyJobPostsPage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/create-job"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <CreateJobPage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/edit-job"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <EditJobPage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/job-applicants"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <JobApplicantsPage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/applicant-details"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <ApplicantDetailsPage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/company-profile"
-                element={
-                  <RoleProtectedRoute allowedRoles={['employer', 'admin']}>
-                    <CompanyProfilePage />
-                  </RoleProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <SettingsPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/my-profile"
-                element={
-                  <ProtectedRoute>
-                    <MyProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-
-               <Route
-                path="/edit-profile"
-                element={
-                  <ProtectedRoute>
-                    <EditProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-
-            <Route
-              path="/my-applications"
-              element={
-                <ProtectedRoute>
-                  <MyApplicationsPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/saved-jobs"
-              element={
-                <ProtectedRoute>
-                  <SavedJobsPage />
-                </ProtectedRoute>
-              }
-            />
-
-              <Route
-                path="/cv-resume"
-                element={
-                  <ProtectedRoute>
-                    <CVResumePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/jobs/:slug"
-                element={
-                  <ProtectedRoute>
-                    <JobDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-  path="/job-search"
-  element={
-    <ProtectedRoute>
-      <JobSearchPage />
-    </ProtectedRoute>
-  }
-/>
-
-              {/* Admin Routes - nested under AdminLayoutPage so the sidebar/header
-                 render once and every sub-page shows inside it via <Outlet />.
-                 Only the parent needs ProtectedRoute; children inherit the guard. */}
-              <Route
-                path="/admin"
-                element={
-                  <RoleProtectedRoute allowedRoles={['admin']}>
-                    <AdminLayoutPage />
-                  </RoleProtectedRoute>
-                }
-              >
-                <Route index element={<AdminOverviewPage />} />
-                <Route path="overview" element={<AdminOverviewPage />} />
-                <Route path="applications" element={<AdminApplicationsPage />} />
-                <Route path="jobs" element={<AdminJobsPage />} />
-                <Route path="users" element={<AdminUsersPage />} />
-                <Route path="companies" element={<AdmincompaniesPage />} />
-                <Route path="settings" element={<AdminSettingsPage />} />
-              </Route>
-
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-            <Toaster position="top-right" richColors />
-          
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+          <Toaster position="top-right" richColors />
         </AuthInitializer>
       </QueryClientProvider>
     </ErrorBoundary>

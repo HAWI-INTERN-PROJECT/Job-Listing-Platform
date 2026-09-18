@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/button'
 
 const navItems = [
   { label: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'My Profile',  icon: User,            path: '/my-profile' },
-  { label: 'Applications',icon: FileText,        path: '/my-applications' },
-  { label: 'Saved Jobs',  icon: Bookmark,        path: '/saved-jobs' },
-  { label: 'CV/Resume',   icon: FileUp,          path: '/cv-resume' },
-  { label: 'Job Search',  icon: Search,          path: '/job-search' },
-  { label: 'Settings',    icon: Settings,        path: '/settings' },
+  { label: 'My Profile',  icon: User,            path: '/dashboard/my-profile' },
+  { label: 'Applications',icon: FileText,        path: '/dashboard/my-applications' },
+  { label: 'Saved Jobs',  icon: Bookmark,        path: '/dashboard/saved-jobs' },
+  { label: 'CV/Resume',   icon: FileUp,          path: '/dashboard/cv-resume' },
+  { label: 'Job Search',  icon: Search,          path: '/dashboard/job-search' },
+  { label: 'Settings',    icon: Settings,        path: '/dashboard/settings' },
 ]
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {

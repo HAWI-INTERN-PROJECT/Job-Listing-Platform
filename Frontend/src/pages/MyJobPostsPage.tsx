@@ -247,6 +247,8 @@ export default function MyJobPostsPage() {
             My Job Posts
           </h1>
 
+        </header>
+
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Notion Document Header */}
           <div className="border-b border-border/60 pb-5 space-y-1.5">

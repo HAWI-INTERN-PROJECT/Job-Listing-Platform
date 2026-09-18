@@ -14,7 +14,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // Proxy API requests to the remote API to avoid CORS during local dev
+        target: 'https://hirestream-api-prod.onrender.com',
         changeOrigin: true,
       },
       '/storage': {
