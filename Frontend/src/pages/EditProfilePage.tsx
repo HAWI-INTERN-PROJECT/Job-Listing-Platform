@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth'
 import { useProfileStore } from '@/stores/profile'
 import type { WorkExperience, Education, Language } from '@/stores/profile'
-// sidebar provided by EmployeeLayoutPage
+import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import { employeeFeedService } from '@/services/employeeFeedService'
 import { useEffect } from 'react'
 import EmployerHeader from '@/components/employer/EmployerHeader'
@@ -122,8 +122,11 @@ export default function EditProfilePage() {
   const sectionCls = 'bg-card border border-border/70 rounded-xl p-5 sm:p-6 shadow-xs space-y-4'
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-      <EmployerHeader title={t('editProfile.title')} />
+    <div className="h-screen flex overflow-hidden bg-background">
+      <EmployeeSidebar />
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+        <EmployerHeader title={t('editProfile.title')} />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Document intro note */}

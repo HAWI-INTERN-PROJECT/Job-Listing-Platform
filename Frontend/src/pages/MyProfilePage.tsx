@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Briefcase, MapPin, Mail, Phone, GraduationCap, Globe, Edit3 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import { useProfileStore } from '@/stores/profile'
+import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 
 export default function MyProfilePage() {
@@ -24,8 +25,11 @@ export default function MyProfilePage() {
   const completion = Math.round((filledFields / 8) * 100)
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-      <EmployerHeader title={t('profile.title')} />
+    <div className="h-screen flex overflow-hidden bg-background">
+      <EmployeeSidebar />
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+        <EmployerHeader title={t('profile.title')} />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Notion Page Header Card */}

@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import api from '@/lib/api'
 import { useSavedJobs } from '@/hooks/useSavedJobs'
@@ -100,8 +101,11 @@ export default function SavedJobsPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-      <EmployerHeader title="Saved Jobs" />
+    <div className="h-screen flex overflow-hidden bg-background">
+      <EmployeeSidebar />
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+        <EmployerHeader title="Saved Jobs" />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Header */}
