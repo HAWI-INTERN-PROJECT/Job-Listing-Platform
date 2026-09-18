@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Briefcase, ArrowUpRight, Search, Building2, Calendar } from 'lucide-react'
-import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import { InterviewCountdown } from '@/components/interview/InterviewCountdown'
 import { InterviewDetailsModal } from '@/components/interview/InterviewDetailsModal'
@@ -106,11 +105,8 @@ export default function MyApplicationsPage() {
   ]
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
-      <EmployeeSidebar />
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-        <EmployerHeader title={t('applications.title')} />
+    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+      <EmployerHeader title={t('applications.title')} />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Notion-style Document Header */}

@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { Search, MapPin, Building2, Check, X, Layers, Briefcase, Filter, Bookmark } from 'lucide-react'
 import { useSavedJobs } from '@/hooks/useSavedJobs'
 import { toast } from 'sonner'
-import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import api from '@/lib/api'
 
@@ -123,11 +122,8 @@ export default function JobSearchPage() {
   const selectedCategoryObj = categories.find((c) => String(c.id) === categoryFilter)
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
-      <EmployeeSidebar />
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-        <EmployerHeader title={t('jobs.title')} />
+    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+      <EmployerHeader title={t('jobs.title')} />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Opportunities Directory Header */}

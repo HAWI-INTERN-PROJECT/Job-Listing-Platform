@@ -4,8 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth'
-import EmployerSidebar from '@/components/employer/EmployerSidebar'
-import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployerHeader from '@/components/employer/EmployerHeader'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { OtpInput } from '@/components/ui/otp-input'
@@ -123,11 +121,8 @@ export default function SettingsPage() {
     'rounded-xl border border-border/70 bg-card p-5 shadow-xs space-y-4 max-w-2xl'
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
-      {isEmployer ? <EmployerSidebar /> : <EmployeeSidebar />}
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
-        <EmployerHeader title={t('settings.title')} />
+    <div className="flex-1 flex flex-col min-w-0 overflow-y-auto pt-14 md:pt-0">
+      <EmployerHeader title={t('settings.title')} />
 
         <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Notion Document Header */}
