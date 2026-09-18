@@ -7,6 +7,7 @@ Route::get('/', function () {
         config('app.name'),
     ]);
 });
+ 
 
 // Log Viewer - Access at /logs
 // Route is auto-registered by opcodesio/log-viewer

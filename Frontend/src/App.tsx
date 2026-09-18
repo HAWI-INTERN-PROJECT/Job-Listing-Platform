@@ -150,6 +150,15 @@ export default function App() {
             <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
             <Route path="/reset-password" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
 
+            <Route path="/my-applications" element={<ProtectedRoute><MyApplicationsPage /></ProtectedRoute>} />
+            <Route path="/saved-jobs" element={<ProtectedRoute><SavedJobsPage /></ProtectedRoute>} />
+            <Route path="/job-search" element={<ProtectedRoute><JobSearchPage /></ProtectedRoute>} />
+            <Route path="/cv-resume" element={<ProtectedRoute><CVResumePage /></ProtectedRoute>} />
+            <Route path="/jobs/:slug" element={<ProtectedRoute><JobDetailPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/my-profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
+            <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+
             <Route path="/dashboard" element={<ProtectedRoute><EmployeeLayoutPage /></ProtectedRoute>}>
               <Route index element={<DashboardPage />} />
               <Route path="my-applications" element={<MyApplicationsPage />} />
