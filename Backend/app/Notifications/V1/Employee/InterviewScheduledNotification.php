@@ -24,7 +24,41 @@ class InterviewScheduledNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        $jobTitle = $this->interview->jobPost->title ?? 'Position';
+        $companyName = $this->interview->employer->company_name ?? 'The employer';
+        $scheduledAt = $this->interview->scheduled_at->format('M d, Y \a\t h:i A');
+        $action = $this->isReschedule ? 'rescheduled' : 'scheduled';
+
+        $subject = $this->isReschedule
+            ? 'Interview Rescheduled — ' . $jobTitle
+            : 'Interview Scheduled — ' . $jobTitle;
+
+        $mail = (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject($subject)
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("Your interview for '{$jobTitle}' with {$companyName} has been {$action}.")
+            ->line("Scheduled for: {$scheduledAt}")
+            ->line("Duration: {$this->interview->duration_minutes} minutes")
+            ->line("Type: {$this->interview->type}");
+
+        if (! empty($this->interview->meeting_link)) {
+            $mail->line('Meeting link: ' . $this->interview->meeting_link);
+        }
+
+        $mail->action('View Interview Details', url('/my-applications'))
+            ->line('You are receiving this email because you have an interview scheduled through HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team');
+
+        return $mail;
     }
 
     /**

@@ -27,7 +27,45 @@ class ApplicationStatusChangedNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        $statusLabel = match ($this->status) {
+            ApplicationStatus::SUBMITTED => 'Submitted',
+            ApplicationStatus::UNDER_REVIEW => 'Under Review',
+            ApplicationStatus::SHORTLISTED => 'Shortlisted',
+            ApplicationStatus::REJECTED => 'Rejected',
+            ApplicationStatus::HIRED => 'Hired',
+        };
+
+        $companyName = $this->jobPost->employer->company_name ?? 'The employer';
+
+        $subject = match ($this->status) {
+            ApplicationStatus::HIRED => 'Congratulations — You Are Hired!',
+            ApplicationStatus::REJECTED => 'Application Update: ' . $this->jobPost->title,
+            ApplicationStatus::SHORTLISTED => 'You Have Been Shortlisted — ' . $this->jobPost->title,
+            default => 'Application Status Updated — ' . $this->jobPost->title,
+        };
+
+        $line = match ($this->status) {
+            ApplicationStatus::HIRED => "Congratulations! You have been hired for '{$this->jobPost->title}' at {$companyName}.",
+            ApplicationStatus::REJECTED => "Your application for '{$this->jobPost->title}' at {$companyName} has been rejected.",
+            default => "Your application for '{$this->jobPost->title}' at {$companyName} has been updated to {$statusLabel}.",
+        };
+
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject($subject)
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line($line)
+            ->action('View Application', url('/my-applications'))
+            ->line('You are receiving this email because you applied through HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team');
     }
 
     /**
