@@ -14,8 +14,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // Proxy API requests to the remote API to avoid CORS during local dev
-        target: 'https://hirestream-api-prod.onrender.com',
+        // During local development proxy API requests to the local Laravel backend
+        // so authenticated routes and named routes resolve correctly.
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/storage': {
