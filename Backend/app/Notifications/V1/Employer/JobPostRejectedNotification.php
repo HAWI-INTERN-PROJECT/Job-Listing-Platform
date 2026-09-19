@@ -24,7 +24,24 @@ class JobPostRejectedNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("Job Post Needs Changes — {$this->jobPost->title}")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("Your job post '{$this->jobPost->title}' could not be approved as submitted.")
+            ->line("Reason: {$this->reason}")
+            ->line('You can edit and resubmit your job post for review.')
+            ->action('Edit Job Post', url('/my-job-posts'))
+            ->line('You are receiving this email because you posted a job on HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team');
     }
 
     /**
