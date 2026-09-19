@@ -27,7 +27,7 @@ const OtpInput = React.forwardRef<HTMLDivElement, OtpInputProps>(
       const nextValue = next.join("")
       onChange(nextValue)
 
-      if (nextValue.length === length && !nextValue.includes("")) {
+      if (next.every((d) => d !== "")) {
         onComplete?.(nextValue)
       }
     }
