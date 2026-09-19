@@ -23,7 +23,23 @@ class EmployerPendingApprovalNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("New Employer Awaiting Approval — {$this->employer->company_name}")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("'{$this->employer->company_name}' submitted their company profile for review.")
+            ->line('Please review and approve or reject the profile.')
+            ->action('Review Company', url('/admin/companies'))
+            ->line('You are receiving this email as an administrator of HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team');
     }
 
     /**
