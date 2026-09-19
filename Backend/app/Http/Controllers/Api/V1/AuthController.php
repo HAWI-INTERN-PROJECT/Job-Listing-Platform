@@ -10,10 +10,11 @@ use App\Http\Requests\V1\Auth\ResetPasswordRequest;
 use App\Http\Resources\V1\AuthResource;
 use App\Http\Resources\V1\UserResource;
 use App\Http\Traits\ApiResponse;
-use App\Models\User;
 use App\Models\Otp;
-use App\Services\OtpService;
+use App\Models\User;
+use App\Notifications\V1\Auth\NewLoginDetectedNotification;
 use App\Services\ActivityLogger;
+use App\Services\OtpService;
 use Exception;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
@@ -22,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Jenssegers\Agent\Agent;
 
 class AuthController extends Controller
 {
@@ -79,6 +81,15 @@ class AuthController extends Controller
         $token = $user->createAccessToken($request->boolean('remember_me'));
 
         ActivityLogger::login($request);
+        $agent = new Agent();
+        $agent->setUserAgent((string) $request->userAgent());
+
+        $user->notify(new NewLoginDetectedNotification(
+            browser: $agent->browser() ?: 'Unknown browser',
+            platform: $agent->platform() ?: 'Unknown platform',
+            ip: (string) $request->ip(),
+            when: now()->toDayDateTimeString() . ' UTC',
+        ));
 
         return AuthResource::make($user, $token);
     }
@@ -160,7 +171,6 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         cache()->forget($cacheKey);
-
 
         ActivityLogger::passwordChanged($request);
 

@@ -9,6 +9,7 @@
         "php": "^8.3",
         "dedoc/scramble": "^0.13.12",
         "grazulex/laravel-apiroute": "^2.0",
+        "jenssegers/agent": "^2.6",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
@@ -88,5 +89,11 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": {
+        "packagist": {
+            "type": "composer",
+            "url": "https://mirrors.aliyun.com/composer/"
+        }
+    }
 }
