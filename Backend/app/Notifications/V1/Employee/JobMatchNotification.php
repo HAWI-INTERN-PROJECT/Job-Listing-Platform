@@ -28,7 +28,37 @@ class JobMatchNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        $companyName = $this->jobPost->employer->company_name ?? 'An employer';
+        $matchedSkills = (array) ($this->reasons['matched_skills'] ?? []);
+        $skillsPreview = ! empty($matchedSkills)
+            ? ' Matches your skills: ' . implode(', ', array_slice($matchedSkills, 0, 3)) . '.'
+            : '';
+
+        $mail = (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("New Job Match ({$this->matchScore}%): {$this->jobPost->title}")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("We found a position matching your profile: '{$this->jobPost->title}' at {$companyName}.{$skillsPreview}")
+            ->line("Match score: {$this->matchScore}%");
+
+        if (! empty($matchedSkills)) {
+            $mail->line('Top matched skills: ' . implode(', ', array_slice($matchedSkills, 0, 5)));
+        }
+
+        $mail->action('View Job Post', url("/jobs/{$this->jobPost->slug}"))
+            ->line('You are receiving this email because this job matches your profile on HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team');
+
+        $mail->view('emails.notifications.employee.job-match');
+        return $mail;
     }
 
     /**

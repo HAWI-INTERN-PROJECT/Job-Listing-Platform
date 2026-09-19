@@ -224,6 +224,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(JobMatch::class);
     }
 
+    /**
      * Create a personal access token with custom expiration.
      */
     public function createAccessToken(bool $rememberMe = false): NewAccessToken

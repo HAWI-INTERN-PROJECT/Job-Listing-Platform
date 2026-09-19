@@ -23,7 +23,24 @@ class EmployerApprovedNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("Welcome to HireStream — {$this->employer->company_name} approved")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("Congratulations! Your company profile for '{$this->employer->company_name}' has been approved by our admin team.")
+            ->line('You can now post jobs and start receiving applications from candidates.')
+            ->action('View Company Profile', url('/company-profile'))
+            ->line('You are receiving this email because you registered as an employer on HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.employer.employer-approved');
     }
 
     /**

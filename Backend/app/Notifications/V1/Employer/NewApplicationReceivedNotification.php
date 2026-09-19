@@ -27,7 +27,25 @@ class NewApplicationReceivedNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("New Application Received — {$this->jobPost->title}")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("You have a new application for '{$this->jobPost->title}'.")
+            ->line("Candidate: {$this->applicant->name}")
+            ->line("Email: {$this->applicant->email}")
+            ->action('View Application', url('/job-applicants'))
+            ->line('You are receiving this email because you posted a job on HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.employer.new-application-received');
     }
 
     /**
