@@ -32,6 +32,24 @@ class JobMatchNotification extends Notification
     }
 
     /**
+     * Determine if the notification should be sent on the given channel.
+     *
+     * Rate-limits the mail channel so a user receives at most one
+     * job-match email per 24 hours, regardless of how many jobs are matched.
+     */
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        if ($channel !== 'mail') {
+            return true;
+        }
+
+        return ! $notifiable->notifications()
+            ->where('data->type', 'job_match')
+            ->where('created_at', '>', now()->subDay())
+            ->exists();
+    }
+
+    /**
      * Get the mail representation of the notification.
      */
     public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
