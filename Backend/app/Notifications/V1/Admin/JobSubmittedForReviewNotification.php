@@ -23,7 +23,25 @@ class JobSubmittedForReviewNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        $companyName = $this->jobPost->employer->company_name ?? 'An employer';
+
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("New Job Submitted for Review — {$this->jobPost->title}")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line("'{$this->jobPost->title}' was submitted by {$companyName} and is awaiting review.")
+            ->line('Please review and approve or reject the job post.')
+            ->action('Review Job Post', url('/admin/jobs'))
+            ->line('You are receiving this email as an administrator of HireStream.')
+            ->line('To manage notification preferences, visit your account settings.')
+            ->salutation('— The HireStream Team');
     }
 
     /**
