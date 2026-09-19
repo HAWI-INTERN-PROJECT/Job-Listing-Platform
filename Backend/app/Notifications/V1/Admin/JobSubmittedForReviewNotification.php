@@ -41,7 +41,8 @@ class JobSubmittedForReviewNotification extends Notification
             ->action('Review Job Post', url('/admin/jobs'))
             ->line('You are receiving this email as an administrator of HireStream.')
             ->line('To manage notification preferences, visit your account settings.')
-            ->salutation('— The HireStream Team');
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.admin.job-submitted-for-review');
     }
 
     /**

@@ -65,7 +65,8 @@ class ApplicationStatusChangedNotification extends Notification
             ->action('View Application', url('/my-applications'))
             ->line('You are receiving this email because you applied through HireStream.')
             ->line('To manage notification preferences, visit your account settings.')
-            ->salutation('— The HireStream Team');
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.employee.application-status-changed');
     }
 
     /**

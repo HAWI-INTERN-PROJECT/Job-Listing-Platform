@@ -39,7 +39,8 @@ class EmployerApprovedNotification extends Notification
             ->action('View Company Profile', url('/company-profile'))
             ->line('You are receiving this email because you registered as an employer on HireStream.')
             ->line('To manage notification preferences, visit your account settings.')
-            ->salutation('— The HireStream Team');
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.employer.employer-approved');
     }
 
     /**

@@ -39,7 +39,8 @@ class EmployerPendingApprovalNotification extends Notification
             ->action('Review Company', url('/admin/companies'))
             ->line('You are receiving this email as an administrator of HireStream.')
             ->line('To manage notification preferences, visit your account settings.')
-            ->salutation('— The HireStream Team');
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.admin.employer-pending-approval');
     }
 
     /**

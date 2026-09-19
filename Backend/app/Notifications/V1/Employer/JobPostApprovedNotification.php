@@ -39,7 +39,8 @@ class JobPostApprovedNotification extends Notification
             ->action('View Job Post', url('/my-job-posts'))
             ->line('You are receiving this email because you posted a job on HireStream.')
             ->line('To manage notification preferences, visit your account settings.')
-            ->salutation('— The HireStream Team');
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.employer.job-post-approved');
     }
 
     /**

@@ -57,6 +57,7 @@ class JobMatchNotification extends Notification
             ->line('To manage notification preferences, visit your account settings.')
             ->salutation('— The HireStream Team');
 
+        $mail->view('emails.notifications.employee.job-match');
         return $mail;
     }
 

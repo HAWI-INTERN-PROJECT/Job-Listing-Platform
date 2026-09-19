@@ -44,7 +44,8 @@ class NewApplicationReceivedNotification extends Notification
             ->action('View Application', url('/job-applicants'))
             ->line('You are receiving this email because you posted a job on HireStream.')
             ->line('To manage notification preferences, visit your account settings.')
-            ->salutation('— The HireStream Team');
+            ->salutation('— The HireStream Team')
+            ->view('emails.notifications.employer.new-application-received');
     }
 
     /**

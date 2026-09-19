@@ -58,6 +58,7 @@ class InterviewScheduledNotification extends Notification
             ->line('To manage notification preferences, visit your account settings.')
             ->salutation('— The HireStream Team');
 
+        $mail->view('emails.notifications.employee.interview-scheduled');
         return $mail;
     }
 
