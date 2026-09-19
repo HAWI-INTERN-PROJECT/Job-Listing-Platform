@@ -44,9 +44,9 @@ class JobMatchNotification extends Notification
         }
 
         return ! $notifiable->notifications()
-            ->where('data->type', 'job_match')
             ->where('created_at', '>', now()->subDay())
-            ->exists();
+            ->get()
+            ->contains(fn ($notification) => ($notification->data['type'] ?? null) === 'job_match');
     }
 
     /**
